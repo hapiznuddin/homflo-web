@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
   const csrfCookies = takeSetCookies(csrfResponse.headers)
 
   const xsrf = csrfCookies
-    .map(cookie => cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)?.[1])
+    .map((cookie) => cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)?.[1])
     .find(Boolean)
 
   const logoutResponse = await fetch(`${laravelOrigin()}/logout`, {
@@ -54,10 +54,7 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  const outgoing = [
-    ...csrfCookies,
-    ...takeSetCookies(logoutResponse.headers)
-  ]
+  const outgoing = [...csrfCookies, ...takeSetCookies(logoutResponse.headers)]
 
   if (outgoing.length > 0) {
     appendResponseHeaders(event, { 'set-cookie': outgoing })

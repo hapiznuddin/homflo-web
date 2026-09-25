@@ -1,18 +1,120 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
-@theme static {
-  --font-sans: 'Public Sans', sans-serif;
+:root {
+  --homflo-background: var(--color-homflo-bg);
+  --homflo-surface: var(--color-homflo-surface);
 
-  --color-green-50: #EFFDF5;
-  --color-green-100: #D9FBE8;
-  --color-green-200: #B3F5D1;
-  --color-green-300: #75EDAE;
-  --color-green-400: #00DC82;
-  --color-green-500: #00C16A;
-  --color-green-600: #00A155;
-  --color-green-700: #007F45;
-  --color-green-800: #016538;
-  --color-green-900: #0A5331;
-  --color-green-950: #052E16;
+  --homflo-primary: var(--color-homflo-primary);
+  --homflo-primary-strong: var(--color-homflo-primary-dark);
+
+  --homflo-text: var(--color-homflo-text);
+  --homflo-text-muted: var(--color-homflo-muted);
+
+  --homflo-border: var(--color-homflo-border);
+
+  --homflo-success: var(--color-homflo-success);
+  --homflo-info: var(--color-homflo-info);
+  --homflo-warning: var(--color-homflo-warning);
+  --homflo-danger: var(--color-homflo-danger);
+}
+
+@theme {
+  /* ─────────────────────────────
+   * Font
+   * ───────────────────────────── */
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* ─────────────────────────────
+   * Homflo colors
+   * ───────────────────────────── */
+
+  --color-homflo-bg: #fbf9f6;
+  --color-homflo-surface: #ffffff;
+  --color-homflo-primary: #1e463e;
+  --color-homflo-primary-dark: #193f38;
+
+  --color-homflo-text: #1a2220;
+  --color-homflo-muted: #78847f;
+  --color-homflo-border: #efeeeb;
+
+  --color-homflo-success: #256b58;
+  --color-homflo-info: #256382;
+  --color-homflo-warning: #b46914;
+  --color-homflo-danger: #c93636;
+
+  /* ─────────────────────────────
+   * Radius
+   * ───────────────────────────── */
+
+  --radius-homflo-sm: 0.5rem;
+  --radius-homflo-md: 0.75rem;
+  --radius-homflo-lg: 1rem;
+  --radius-homflo-xl: 1.25rem;
+  --radius-homflo-2xl: 1.5rem;
+
+  /* ─────────────────────────────
+   * Shadows
+   * ───────────────────────────── */
+
+  --shadow-homflo-card:
+    0 1px 2px rgb(26 34 32 / 0.04),
+    0 4px 16px rgb(26 34 32 / 0.04);
+
+  --shadow-homflo-floating:
+    0 8px 24px rgb(26 34 32 / 0.08);
+
+  /* ─────────────────────────────
+   * Motion
+   * ───────────────────────────── */
+
+  --ease-homflo:
+    cubic-bezier(0.16, 1, 0.3, 1);
+
+  --duration-homflo-fast: 150ms;
+  --duration-homflo-normal: 200ms;
+  --duration-homflo-slow: 300ms;
+}
+
+@layer base {
+  html {
+    background: var(--homflo-background);
+    color: var(--homflo-text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--homflo-background);
+    color: var(--homflo-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(
+      in srgb,
+      var(--homflo-primary) 35%,
+      transparent
+    );
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

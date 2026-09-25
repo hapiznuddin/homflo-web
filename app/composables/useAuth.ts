@@ -1,3 +1,5 @@
+export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error'
+
 export interface AuthUser {
   id: string
   username: string
@@ -6,11 +8,25 @@ export interface AuthUser {
   email_verified_at: string | null
 }
 
+export interface AuthHousehold {
+  id: string
+  name: string
+  role: string
+}
+
 export interface MeData {
   user: AuthUser
-  household: { id: string, name: string, role: string } | null
+  household: AuthHousehold | null
   onboarding: { required: boolean }
 }
+
+export type AuthorizableAction =
+  | 'household.create'
+  | 'household.invite'
+  | 'member.list'
+  | 'member.update'
+  | 'member.remove'
+  | 'invitation.accept'
 
 function useApiBase(): string {
   const config = useRuntimeConfig()
@@ -18,43 +34,110 @@ function useApiBase(): string {
   return (config.public.apiBase as string).replace(/\/+$/, '')
 }
 
+function isUnauthorized(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'statusCode' in error &&
+    (error as { statusCode?: number }).statusCode === 401
+  )
+}
+
 export function useAuth() {
   const user = useState<AuthUser | null>('auth-user', () => null)
-  // Loading-first: the initial render must show the loading state, never
-  // the error state, so SSR/hydration cannot flash a failure.
-  const pending = useState<boolean>('auth-pending', () => true)
+  const household = useState<AuthHousehold | null>('auth-household', () => null)
+  const onboarding = useState<{ required: boolean }>('auth-onboarding', () => ({ required: false }))
+  const status = useState<AuthStatus>('auth-status', () => 'idle')
   const error = useState<string | null>('auth-error', () => null)
   const inflight = useState<boolean>('auth-inflight', () => false)
 
-  // Bootstrap through the Nuxt server boundary (/api/auth/me), never
-  // directly against Laravel /api/me from the browser.
-  async function fetchMe(): Promise<AuthUser | null> {
-    // A bootstrap request is already running; the in-flight request will
-    // resolve the shared state. Never fire a duplicate request.
+  const isAuthenticated = computed(() => status.value === 'authenticated')
+  const isGuest = computed(() => status.value === 'unauthenticated')
+  const isEmailVerified = computed(
+    () => user.value?.email_verified_at !== null && user.value !== null
+  )
+  const hasHousehold = computed(() => household.value !== null)
+  const isHouseholdOwner = computed(() => household.value?.role === 'owner')
+  const isHouseholdMember = computed(() => household.value !== null)
+
+  // UX-only helper. The Laravel backend (HouseholdPolicy) remains the
+  // final authority; this only decides what the UI shows or hides.
+  function can(action: AuthorizableAction): boolean {
+    if (!isAuthenticated.value) {
+      return false
+    }
+
+    switch (action) {
+      case 'household.invite':
+      case 'member.update':
+      case 'member.remove':
+        return isHouseholdOwner.value
+      case 'household.create':
+      case 'member.list':
+      case 'invitation.accept':
+        return true
+    }
+  }
+
+  // Single shared bootstrap through the Nuxt server boundary
+  // (/api/auth/me), never directly against Laravel /api/me.
+  // 401 → unauthenticated. Network/5xx → error state that keeps the
+  // last-known user instead of logging out (offline-safe).
+  async function bootstrap(): Promise<AuthStatus> {
     if (inflight.value) {
-      return user.value
+      return status.value
+    }
+
+    // Already resolved in this client session; pages and middleware reuse it.
+    if (status.value === 'authenticated' || status.value === 'unauthenticated') {
+      return status.value
     }
 
     inflight.value = true
-    pending.value = true
+    status.value = 'loading'
     error.value = null
-    user.value = null
 
     try {
-      const response = await $fetch<{ success: boolean, data: MeData }>('/api/auth/me', {
+      const response = await $fetch<{ success: boolean; data: MeData }>('/api/auth/me', {
         credentials: 'include',
         headers: { Accept: 'application/json' }
       })
       user.value = response.data.user
-      return user.value
-    } catch {
-      user.value = null
-      error.value = 'Sesi tidak ditemukan. Silakan login kembali.'
-      return null
+      household.value = response.data.household
+      onboarding.value = response.data.onboarding
+      status.value = 'authenticated'
+      return status.value
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        user.value = null
+        household.value = null
+        status.value = 'unauthenticated'
+      } else {
+        error.value = 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.'
+        status.value = 'error'
+      }
+      return status.value
     } finally {
-      pending.value = false
       inflight.value = false
     }
+  }
+
+  // Force a fresh bootstrap (e.g. right after login/logout).
+  async function refresh(): Promise<AuthStatus> {
+    status.value = 'idle'
+    return bootstrap()
+  }
+
+  // Back-compat alias used by the OAuth callback page.
+  const fetchMe = bootstrap
+  const pending = computed(() => status.value === 'loading' || status.value === 'idle')
+
+  function markUnauthenticated(): void {
+    user.value = null
+    household.value = null
+    onboarding.value = { required: false }
+    error.value = null
+    status.value = 'unauthenticated'
   }
 
   async function logout(): Promise<void> {
@@ -63,7 +146,7 @@ export function useAuth() {
       credentials: 'include',
       headers: { Accept: 'application/json' }
     })
-    user.value = null
+    markUnauthenticated()
   }
 
   function loginWithGoogle(): void {
@@ -72,5 +155,25 @@ export function useAuth() {
     window.location.href = `${useApiBase()}/auth/google/redirect`
   }
 
-  return { user, pending, error, fetchMe, logout, loginWithGoogle }
+  return {
+    user,
+    household,
+    onboarding,
+    status,
+    pending,
+    error,
+    isAuthenticated,
+    isGuest,
+    isEmailVerified,
+    hasHousehold,
+    isHouseholdOwner,
+    isHouseholdMember,
+    can,
+    bootstrap,
+    refresh,
+    fetchMe,
+    logout,
+    loginWithGoogle,
+    markUnauthenticated
+  }
 }
