@@ -1,72 +1,3 @@
-<template>
-  <div>
-    <h1 class="text-2xl font-bold">Masuk</h1>
-    <p class="mt-1 text-sm text-slate-600">Kelola keuangan rumah tangga Anda.</p>
-
-    <form class="mt-6 flex flex-col gap-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="login-email" class="mb-1 block text-sm font-medium">Email</label>
-        <UInput
-          id="login-email"
-          v-model="form.email"
-          type="email"
-          autocomplete="email"
-          required
-          class="w-full"
-          :ui="{ base: 'min-h-12 text-base' }"
-        />
-      </div>
-
-      <div>
-        <label for="login-password" class="mb-1 block text-sm font-medium">Kata sandi</label>
-        <UInput
-          id="login-password"
-          v-model="form.password"
-          type="password"
-          autocomplete="current-password"
-          required
-          class="w-full"
-          :ui="{ base: 'min-h-12 text-base' }"
-        />
-      </div>
-
-      <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
-        {{ formError }}
-      </p>
-
-      <UButton
-        type="submit"
-        block
-        :loading="submitting"
-        :disabled="submitting"
-        class="min-h-12 text-base"
-      >
-        Masuk
-      </UButton>
-    </form>
-
-    <UButton
-      block
-      color="neutral"
-      variant="outline"
-      class="mt-3 min-h-12 text-base"
-      :disabled="submitting"
-      @click="loginWithGoogle()"
-    >
-      Masuk dengan Google
-    </UButton>
-
-    <div class="mt-4 flex items-center justify-between text-sm">
-      <NuxtLink to="/forgot-password" class="underline"> Lupa kata sandi? </NuxtLink>
-      <NuxtLink to="/register" class="underline"> Daftar </NuxtLink>
-    </div>
-
-    <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">
-      Tidak dapat terhubung ke server. Anda sedang offline.
-    </p>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
@@ -100,3 +31,74 @@ async function onSubmit(): Promise<void> {
   }
 }
 </script>
+
+<template>
+  <div class="flex min-h-screen flex-col items-center justify-center text-center">
+    <div
+      class="w-full max-w-sm md:max-w-xl lg:max-w-4xl rounded-2xl border border-slate-200 bg-white/30 backdrop-blur-sm p-6 shadow-md"
+    >
+      <h1 class="text-2xl font-bold">Masuk</h1>
+      <p class="mt-1 text-sm text-slate-600">Kelola keuangan rumah tangga Anda.</p>
+
+      <form class="mt-6 flex flex-col gap-4" novalidate @submit.prevent="onSubmit">
+        <div>
+          <label for="login-email" class="mb-1 block text-sm font-medium">Email</label>
+          <UInput
+            id="login-email"
+            v-model="form.email"
+            type="email"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div>
+          <label for="login-password" class="mb-1 block text-sm font-medium">Kata sandi</label>
+          <UInput
+            id="login-password"
+            v-model="form.password"
+            type="password"
+            autocomplete="current-password"
+            required
+            class="w-full"
+            :ui="{ base: 'min-h-12 text-base' }"
+          />
+        </div>
+
+        <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
+          {{ formError }}
+        </p>
+
+        <UButton
+          type="submit"
+          block
+          :loading="submitting"
+          :disabled="submitting"
+          class="min-h-12 text-base"
+        >
+          Masuk
+        </UButton>
+      </form>
+
+      <UButton
+        block
+        color="neutral"
+        variant="outline"
+        class="mt-3 min-h-12 text-base"
+        :disabled="submitting"
+        @click="loginWithGoogle()"
+      >
+        Masuk dengan Google
+      </UButton>
+
+      <div class="mt-4 flex items-center justify-between text-sm">
+        <NuxtLink to="/forgot-password" class="underline"> Lupa kata sandi? </NuxtLink>
+        <NuxtLink to="/register" class="underline"> Daftar </NuxtLink>
+      </div>
+
+      <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">
+        Tidak dapat terhubung ke server. Anda sedang offline.
+      </p>
+    </div>
+  </div>
+</template>

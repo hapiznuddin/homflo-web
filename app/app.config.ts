@@ -1,7 +1,7 @@
 export default defineAppConfig({
   ui: {
     colors: {
-      primary: 'homflo',
+      primary: 'homflo-primary',
       neutral: 'stone'
     },
 

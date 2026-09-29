@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-slate-50 text-slate-900">
+  <div class="min-h-dvh  text-slate-900">
     <header
       class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur"
     >

@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxt/ui', '@nuxt/a11y', '@vite-pwa/nuxt'],
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@nuxt/a11y', '@vite-pwa/nuxt', 'shadcn-nuxt'],
 
   devtools: {
     enabled: true
@@ -63,5 +63,17 @@ export default defineNuxtConfig({
         }
       ]
     }
+  },
+
+  shadcn: {
+    /**
+     * Prefix for all the imported component
+     */
+    prefix: '',
+    /**
+     * Directory that the component lives in.
+     * @default "./components/ui"
+     */
+    componentDir: './components/ui'
   }
 })
