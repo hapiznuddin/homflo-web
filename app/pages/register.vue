@@ -45,30 +45,56 @@
 
       <div>
         <label for="register-password" class="mb-1 block text-sm font-medium">Kata sandi</label>
-        <UInput
+        <VInput
           id="register-password"
           v-model="form.password"
-          type="password"
+          :type="showPassword ? 'text' : 'password'"
           autocomplete="new-password"
           required
           class="w-full"
-          :ui="{ base: 'min-h-12 text-base' }"
-        />
+          :ui="{ base: 'min-h-12 text-base', trailing: 'pe-1' }"
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              :aria-pressed="showPassword"
+              aria-controls="register-password"
+              @click="showPassword = !showPassword"
+            />
+          </template>
+        </VInput>
       </div>
 
       <div>
         <label for="register-password-confirmation" class="mb-1 block text-sm font-medium"
           >Konfirmasi kata sandi</label
         >
-        <UInput
+        <VInput
           id="register-password-confirmation"
           v-model="form.password_confirmation"
-          type="password"
+          :type="showPasswordConfirmation ? 'text' : 'password'"
           autocomplete="new-password"
           required
           class="w-full"
-          :ui="{ base: 'min-h-12 text-base' }"
-        />
+          :ui="{ base: 'min-h-12 text-base', trailing: 'pe-1' }"
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="showPasswordConfirmation ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :aria-label="showPasswordConfirmation ? 'Hide password' : 'Show password'"
+              :aria-pressed="showPasswordConfirmation"
+              aria-controls="register-password-confirmation"
+              @click="showPasswordConfirmation = !showPasswordConfirmation"
+            />
+          </template>
+        </VInput>
       </div>
 
       <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
@@ -94,6 +120,8 @@
 </template>
 
 <script setup lang="ts">
+import VInput from '@/components/ui/VInput.vue'
+
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const auth = useAuth()
@@ -108,6 +136,8 @@ const form = reactive({
 })
 const submitting = ref(false)
 const formError = ref<string | null>(null)
+const showPassword = ref(false)
+const showPasswordConfirmation = ref(false)
 
 async function onSubmit(): Promise<void> {
   submitting.value = true

@@ -23,8 +23,12 @@ onMounted(async () => {
       <p class="mt-1 text-sm text-slate-600">Kelola keuangan rumah tangga dan pribadi.</p>
 
       <div class="mt-6 flex flex-col gap-3">
-        <Button>Masuk</Button>
-        <Button variant="outline">Daftar</Button>
+        <Button as-child>
+          <NuxtLink to="/login">Masuk</NuxtLink>
+        </Button>
+        <Button variant="outline" as-child>
+          <NuxtLink to="/register">Daftar</NuxtLink>
+        </Button>
       </div>
     </div>
   </div>
