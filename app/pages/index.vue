@@ -15,21 +15,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center text-center">
-    <div
-      class="w-full max-w-sm md:max-w-xl lg:max-w-4xl rounded-2xl border border-slate-200 bg-white/30 backdrop-blur-sm p-6 shadow-md"
-    >
-      <h1 class="text-2xl font-bold">Homflo</h1>
-      <p class="mt-1 text-sm text-slate-600">Kelola keuangan rumah tangga dan pribadi.</p>
+  <div class="flex w-full flex-col items-center justify-center text-center">
+      <div class="flex flex-col items-center justify-center gap-4">
+        <NuxtImg
+          src="/img/homflo-light-vertical.webp"
+          alt="Homflo Logo"
+          width="100%"
+          height="100%"
+          class="mx-auto w-full max-w-32 dark:hidden"
+        />
+        <div class="flex flex-col items-center justify-center gap-1">
+          <h1 class="text-2xl font-bold dark:text-stone-300">Mulai lebih tertata</h1>
+          <p class="text-sm text-stone-600 dark:text-stone-400">
+            Satu tempat untuk keuangan pribadi dan keluarga.
+          </p>
+        </div>
+      </div>
 
-      <div class="mt-6 flex flex-col gap-3">
-        <Button as-child>
+      <div class="mt-6 flex flex-col gap-4 w-full">
+        <Button as-child size="lg" class="text-base">
           <NuxtLink to="/login">Masuk</NuxtLink>
         </Button>
-        <Button variant="outline" as-child>
+        <Button variant="outline" as-child size="lg" class="text-base">
           <NuxtLink to="/register">Daftar</NuxtLink>
         </Button>
       </div>
-    </div>
   </div>
 </template>

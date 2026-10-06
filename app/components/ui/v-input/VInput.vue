@@ -20,19 +20,19 @@ const model = defineModel<string | number>()
 // Focus-ring colors bound to the flat Homflo palette in
 // assets/css/main.css. `neutral` is left to the default theme.
 const focusRingClasses: Record<Exclude<HomfloInputColor, 'neutral'>, string> = {
-  primary: 'outline-primary/25 focus-visible:outline-3 focus-visible:ring-primary)',
-  success: 'outline-success/25 focus-visible:outline-3 focus-visible:ring-success)',
-  info: 'outline-info/25 focus-visible:outline-3 focus-visible:ring-info)',
-  warning: 'outline-warning/25 focus-visible:outline-3 focus-visible:ring-warning)',
-  error: 'outline-error/25 focus-visible:outline-3 focus-visible:ring-danger)'
+  primary: 'outline-primary/25 rounded-full focus-visible:outline-3 focus-visible:ring-primary)',
+  success: 'outline-success/25 rounded-full focus-visible:outline-3 focus-visible:ring-success)',
+  info: 'outline-info/25 rounded-full focus-visible:outline-3 focus-visible:ring-info)',
+  warning: 'outline-warning/25 rounded-full focus-visible:outline-3 focus-visible:ring-warning)',
+  error: 'outline-error/25 rounded-full focus-visible:outline-3 focus-visible:ring-danger)'
 }
 
 const highlightClasses: Record<Exclude<HomfloInputColor, 'neutral'>, string> = {
-  primary: 'ring ring-inset ring-primary',
-  success: 'ring ring-inset ring-success',
-  info: 'ring ring-inset ring-info',
-  warning: 'ring ring-inset ring-warning',
-  error: 'ring ring-inset ring-danger'
+  primary: 'ring ring-inset ring-primary rounded-full',
+  success: 'ring ring-inset ring-success rounded-full',
+  info: 'ring ring-inset ring-info rounded-full',
+  warning: 'ring ring-inset ring-warning rounded-full',
+  error: 'ring ring-inset ring-danger rounded-full'
 }
 
 const variantClasses = computed(() => {

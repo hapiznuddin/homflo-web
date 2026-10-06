@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:host": "nuxt dev --host",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
@@ -18,6 +19,7 @@
     "@lucide/vue": "^1.48.0",
     "@nuxt/a11y": "1.0.0-alpha.1",
     "@nuxt/hints": "1.1.4",
+    "@nuxt/image": "2.1.0",
     "@nuxt/ui": "^4.11.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "@vueuse/core": "^15.0.0",

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-dvh  text-slate-900">
     <header
-      class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur"
+      class="sticky top-0 z-10 border-b border-slate-200 bg-background pt-[env(safe-area-inset-top)] backdrop-blur"
     >
       <div class="mx-auto flex h-14 w-full max-w-2xl items-center justify-between px-4">
         <NuxtLink to="/dashboard" class="text-base font-bold"> Homflo </NuxtLink>
@@ -21,7 +21,7 @@
 
     <nav
       aria-label="Navigasi utama"
-      class="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      class="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-background pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <div class="mx-auto grid w-full max-w-2xl grid-cols-2">
         <NuxtLink

@@ -1,49 +1,7 @@
-<template>
-  <div>
-    <h1 class="text-2xl font-bold">Lupa kata sandi</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Masukkan email Anda. Jika terdaftar, tautan pemulihan akan dikirim.
-    </p>
-
-    <form class="mt-6 flex flex-col gap-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="forgot-email" class="mb-1 block text-sm font-medium">Email</label>
-        <UInput
-          id="forgot-email"
-          v-model="form.email"
-          type="email"
-          autocomplete="email"
-          required
-          class="w-full"
-          :ui="{ base: 'min-h-12 text-base' }"
-        />
-      </div>
-
-      <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
-        {{ formError }}
-      </p>
-      <p v-if="sent" role="status" class="text-sm text-green-700">
-        Jika email terdaftar, tautan pemulihan telah dikirim.
-      </p>
-
-      <UButton
-        type="submit"
-        block
-        :loading="submitting"
-        :disabled="submitting"
-        class="min-h-12 text-base"
-      >
-        Kirim tautan pemulihan
-      </UButton>
-    </form>
-
-    <p class="mt-4 text-center text-sm">
-      <NuxtLink to="/login" class="underline"> Kembali masuk </NuxtLink>
-    </p>
-  </div>
-</template>
-
 <script setup lang="ts">
+import VInput from '@/components/ui/v-input/VInput.vue'
+import Button from '@/components/ui/button/Button.vue'
+
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const { api } = useLaravel()
@@ -68,3 +26,68 @@ async function onSubmit(): Promise<void> {
   }
 }
 </script>
+
+<template>
+  <div class="flex w-full flex-col items-center justify-center text-center">
+    <div class="flex flex-col items-center justify-center gap-4">
+      <NuxtImg
+        src="/img/homflo-light-vertical.webp"
+        alt="Homflo Logo"
+        width="100%"
+        height="100%"
+        class="mx-auto w-full max-w-32 dark:hidden"
+      />
+      <div class="flex flex-col items-center justify-center gap-1">
+        <h1 class="text-2xl font-bold">Lupa kata sandi</h1>
+        <p class="text-sm text-stone-500">
+          Masukkan email Anda. Jika terdaftar, tautan pemulihan akan dikirim.
+        </p>
+      </div>
+    </div>
+
+    <form class="mt-6 flex flex-col gap-6 w-full" novalidate @submit.prevent="onSubmit">
+      <div class="flex flex-col w-full justify-start items-start gap-1">
+        <label for="forgot-email" class="block text-sm md:text-base font-medium">Email</label>
+        <VInput
+          id="forgot-email"
+          v-model="form.email"
+          trailing-icon="i-lucide-at-sign"
+          type="email"
+          size="lg"
+          placeholder="Enter your email"
+          autocomplete="email"
+          required
+          class="w-full"
+          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
+        />
+      </div>
+
+      <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
+        {{ formError }}
+      </p>
+      <p v-if="sent" role="status" class="text-sm text-green-700">
+        Jika email terdaftar, tautan pemulihan telah dikirim.
+      </p>
+
+      <Button
+        type="submit"
+        block
+        size="lg"
+        :loading="submitting"
+        :disabled="submitting"
+        class="text-base"
+      >
+        Kirim Email
+      </Button>
+    </form>
+
+    <div class="mt-6 flex items-center justify-center gap-1">
+      <NuxtLink
+        to="/login"
+        class="underline text-end font-medium text-primary/90 hover:text-primary/60"
+      >
+        Kembali ke halaman login
+      </NuxtLink>
+    </div>
+  </div>
+</template>

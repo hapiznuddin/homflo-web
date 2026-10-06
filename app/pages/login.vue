@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import VInput from '@/components/ui/VInput.vue'
-import Button from '@/components/ui/VButton.vue'
+import VInput from '@/components/ui/v-input/VInput.vue'
+import Button from '@/components/ui/button/Button.vue'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
@@ -38,26 +38,35 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center text-center">
-    <div
-      class="w-full max-w-sm md:max-w-xl lg:max-w-4xl rounded-2xl border border-slate-200 bg-white/30 backdrop-blur-sm p-6 shadow-md"
-    >
-      <h1 class="text-2xl font-bold">Masuk</h1>
-      <p class="mt-1 text-sm text-slate-600">Kelola keuangan rumah tangga Anda.</p>
+  <div class="flex flex-col items-center justify-center text-center w-full">
+      <div class="flex flex-col items-center justify-center gap-4">
+        <NuxtImg
+          src="/img/homflo-light-vertical.webp"
+          alt="Homflo Logo"
+          width="100%"
+          height="100%"
+          class="mx-auto w-full max-w-32 dark:hidden"
+        />
+        <div class="flex flex-col items-center justify-center gap-1">
+          <h1 class="text-2xl font-bold">Selamat Datang Kembali</h1>
+          <p class="text-sm text-stone-500">Kelola keuangan rumah tangga anda, mulai dari sini.</p>
+        </div>
+      </div>
 
-      <form class="mt-6 flex flex-col gap-4" novalidate @submit.prevent="onSubmit">
+      <form class="mt-6 flex flex-col gap-4 w-full" novalidate @submit.prevent="onSubmit">
         <div class="flex flex-col w-full justify-start items-start gap-1">
-          <label for="login-email" class="block text-sm font-medium">Email</label>
+          <label for="login-email" class="block text-sm md:text-base font-medium">Email</label>
           <VInput
             id="login-email"
             v-model="form.email"
             trailing-icon="i-lucide-at-sign"
             placeholder="Enter your email"
-            size="md"
+            size="lg"
             type="email"
             autocomplete="email"
             required
             class="w-full"
+            :ui="{ base: 'min-h-10 text-base rounded-lg' }"
           />
         </div>
 
@@ -69,15 +78,16 @@ async function onSubmit(): Promise<void> {
             :type="show ? 'text' : 'password'"
             autocomplete="current-password"
             required
+            size="lg"
             class="w-full"
             placeholder="Password"
-            :ui="{ trailing: 'pe-1' }"
+            :ui="{ trailing: 'pe-1', base: 'min-h-10 text-base rounded-lg' }"
           >
             <template #trailing>
               <UButton
                 color="neutral"
                 variant="link"
-                size="sm"
+                size="md"
                 :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                 :aria-label="show ? 'Hide password' : 'Show password'"
                 :aria-pressed="show"
@@ -94,20 +104,31 @@ async function onSubmit(): Promise<void> {
 
         <NuxtLink
           to="/forgot-password"
-          class="underline text-end text-sm font-medium hover:text-primary/80"
+          class="underline self-end text-sm font-medium text-primary/90 hover:text-primary/70 w-fit"
         >
           Lupa Password?
         </NuxtLink>
-        <Button type="submit" block :loading="submitting" :disabled="submitting" class="text-base">
+
+        <Button
+          type="submit"
+          size="lg"
+          block
+          :loading="submitting"
+          :disabled="submitting"
+          class="text-base"
+        >
           Masuk
         </Button>
       </form>
+
+      <USeparator label="Atau" class="my-4 text-stone-400" />
 
       <Button
         block
         color="neutral"
         variant="outline"
-        class="mt-3 text-base"
+        size="lg"
+        class="text-base w-full"
         :disabled="submitting"
         @click="loginWithGoogle()"
       >
@@ -139,9 +160,12 @@ async function onSubmit(): Promise<void> {
         Masuk dengan Google
       </Button>
 
-      <div class="mt-4 flex items-center justify-center gap-1">
-        <p>Belum punya akun?</p>
-        <NuxtLink to="/register" class="underline text-end font-medium hover:text-primary/80">
+      <div class="mt-6 flex items-center justify-center gap-1">
+        <p class="text-stone-600">Belum punya akun?</p>
+        <NuxtLink
+          to="/register"
+          class="underline text-end font-medium text-primary/90 hover:text-primary/60"
+        >
           Daftar
         </NuxtLink>
       </div>
@@ -150,7 +174,6 @@ async function onSubmit(): Promise<void> {
         Tidak dapat terhubung ke server. Anda sedang offline.
       </p>
     </div>
-  </div>
 </template>
 
 <style>
