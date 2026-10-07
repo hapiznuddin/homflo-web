@@ -17,6 +17,12 @@ export default defineAppConfig({
       defaultVariants: {
         size: 'lg'
       }
+    },
+
+    toast: {
+      slots: {
+        root: 'relative group overflow-hidden bg-background shadow-lg rounded-lg ring ring-default p-4 flex gap-2.5'
+      }
     }
   }
 })

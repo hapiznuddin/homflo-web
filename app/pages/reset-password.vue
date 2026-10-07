@@ -1,3 +1,46 @@
+<script setup lang="ts">
+definePageMeta({ layout: 'auth', middleware: 'guest' })
+
+const route = useRoute()
+const { nuxtApi } = useLaravel()
+const toast = useToast()
+
+const form = reactive({
+  email: typeof route.query.email === 'string' ? route.query.email : '',
+  token: typeof route.query.token === 'string' ? route.query.token : '',
+  password: '',
+  password_confirmation: ''
+})
+const submitting = ref(false)
+const formError = ref<string | null>(null)
+const done = ref(false)
+
+async function onSubmit(): Promise<void> {
+  submitting.value = true
+  formError.value = null
+  done.value = false
+
+  try {
+    await nuxtApi('/password/reset', { method: 'POST', body: { ...form } })
+    done.value = true
+    toast.add({
+      title: 'Kata sandi diubah',
+      description: 'Silakan masuk dengan kata sandi baru Anda.',
+      color: 'success'
+    })
+  } catch (error: unknown) {
+    toast.add({
+      title: 'Gagal mengubah kata sandi',
+      description: readError(error, 'Tautan tidak valid atau kedaluwarsa.'),
+      color: 'error'
+    })
+    // formError.value = readError(error, 'Tautan tidak valid atau kedaluwarsa.')
+  } finally {
+    submitting.value = false
+  }
+}
+</script>
+
 <template>
   <div>
     <h1 class="text-2xl font-bold">Atur ulang kata sandi</h1>
@@ -55,44 +98,14 @@
       <UButton
         type="submit"
         block
+        loading-auto
+        size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="min-h-12 text-base"
+        class="text-base rounded-full"
       >
         Ubah kata sandi
       </UButton>
     </form>
   </div>
 </template>
-
-<script setup lang="ts">
-definePageMeta({ layout: 'auth', middleware: 'guest' })
-
-const route = useRoute()
-const { api } = useLaravel()
-
-const form = reactive({
-  email: typeof route.query.email === 'string' ? route.query.email : '',
-  token: typeof route.query.token === 'string' ? route.query.token : '',
-  password: '',
-  password_confirmation: ''
-})
-const submitting = ref(false)
-const formError = ref<string | null>(null)
-const done = ref(false)
-
-async function onSubmit(): Promise<void> {
-  submitting.value = true
-  formError.value = null
-  done.value = false
-
-  try {
-    await api('/password/reset', { method: 'POST', body: { ...form } })
-    done.value = true
-  } catch (error: unknown) {
-    formError.value = readError(error, 'Tautan tidak valid atau kedaluwarsa.')
-  } finally {
-    submitting.value = false
-  }
-}
-</script>

@@ -30,7 +30,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: import.meta.env.NUXT_API_BASE
+      apiBase: import.meta.env.NUXT_API_BASE,
+      // Frontend origin used as Sanctum stateful Origin fallback on the
+      // server boundary. Overridable via NUXT_PUBLIC_SITE_URL.
+      siteUrl: 'http://localhost:3000'
     }
   },
 

@@ -5,19 +5,68 @@ import Button from '@/components/ui/button/Button.vue'
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuth()
 const { csrf, origin } = useLaravel()
-const { loginWithGoogle } = auth
+const { startGoogleOAuth, oauthRedirecting, oauthProcessing } = auth
+
+const toast = useToast()
 
 const form = reactive({ email: '', password: '' })
 const submitting = ref(false)
-const formError = ref<string | null>(null)
 
 const show = ref(false)
 
+// The query flag renders the processing modal synchronously on first
+// paint (including SSR), so feedback is instant instead of waiting for
+// the mounted bootstrap below.
+const isOAuthReturn = computed(() => route.query.oauth === 'processing')
+
+// OAuth return path: the callback route hands off here with
+// ?oauth=processing. Resolve the shared bootstrap, then show an explicit
+// success/failure result inside the modal before leaving the page.
+const oauthResult = ref<{ ok: boolean; message: string } | null>(null)
+
+function oauthModalVisible(): boolean {
+  return oauthProcessing.value || oauthResult.value !== null || isOAuthReturn.value
+}
+
+onMounted(async () => {
+  if (route.query.oauth !== 'processing') {
+    return
+  }
+
+  oauthProcessing.value = true
+  oauthResult.value = null
+
+  try {
+    await router.replace({ query: {} })
+
+    const result = await auth.bootstrap()
+
+    if (result === 'authenticated') {
+      oauthResult.value = { ok: true, message: 'Login berhasil! Mengalihkan…' }
+      await new Promise((resolve) => setTimeout(resolve, 900))
+      await navigateTo(auth.postAuthDestination())
+    } else if (result === 'error') {
+      oauthResult.value = {
+        ok: false,
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.'
+      }
+    } else {
+      oauthResult.value = { ok: false, message: 'Login gagal. Silakan coba lagi.' }
+    }
+  } finally {
+    oauthProcessing.value = false
+  }
+})
+
+function dismissOAuthResult(): void {
+  oauthResult.value = null
+}
+
 async function onSubmit(): Promise<void> {
   submitting.value = true
-  formError.value = null
 
   try {
     const headers = await csrf()
@@ -28,9 +77,18 @@ async function onSubmit(): Promise<void> {
       body: { email: form.email, password: form.password }
     })
     await auth.refresh()
-    await navigateTo('/dashboard')
+    toast.add({
+      title: 'Login berhasil',
+      description: 'Selamat datang kembali!',
+      color: 'success'
+    })
+    await navigateTo(auth.postAuthDestination())
   } catch (error: unknown) {
-    formError.value = readError(error, 'Email atau kata sandi salah.')
+    toast.add({
+      title: 'Login gagal',
+      description: readError(error, 'Email atau kata sandi salah. Silakan coba lagi.'),
+      color: 'error'
+    })
   } finally {
     submitting.value = false
   }
@@ -71,7 +129,7 @@ async function onSubmit(): Promise<void> {
           id="login-email"
           v-model="form.email"
           trailing-icon="i-lucide-at-sign"
-          placeholder="Enter your email"
+          placeholder="Masukkan email Anda"
           size="lg"
           type="email"
           autocomplete="email"
@@ -93,7 +151,7 @@ async function onSubmit(): Promise<void> {
           required
           size="lg"
           class="w-full"
-          placeholder="Password"
+          placeholder="Masukkan password Anda"
           :ui="{ trailing: 'pe-1', base: 'min-h-10 text-base rounded-lg' }"
         >
           <template #trailing>
@@ -111,10 +169,6 @@ async function onSubmit(): Promise<void> {
         </VInput>
       </div>
 
-      <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
-        {{ formError }}
-      </p>
-
       <NuxtLink
         to="/forgot-password"
         class="underline self-end text-sm font-medium text-primary/90 hover:text-primary/70 w-fit dark:text-primary dark:hover:text-primary/70"
@@ -122,16 +176,17 @@ async function onSubmit(): Promise<void> {
         Lupa Password?
       </NuxtLink>
 
-      <Button
+      <UButton
         type="submit"
         size="lg"
         block
+        loading-auto
         :loading="submitting"
         :disabled="submitting"
-        class="text-base"
+        class="text-base rounded-full"
       >
         Masuk
-      </Button>
+      </UButton>
     </form>
 
     <USeparator label="Atau" class="my-4 text-stone-400" />
@@ -142,8 +197,9 @@ async function onSubmit(): Promise<void> {
       variant="outline"
       size="lg"
       class="text-base w-full dark:text-stone-300"
-      :disabled="submitting"
-      @click="loginWithGoogle()"
+      :loading="oauthRedirecting"
+      :disabled="submitting || oauthRedirecting"
+      @click="startGoogleOAuth('login')"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.8em" viewBox="0 0 16 16">
         <!-- Icon from Material Icon Theme by Material Extensions - https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE -->
@@ -186,6 +242,50 @@ async function onSubmit(): Promise<void> {
     <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">
       Tidak dapat terhubung ke server. Anda sedang offline.
     </p>
+
+    <div
+      v-if="oauthModalVisible()"
+      role="dialog"
+      aria-modal="true"
+      aria-live="polite"
+      aria-label="Status login"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+    >
+      <div
+        class="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl bg-white px-6 py-8 text-center shadow-xl dark:bg-stone-900"
+      >
+        <template v-if="oauthResult">
+          <span
+            v-if="oauthResult.ok"
+            class="flex size-8 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+            aria-hidden="true"
+            >✓</span
+          >
+          <span
+            v-else
+            class="flex size-8 items-center justify-center rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+            aria-hidden="true"
+            >!</span
+          >
+          <p class="text-base font-medium dark:text-white">{{ oauthResult.message }}</p>
+          <button
+            v-if="!oauthResult.ok"
+            type="button"
+            class="mt-1 min-h-11 rounded-lg px-4 text-sm font-medium underline"
+            @click="dismissOAuthResult()"
+          >
+            Tutup
+          </button>
+        </template>
+        <template v-else>
+          <span
+            class="size-8 shrink-0 animate-spin rounded-full border-[3px] border-primary/30 border-t-primary"
+            aria-hidden="true"
+          />
+          <p class="text-base font-medium dark:text-white">Memproses login…</p>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 

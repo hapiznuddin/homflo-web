@@ -1,39 +1,10 @@
-<template>
-  <div>
-    <h1 class="text-2xl font-bold">Verifikasi email</h1>
-
-    <p v-if="isEmailVerified" role="status" class="mt-2 text-sm text-green-700">
-      Email Anda sudah terverifikasi.
-    </p>
-    <template v-else>
-      <p class="mt-2 text-sm text-slate-600">
-        Verifikasi email untuk mengaktifkan fitur rumah tangga.
-      </p>
-      <p v-if="sent" role="status" class="mt-2 text-sm text-green-700">
-        Tautan verifikasi telah dikirim ke email Anda.
-      </p>
-      <p v-if="formError" role="alert" aria-live="assertive" class="mt-2 text-sm text-red-600">
-        {{ formError }}
-      </p>
-      <UButton
-        block
-        :loading="submitting"
-        :disabled="submitting"
-        class="mt-4 min-h-12 text-base"
-        @click="onResend()"
-      >
-        Kirim tautan verifikasi
-      </UButton>
-    </template>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({ layout: 'auth', middleware: 'auth' })
 
 const auth = useAuth()
-const { api } = useLaravel()
+const { nuxtApi } = useLaravel()
 const { isEmailVerified } = auth
+const toast = useToast()
 
 const submitting = ref(false)
 const formError = ref<string | null>(null)
@@ -45,12 +16,61 @@ async function onResend(): Promise<void> {
   sent.value = false
 
   try {
-    await api('/email/verification-notification', { method: 'POST' })
+    await nuxtApi('/email/verification-notification', { method: 'POST' })
     sent.value = true
+    toast.add({
+      title: 'Tautan terkirim',
+      description: 'Tautan verifikasi telah dikirim ke email Anda.',
+      color: 'success'
+    })
   } catch (error: unknown) {
-    formError.value = readError(error, 'Gagal mengirim tautan. Coba lagi.')
+    toast.add({
+      title: 'Gagal mengirim tautan',
+      description: readError(error, 'Gagal mengirim tautan. Coba lagi.'),
+      color: 'error'
+    })
+    // formError.value = readError(error, 'Gagal mengirim tautan. Coba lagi.')
   } finally {
     submitting.value = false
   }
 }
 </script>
+
+<template>
+  <div class="flex w-full flex-col items-center justify-center text-center">
+    <h1 class="text-2xl font-bold">Verifikasi email</h1>
+
+    <p v-if="isEmailVerified" role="status" class="text-sm font-semibold text-green-800">
+      Email Anda sudah terverifikasi.
+    </p>
+    <template v-else>
+      <div class="flex w-full flex-col items-center justify-center text-center gap-2">
+        <p class="text-sm text-stone-600 dark:dark:text-stone-400">
+          Verifikasi email untuk mengaktifkan fitur rumah tangga.
+        </p>
+        <p v-if="sent" role="status" class="text-sm font-semibold text-green-800">
+          Tautan verifikasi telah dikirim ke email Anda.
+        </p>
+        <p
+          v-if="formError"
+          role="alert"
+          aria-live="assertive"
+          class="text-sm font-semibold text-red-800"
+        >
+          {{ formError }}
+        </p>
+        <UButton
+          block
+          size="lg"
+          :loading="submitting"
+          :disabled="submitting"
+          class="mt-4 text-base w-full rounded-full"
+          loading-auto
+          @click="onResend()"
+        >
+          Kirim tautan verifikasi
+        </UButton>
+      </div>
+    </template>
+  </div>
+</template>

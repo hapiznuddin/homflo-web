@@ -4,8 +4,12 @@ import Button from '@/components/ui/button/Button.vue'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
+const route = useRoute()
+const router = useRouter()
 const auth = useAuth()
+const { startGoogleOAuth, oauthRedirecting, oauthProcessing } = auth
 const { csrf, origin } = useLaravel()
+const toast = useToast()
 
 const form = reactive({
   username: '',
@@ -32,12 +36,70 @@ async function onSubmit(): Promise<void> {
       body: { ...form }
     })
     await auth.refresh()
-    await navigateTo('/dashboard')
+    toast.add({
+      title: 'Pendaftaran berhasil',
+      description: 'Selamat datang di Homflo!',
+      color: 'success'
+    })
+    await navigateTo(auth.postAuthDestination())
   } catch (error: unknown) {
-    formError.value = readError(error, 'Pendaftaran gagal. Periksa kembali isian Anda.')
+    toast.add({
+      title: 'Pendaftaran gagal',
+      description: readError(error, 'Pendaftaran gagal. Periksa kembali isian Anda.'),
+      color: 'error'
+    })
+    // formError.value = readError(error, 'Pendaftaran gagal. Periksa kembali isian Anda.')
   } finally {
     submitting.value = false
   }
+}
+
+// The query flag renders the processing modal synchronously on first
+// paint (including SSR), so feedback is instant instead of waiting for
+// the mounted bootstrap below.
+const isOAuthReturn = computed(() => route.query.oauth === 'processing')
+
+// OAuth return path: the callback route hands off here with
+// ?oauth=processing. Resolve the shared bootstrap, then show an explicit
+// success/failure result inside the modal before leaving the page.
+const oauthResult = ref<{ ok: boolean; message: string } | null>(null)
+
+function oauthModalVisible(): boolean {
+  return oauthProcessing.value || oauthResult.value !== null || isOAuthReturn.value
+}
+
+onMounted(async () => {
+  if (route.query.oauth !== 'processing') {
+    return
+  }
+
+  oauthProcessing.value = true
+  oauthResult.value = null
+
+  try {
+    await router.replace({ query: {} })
+
+    const result = await auth.bootstrap()
+
+    if (result === 'authenticated') {
+      oauthResult.value = { ok: true, message: 'Pendaftaran berhasil! Mengalihkan…' }
+      await new Promise((resolve) => setTimeout(resolve, 900))
+      await navigateTo(auth.postAuthDestination())
+    } else if (result === 'error') {
+      oauthResult.value = {
+        ok: false,
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.'
+      }
+    } else {
+      oauthResult.value = { ok: false, message: 'Pendaftaran gagal. Silakan coba lagi.' }
+    }
+  } finally {
+    oauthProcessing.value = false
+  }
+})
+
+function dismissOAuthResult(): void {
+  oauthResult.value = null
 }
 </script>
 
@@ -78,7 +140,7 @@ async function onSubmit(): Promise<void> {
           v-model="form.username"
           type="text"
           autocomplete="username"
-          placeholder="Enter your username"
+          placeholder="Masukkan username Anda"
           required
           class="w-full"
           :ui="{ base: 'min-h-10 text-base rounded-lg' }"
@@ -94,7 +156,7 @@ async function onSubmit(): Promise<void> {
           v-model="form.name"
           type="text"
           autocomplete="name"
-          placeholder="Enter your full name"
+          placeholder="Masukkan nama lengkap Anda"
           required
           class="w-full"
           :ui="{ base: 'min-h-10 text-base rounded-lg' }"
@@ -108,9 +170,10 @@ async function onSubmit(): Promise<void> {
         <VInput
           id="register-email"
           v-model="form.email"
+          trailing-icon="i-lucide-at-sign"
           type="email"
           autocomplete="email"
-          placeholder="Enter your email"
+          placeholder="Masukkan email Anda"
           required
           class="w-full"
           :ui="{ base: 'min-h-10 text-base rounded-lg' }"
@@ -129,7 +192,7 @@ async function onSubmit(): Promise<void> {
           :type="showPassword ? 'text' : 'password'"
           autocomplete="new-password"
           required
-          placeholder="Enter your password"
+          placeholder="Masukkan password Anda"
           class="w-full"
           :ui="{ base: 'min-h-10 text-base rounded-lg', trailing: 'pe-1' }"
         >
@@ -160,7 +223,7 @@ async function onSubmit(): Promise<void> {
           :type="showPasswordConfirmation ? 'text' : 'password'"
           autocomplete="new-password"
           required
-          placeholder="Confirm your password"
+          placeholder="Konfirmasi password Anda"
           class="w-full"
           :ui="{ base: 'min-h-10 text-base rounded-lg', trailing: 'pe-1' }"
         >
@@ -183,16 +246,17 @@ async function onSubmit(): Promise<void> {
         {{ formError }}
       </p>
 
-      <Button
+      <UButton
         type="submit"
         block
+        loading-auto
         size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base mt-4"
+        class="text-base mt-4 rounded-full"
       >
         Daftar
-      </Button>
+      </UButton>
     </form>
 
     <USeparator label="Atau" class="my-4 text-stone-400" />
@@ -203,8 +267,9 @@ async function onSubmit(): Promise<void> {
       variant="outline"
       size="lg"
       class="text-base w-full dark:text-stone-300"
-      :disabled="submitting"
-      @click="loginWithGoogle()"
+      :loading="oauthRedirecting"
+      :disabled="submitting || oauthRedirecting"
+      @click="startGoogleOAuth('register')"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.8em" viewBox="0 0 16 16">
         <!-- Icon from Material Icon Theme by Material Extensions - https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE -->
@@ -242,6 +307,50 @@ async function onSubmit(): Promise<void> {
       >
         Masuk
       </NuxtLink>
+    </div>
+
+    <div
+      v-if="oauthModalVisible()"
+      role="dialog"
+      aria-modal="true"
+      aria-live="polite"
+      aria-label="Status pendaftaran"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+    >
+      <div
+        class="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl bg-white px-6 py-8 text-center shadow-xl dark:bg-stone-900"
+      >
+        <template v-if="oauthResult">
+          <span
+            v-if="oauthResult.ok"
+            class="flex size-8 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+            aria-hidden="true"
+            >✓</span
+          >
+          <span
+            v-else
+            class="flex size-8 items-center justify-center rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+            aria-hidden="true"
+            >!</span
+          >
+          <p class="text-base font-medium dark:text-white">{{ oauthResult.message }}</p>
+          <button
+            v-if="!oauthResult.ok"
+            type="button"
+            class="mt-1 min-h-11 rounded-lg px-4 text-sm font-medium underline"
+            @click="dismissOAuthResult()"
+          >
+            Tutup
+          </button>
+        </template>
+        <template v-else>
+          <span
+            class="size-8 shrink-0 animate-spin rounded-full border-[3px] border-primary/30 border-t-primary"
+            aria-hidden="true"
+          />
+          <p class="text-base font-medium dark:text-white">Memproses pendaftaran…</p>
+        </template>
+      </div>
     </div>
   </div>
 </template>

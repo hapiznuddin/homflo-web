@@ -19,6 +19,14 @@ export function useLaravel() {
     headers: { Accept: 'application/json' }
   })
 
+  // Same-origin Nuxt server boundary. Mutations go through here so the
+  // server can forward session cookies + CSRF state to Laravel.
+  const nuxtApi = $fetch.create({
+    baseURL: '/api',
+    credentials: 'include',
+    headers: { Accept: 'application/json' }
+  })
+
   // Bootstrap CSRF cookies for Laravel web routes (login/register).
   // Reads only the XSRF-TOKEN cookie, never any auth credential.
   async function csrf(): Promise<Record<string, string>> {
@@ -32,5 +40,5 @@ export function useLaravel() {
     return token ? { 'X-XSRF-TOKEN': token } : {}
   }
 
-  return { api, csrf, origin: useLaravelOrigin() }
+  return { api, nuxtApi, csrf, origin: useLaravelOrigin() }
 }

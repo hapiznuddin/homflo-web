@@ -104,7 +104,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const auth = useAuth()
-const { api } = useLaravel()
+const { nuxtApi } = useLaravel()
 const { user, isEmailVerified, logout } = auth
 
 const form = reactive({ current_password: '', password: '', password_confirmation: '' })
@@ -118,7 +118,7 @@ async function onSubmit(): Promise<void> {
   done.value = false
 
   try {
-    await api('/password/change', { method: 'POST', body: { ...form } })
+    await nuxtApi('/password/change', { method: 'POST', body: { ...form } })
     done.value = true
     form.current_password = ''
     form.password = ''

@@ -98,9 +98,22 @@ export function useAuth() {
     error.value = null
 
     try {
+      // Server-side rendering has no browser cookies of its own: forward
+      // them explicitly so SSR resolves the real session instead of always
+      // looking like a guest.
+      const headers: Record<string, string> = { Accept: 'application/json' }
+
+      if (import.meta.server) {
+        const { cookie } = useRequestHeaders(['cookie'])
+
+        if (cookie) {
+          headers.Cookie = cookie
+        }
+      }
+
       const response = await $fetch<{ success: boolean; data: MeData }>('/api/auth/me', {
         credentials: 'include',
-        headers: { Accept: 'application/json' }
+        headers
       })
       user.value = response.data.user
       household.value = response.data.household
@@ -149,10 +162,50 @@ export function useAuth() {
     markUnauthenticated()
   }
 
-  function loginWithGoogle(): void {
-    // Top-level navigation to the backend OAuth entry. The backend sets
-    // the session cookie and redirects back to /auth/callback.
+  // Shared Google OAuth entry for Login and Register. Real browser
+  // navigation (not fetch): Laravel redirects to Google, then back with
+  // a fresh session cookie.
+  const oauthRedirecting = useState<boolean>('auth-oauth-redirecting', () => false)
+  const oauthProcessing = useState<boolean>('auth-oauth-processing', () => false)
+
+  // UI-only intent remembering which page started OAuth. It is never an
+  // authentication authority; the backend session decides everything.
+  function setOAuthIntent(page: 'login' | 'register'): void {
+    try {
+      sessionStorage.setItem('homflo-oauth-intent', page)
+    } catch {
+      // Storage unavailable: callback falls back to login.
+    }
+  }
+
+  function takeOAuthIntent(): 'login' | 'register' {
+    try {
+      const intent = sessionStorage.getItem('homflo-oauth-intent')
+      sessionStorage.removeItem('homflo-oauth-intent')
+
+      return intent === 'register' ? 'register' : 'login'
+    } catch {
+      return 'login'
+    }
+  }
+
+  function startGoogleOAuth(page: 'login' | 'register'): void {
+    if (oauthRedirecting.value) {
+      return
+    }
+
+    setOAuthIntent(page)
+    oauthRedirecting.value = true
     window.location.href = `${useApiBase()}/auth/google/redirect`
+  }
+
+  // Back-compat alias.
+  const loginWithGoogle = () => startGoogleOAuth('login')
+
+  // Post-auth destination from backend onboarding state. Backend is the
+  // authority; the client never guesses household state.
+  function postAuthDestination(): string {
+    return onboarding.value.required ? '/onboarding' : '/dashboard'
   }
 
   return {
@@ -174,6 +227,12 @@ export function useAuth() {
     fetchMe,
     logout,
     loginWithGoogle,
+    startGoogleOAuth,
+    oauthRedirecting,
+    oauthProcessing,
+    setOAuthIntent,
+    takeOAuthIntent,
+    postAuthDestination,
     markUnauthenticated
   }
 }

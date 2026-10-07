@@ -1,26 +1,44 @@
 <script setup lang="ts">
 import VInput from '@/components/ui/v-input/VInput.vue'
-import Button from '@/components/ui/button/Button.vue'
 
 definePageMeta({ layout: 'auth', middleware: 'auth' })
 
 const auth = useAuth()
-const { api } = useLaravel()
+const { nuxtApi } = useLaravel()
+const toast = useToast()
 
 const form = reactive({ name: '' })
 const submitting = ref(false)
 const formError = ref<string | null>(null)
+
+onMounted(async () => {
+  const status = await auth.bootstrap()
+
+  if (status === 'authenticated' && !auth.onboarding.value.required) {
+    await navigateTo('/dashboard')
+  }
+})
 
 async function onSubmit(): Promise<void> {
   submitting.value = true
   formError.value = null
 
   try {
-    await api('/households', { method: 'POST', body: { name: form.name } })
+    await nuxtApi('/households', { method: 'POST', body: { name: form.name } })
     await auth.refresh()
-    await navigateTo('/dashboard')
+    toast.add({
+      title: 'Rumah tangga dibuat',
+      description: 'Selamat! Rumah tangga Anda siap digunakan.',
+      color: 'success'
+    })
+    await navigateTo(auth.postAuthDestination())
   } catch (error: unknown) {
-    formError.value = readError(error, 'Gagal membuat rumah tangga.')
+    toast.add({
+      title: 'Rumah tangga gagal dibuat',
+      description: readError(error, 'Gagal membuat rumah tangga.'),
+      color: 'error'
+    })
+    // formError.value = readError(error, 'Gagal membuat rumah tangga.')
   } finally {
     submitting.value = false
   }
@@ -73,16 +91,17 @@ async function onSubmit(): Promise<void> {
         {{ formError }}
       </p>
 
-      <Button
+      <UButton
         type="submit"
         block
+        loading-auto
         size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base"
+        class="text-base rounded-full"
       >
         Buat
-      </Button>
+      </UButton>
     </form>
   </div>
 </template>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import VInput from '@/components/ui/v-input/VInput.vue'
-import Button from '@/components/ui/button/Button.vue'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
-const { api } = useLaravel()
+const { nuxtApi } = useLaravel()
+const toast = useToast()
 
 const form = reactive({ email: '' })
 const submitting = ref(false)
@@ -17,10 +17,20 @@ async function onSubmit(): Promise<void> {
   sent.value = false
 
   try {
-    await api('/password/forgot', { method: 'POST', body: { email: form.email } })
+    await nuxtApi('/password/forgot', { method: 'POST', body: { email: form.email } })
     sent.value = true
+    toast.add({
+      title: 'Tautan terkirim',
+      description: 'Jika email terdaftar, tautan pemulihan telah dikirim.',
+      color: 'success'
+    })
   } catch (error: unknown) {
-    formError.value = readError(error, 'Permintaan gagal. Coba lagi.')
+    toast.add({
+      title: 'Permintaan gagal',
+      description: readError(error, 'Permintaan gagal. Coba lagi.'),
+      color: 'error'
+    })
+    // formError.value = readError(error, 'Permintaan gagal. Coba lagi.')
   } finally {
     submitting.value = false
   }
@@ -61,7 +71,7 @@ async function onSubmit(): Promise<void> {
           trailing-icon="i-lucide-at-sign"
           type="email"
           size="lg"
-          placeholder="Enter your email"
+          placeholder="Masukkan email Anda"
           autocomplete="email"
           required
           class="w-full"
@@ -76,16 +86,17 @@ async function onSubmit(): Promise<void> {
         Jika email terdaftar, tautan pemulihan telah dikirim.
       </p>
 
-      <Button
+      <UButton
         type="submit"
         block
+        loading-auto
         size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base"
+        class="text-base rounded-full"
       >
         Kirim Email
-      </Button>
+      </UButton>
     </form>
 
     <div class="mt-6 flex items-center justify-center gap-1">
