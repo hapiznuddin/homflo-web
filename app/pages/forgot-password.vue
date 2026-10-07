@@ -37,9 +37,16 @@ async function onSubmit(): Promise<void> {
         height="100%"
         class="mx-auto w-full max-w-32 dark:hidden"
       />
+      <NuxtImg
+        src="/img/homflo-dark-vertical.webp"
+        alt="Homflo Logo"
+        width="100%"
+        height="100%"
+        class="mx-auto w-full max-w-32 hidden dark:block"
+      />
       <div class="flex flex-col items-center justify-center gap-1">
-        <h1 class="text-2xl font-bold">Lupa kata sandi</h1>
-        <p class="text-sm text-stone-500">
+        <h1 class="text-2xl font-bold dark:text-white">Lupa kata sandi</h1>
+        <p class="text-sm text-stone-500 dark:text-stone-400">
           Masukkan email Anda. Jika terdaftar, tautan pemulihan akan dikirim.
         </p>
       </div>
@@ -47,7 +54,7 @@ async function onSubmit(): Promise<void> {
 
     <form class="mt-6 flex flex-col gap-6 w-full" novalidate @submit.prevent="onSubmit">
       <div class="flex flex-col w-full justify-start items-start gap-1">
-        <label for="forgot-email" class="block text-sm md:text-base font-medium">Email</label>
+        <label for="forgot-email" class="block text-sm md:text-base font-medium dark:text-white">Email</label>
         <VInput
           id="forgot-email"
           v-model="form.email"
@@ -84,7 +91,7 @@ async function onSubmit(): Promise<void> {
     <div class="mt-6 flex items-center justify-center gap-1">
       <NuxtLink
         to="/login"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60"
+        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary dark:hover:text-primary/60"
       >
         Kembali ke halaman login
       </NuxtLink>

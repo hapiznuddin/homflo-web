@@ -63,6 +63,7 @@
 @layer base {
   html {
     font-family: var(--font-sans);
+    color: var(--foreground);
   }
 
   body {
@@ -82,7 +83,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--homflo-primary) 35%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent);
     outline-offset: 2px;
   }
 }

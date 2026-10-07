@@ -24,6 +24,13 @@ onMounted(async () => {
           height="100%"
           class="mx-auto w-full max-w-32 dark:hidden"
         />
+        <NuxtImg
+          src="/img/homflo-dark-vertical.webp"
+          alt="Homflo Logo"
+          width="100%"
+          height="100%"
+          class="mx-auto w-full max-w-32 hidden dark:block"
+        />
         <div class="flex flex-col items-center justify-center gap-1">
           <h1 class="text-2xl font-bold dark:text-stone-300">Mulai lebih tertata</h1>
           <p class="text-sm text-stone-600 dark:text-stone-400">
@@ -36,7 +43,7 @@ onMounted(async () => {
         <Button as-child size="lg" class="text-base">
           <NuxtLink to="/login">Masuk</NuxtLink>
         </Button>
-        <Button variant="outline" as-child size="lg" class="text-base">
+        <Button variant="outline" as-child size="lg" class="text-base dark:text-stone-300">
           <NuxtLink to="/register">Daftar</NuxtLink>
         </Button>
       </div>
