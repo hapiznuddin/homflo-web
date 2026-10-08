@@ -171,7 +171,7 @@ async function onSubmit(): Promise<void> {
 
       <NuxtLink
         to="/forgot-password"
-        class="underline self-end text-sm font-medium text-primary/90 hover:text-primary/70 w-fit dark:text-primary dark:hover:text-primary/70"
+        class="underline self-end text-sm font-medium text-primary/90 hover:text-primary/70 w-fit dark:text-primary-dark dark:hover:text-primary-dark/70"
       >
         Lupa Password?
       </NuxtLink>
@@ -183,7 +183,7 @@ async function onSubmit(): Promise<void> {
         loading-auto
         :loading="submitting"
         :disabled="submitting"
-        class="text-base rounded-full"
+        class="text-base rounded-full text-white"
       >
         Masuk
       </UButton>
@@ -233,7 +233,7 @@ async function onSubmit(): Promise<void> {
       <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
       <NuxtLink
         to="/register"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary dark:hover:text-primary/60"
+        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
       >
         Daftar
       </NuxtLink>

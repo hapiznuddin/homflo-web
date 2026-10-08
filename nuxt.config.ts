@@ -47,6 +47,17 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-06-30',
 
+  nitro: {
+    prerender: {
+      // @nuxt/image optimizer routes hang silently during prerender (the
+      // prerenderer awaits an image transform that never settles, which
+      // drains the event loop and exits the build before output is
+      // finalized). They are dynamic endpoints; serve them at runtime.
+      // Nitro matches string patterns with startsWith, hence the prefix.
+      ignore: ['/_ipx/']
+    }
+  },
+
   a11y: {
     enabled: true,
     logIssues: true
@@ -73,10 +84,22 @@ export default defineNuxtConfig({
       background_color: '#ffffff',
       icons: [
         {
-          src: 'pwa-icon.svg',
-          sizes: 'any',
-          type: 'image/svg+xml',
+          src: 'pwa-icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
           purpose: 'any'
+        },
+        {
+          src: 'pwa-icon-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any'
+        },
+        {
+          src: 'pwa-maskable-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable'
         }
       ]
     },

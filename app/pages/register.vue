@@ -253,7 +253,7 @@ function dismissOAuthResult(): void {
         size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base mt-4 rounded-full"
+        class="text-base mt-4 rounded-full text-white"
       >
         Daftar
       </UButton>
@@ -303,7 +303,7 @@ function dismissOAuthResult(): void {
       <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
       <NuxtLink
         to="/login"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:hover:text-primary/60 dark:text-primary"
+        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
       >
         Masuk
       </NuxtLink>

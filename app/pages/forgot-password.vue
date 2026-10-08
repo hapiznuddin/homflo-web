@@ -93,7 +93,7 @@ async function onSubmit(): Promise<void> {
         size="lg"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base rounded-full"
+        class="text-base rounded-full text-white"
       >
         Kirim Email
       </UButton>
@@ -102,7 +102,7 @@ async function onSubmit(): Promise<void> {
     <div class="mt-6 flex items-center justify-center gap-1">
       <NuxtLink
         to="/login"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary dark:hover:text-primary/60"
+        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
       >
         Kembali ke halaman login
       </NuxtLink>
