@@ -74,29 +74,40 @@ export default defineNuxtConfig({
 
   pwa: {
     registerType: 'prompt',
+    // Serve the web manifest (and dev-sw) from the official vite-plugin-pwa
+    // dev middleware so GET /manifest.webmanifest never falls through to the
+    // Nuxt SSR renderer (which produced Vue Router R0004 warnings).
+    // Safety: dev precache glob dir (.nuxt/dev-sw-dist) is empty, the
+    // navigateFallback allowlist is pinned to exactly '/', our NetworkOnly
+    // /api/ runtime rule is preserved, and 'prompt' registration never
+    // claims open clients.
+    devOptions: {
+      enabled: true
+    },
     manifest: {
+      id: '/',
+      lang: 'id',
       name: 'Homflo',
       short_name: 'Homflo',
       description: 'Kelola keuangan rumah tangga dan pribadi.',
       display: 'standalone',
       start_url: '/',
+      scope: '/',
       theme_color: '#00A155',
       background_color: '#ffffff',
       icons: [
         {
-          src: 'pwa-icon-192.png',
+          src: '/pwa-icon-192.png',
           sizes: '192x192',
-          type: 'image/png',
-          purpose: 'any'
+          type: 'image/png'
         },
         {
-          src: 'pwa-icon-512.png',
+          src: '/pwa-icon-512.png',
           sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any'
+          type: 'image/png'
         },
         {
-          src: 'pwa-maskable-512.png',
+          src: '/pwa-maskable-512.png',
           sizes: '512x512',
           type: 'image/png',
           purpose: 'maskable'

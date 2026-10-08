@@ -4,10 +4,7 @@ useHead({
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
     { name: 'theme-color', content: '#00A155' }
   ],
-  link: [
-    { rel: 'icon', href: '/favicon.ico' },
-    { rel: 'manifest', href: '/manifest.webmanifest' }
-  ],
+  link: [{ rel: 'icon', href: '/favicon.ico' }],
   htmlAttrs: {
     lang: 'en'
   }
@@ -28,6 +25,7 @@ useSeoMeta({
 </script>
 
 <template>
+  <NuxtPwaManifest />
   <UApp>
     <NuxtLayout>
       <NuxtPage />

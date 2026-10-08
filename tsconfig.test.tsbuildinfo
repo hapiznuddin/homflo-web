@@ -1,0 +1,1 @@
+{"root":["./.nuxt/nuxt.node.d.ts","./vitest.config.ts","./test/unit/format.test.ts","./test/unit/pwa-config.test.ts","./test/unit/pwa-icons.test.ts","./test/e2e/css-assets.test.ts","./test/e2e/manifest-http.test.ts"],"version":"6.0.3"}

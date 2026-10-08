@@ -1,0 +1,18 @@
+{
+  // Typecheck coverage untuk test files yang tidak masuk include Nuxt
+  // (test/unit, test/e2e, vitest.config.ts). Dirujuk dari tsconfig.json
+  // sehingga ikut tercakup `nuxt typecheck` (vue-tsc -b).
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": [".nuxt/nuxt.node.d.ts", "vitest.config.ts", "test/unit/**/*.ts", "test/e2e/**/*.ts"]
+}
