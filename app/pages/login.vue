@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import VInput from '@/components/ui/v-input/VInput.vue'
-import Button from '@/components/ui/button/Button.vue'
-
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const route = useRoute()
@@ -125,17 +122,14 @@ async function onSubmit(): Promise<void> {
         <label for="login-email" class="block text-sm md:text-base font-medium dark:text-white"
           >Email</label
         >
-        <VInput
+        <UInput
           id="login-email"
           v-model="form.email"
           trailing-icon="i-lucide-at-sign"
           placeholder="Masukkan email Anda"
-          size="lg"
           type="email"
           autocomplete="email"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -143,20 +137,17 @@ async function onSubmit(): Promise<void> {
         <label for="login-password" class="block text-sm font-medium dark:text-white"
           >Password</label
         >
-        <VInput
+        <UInput
           id="login-password"
           v-model="form.password"
           :type="show ? 'text' : 'password'"
           autocomplete="current-password"
           required
-          size="lg"
-          class="w-full"
           placeholder="Masukkan password Anda"
-          :ui="{ trailing: 'pe-1', base: 'min-h-10 text-base rounded-lg' }"
+          :ui="{ trailing: 'pe-1' }"
         >
           <template #trailing>
             <UButton
-              color="neutral"
               variant="link"
               size="md"
               :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -166,37 +157,31 @@ async function onSubmit(): Promise<void> {
               @click="show = !show"
             />
           </template>
-        </VInput>
+        </UInput>
       </div>
 
-      <NuxtLink
-        to="/forgot-password"
-        class="underline self-end text-sm font-medium text-primary/90 hover:text-primary/70 w-fit dark:text-primary-dark dark:hover:text-primary-dark/70"
-      >
-        Lupa Password?
-      </NuxtLink>
+      <UButton variant="link" size="lg" class="self-end" as-child>
+        <NuxtLink to="/forgot-password"> Lupa Password? </NuxtLink>
+      </UButton>
 
       <UButton
         type="submit"
-        size="lg"
+        size="xl"
         block
         loading-auto
         :loading="submitting"
         :disabled="submitting"
-        class="text-base rounded-full text-white"
       >
         Masuk
       </UButton>
     </form>
 
-    <USeparator label="Atau" class="my-4 text-stone-400" />
+    <USeparator label="Atau" class="my-4" />
 
-    <Button
+    <UButton
       block
-      color="neutral"
       variant="outline"
-      size="lg"
-      class="text-base w-full dark:text-stone-300"
+      size="xl"
       :loading="oauthRedirecting"
       :disabled="submitting || oauthRedirecting"
       @click="startGoogleOAuth('login')"
@@ -227,16 +212,13 @@ async function onSubmit(): Promise<void> {
         </g>
       </svg>
       Masuk dengan Google
-    </Button>
+    </UButton>
 
     <div class="mt-6 flex items-center justify-center gap-1">
       <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
-      <NuxtLink
-        to="/register"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
-      >
-        Daftar
-      </NuxtLink>
+      <UButton variant="link" size="xl" as-child>
+        <NuxtLink to="/register"> Daftar </NuxtLink>
+      </UButton>
     </div>
 
     <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">

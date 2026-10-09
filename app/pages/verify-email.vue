@@ -61,10 +61,10 @@ async function onResend(): Promise<void> {
         </p>
         <UButton
           block
-          size="lg"
+          size="xl"
           :loading="submitting"
           :disabled="submitting"
-          class="mt-4 text-base w-full rounded-full"
+          class="mt-4"
           loading-auto
           @click="onResend()"
         >

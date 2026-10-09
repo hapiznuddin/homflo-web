@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import VInput from '@/components/ui/v-input/VInput.vue'
-
 definePageMeta({ layout: 'auth', middleware: 'auth' })
 
 const auth = useAuth()
@@ -75,15 +73,13 @@ async function onSubmit(): Promise<void> {
         <label for="onboarding-name" class="block text-sm md:text-base font-medium dark:text-white"
           >Nama rumah tangga</label
         >
-        <VInput
+        <UInput
           id="onboarding-name"
           v-model="form.name"
           type="text"
           autocomplete="off"
           placeholder="Contoh: Rumah Tangga Budi"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -95,10 +91,9 @@ async function onSubmit(): Promise<void> {
         type="submit"
         block
         loading-auto
-        size="lg"
+        size="xl"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base rounded-full"
       >
         Buat
       </UButton>

@@ -15,5 +15,6 @@ const isDark = computed({
     checked-icon="i-lucide-moon"
     unchecked-icon="i-lucide-sun"
     aria-label="Ubah tema terang atau gelap"
+    size="xl"
   />
 </template>

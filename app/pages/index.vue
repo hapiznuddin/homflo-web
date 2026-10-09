@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import Button from '@/components/ui/button/Button.vue'
-
 definePageMeta({ layout: 'auth' })
 
 const auth = useAuth()
@@ -40,12 +38,12 @@ onMounted(async () => {
       </div>
 
       <div class="mt-6 flex flex-col gap-4 w-full">
-        <Button as-child size="lg" class="text-base">
+        <UButton as-child size="xl">
           <NuxtLink to="/login">Masuk</NuxtLink>
-        </Button>
-        <Button variant="outline" as-child size="lg" class="text-base dark:text-stone-300">
+        </UButton>
+        <UButton variant="outline" as-child size="xl">
           <NuxtLink to="/register">Daftar</NuxtLink>
-        </Button>
+        </UButton>
       </div>
   </div>
 </template>

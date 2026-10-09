@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import VInput from '@/components/ui/v-input/VInput.vue'
-import Button from '@/components/ui/button/Button.vue'
-
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const route = useRoute()
@@ -135,15 +132,13 @@ function dismissOAuthResult(): void {
           class="block text-sm md:text-base font-medium dark:text-white"
           >Username</label
         >
-        <VInput
+        <UInput
           id="register-username"
           v-model="form.username"
           type="text"
           autocomplete="username"
           placeholder="Masukkan username Anda"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -151,15 +146,13 @@ function dismissOAuthResult(): void {
         <label for="register-name" class="block text-sm md:text-base font-medium dark:text-white"
           >Nama lengkap</label
         >
-        <VInput
+        <UInput
           id="register-name"
           v-model="form.name"
           type="text"
           autocomplete="name"
           placeholder="Masukkan nama lengkap Anda"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -167,7 +160,7 @@ function dismissOAuthResult(): void {
         <label for="register-email" class="block text-sm md:text-base font-medium dark:text-white"
           >Email</label
         >
-        <VInput
+        <UInput
           id="register-email"
           v-model="form.email"
           trailing-icon="i-lucide-at-sign"
@@ -175,8 +168,6 @@ function dismissOAuthResult(): void {
           autocomplete="email"
           placeholder="Masukkan email Anda"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -186,19 +177,17 @@ function dismissOAuthResult(): void {
           class="block text-sm md:text-base font-medium dark:text-white"
           >Kata sandi</label
         >
-        <VInput
+        <UInput
           id="register-password"
           v-model="form.password"
           :type="showPassword ? 'text' : 'password'"
           autocomplete="new-password"
           required
           placeholder="Masukkan password Anda"
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg', trailing: 'pe-1' }"
+          :ui="{ trailing: 'pe-1' }"
         >
           <template #trailing>
             <UButton
-              color="neutral"
               variant="link"
               size="sm"
               :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -208,7 +197,7 @@ function dismissOAuthResult(): void {
               @click="showPassword = !showPassword"
             />
           </template>
-        </VInput>
+        </UInput>
       </div>
 
       <div class="flex flex-col w-full justify-start items-start gap-1">
@@ -217,19 +206,17 @@ function dismissOAuthResult(): void {
           class="block text-sm md:text-base font-medium dark:text-white"
           >Konfirmasi kata sandi</label
         >
-        <VInput
+        <UInput
           id="register-password-confirmation"
           v-model="form.password_confirmation"
           :type="showPasswordConfirmation ? 'text' : 'password'"
           autocomplete="new-password"
           required
           placeholder="Konfirmasi password Anda"
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg', trailing: 'pe-1' }"
+          :ui="{ trailing: 'pe-1' }"
         >
           <template #trailing>
             <UButton
-              color="neutral"
               variant="link"
               size="sm"
               :icon="showPasswordConfirmation ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -239,7 +226,7 @@ function dismissOAuthResult(): void {
               @click="showPasswordConfirmation = !showPasswordConfirmation"
             />
           </template>
-        </VInput>
+        </UInput>
       </div>
 
       <p v-if="formError" role="alert" aria-live="assertive" class="text-sm text-red-600">
@@ -250,10 +237,10 @@ function dismissOAuthResult(): void {
         type="submit"
         block
         loading-auto
-        size="lg"
+        size="xl"
         :loading="submitting"
         :disabled="submitting"
-        class="text-base mt-4 rounded-full text-white"
+        class="mt-4"
       >
         Daftar
       </UButton>
@@ -261,12 +248,10 @@ function dismissOAuthResult(): void {
 
     <USeparator label="Atau" class="my-4 text-stone-400" />
 
-    <Button
+    <UButton
       block
-      color="neutral"
       variant="outline"
-      size="lg"
-      class="text-base w-full dark:text-stone-300"
+      size="xl"
       :loading="oauthRedirecting"
       :disabled="submitting || oauthRedirecting"
       @click="startGoogleOAuth('register')"
@@ -297,16 +282,13 @@ function dismissOAuthResult(): void {
         </g>
       </svg>
       Daftar dengan Google
-    </Button>
+    </UButton>
 
     <div class="mt-6 flex items-center justify-center gap-1">
       <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
-      <NuxtLink
-        to="/login"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
-      >
-        Masuk
-      </NuxtLink>
+      <UButton variant="link" size="xl" as-child>
+        <NuxtLink to="/login"> Masuk </NuxtLink>
+      </UButton>
     </div>
 
     <div

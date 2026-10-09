@@ -64,7 +64,9 @@ async function onSubmit(): Promise<void> {
 
     <form class="mt-6 flex flex-col gap-6 w-full" novalidate @submit.prevent="onSubmit">
       <div class="flex flex-col w-full justify-start items-start gap-1">
-        <label for="forgot-email" class="block text-sm md:text-base font-medium dark:text-white">Email</label>
+        <label for="forgot-email" class="block text-sm md:text-base font-medium dark:text-white"
+          >Email</label
+        >
         <VInput
           id="forgot-email"
           v-model="form.email"
@@ -100,12 +102,9 @@ async function onSubmit(): Promise<void> {
     </form>
 
     <div class="mt-6 flex items-center justify-center gap-1">
-      <NuxtLink
-        to="/login"
-        class="underline text-end font-medium text-primary/90 hover:text-primary/60 dark:text-primary-dark dark:hover:text-primary-dark/70"
-      >
-        Kembali ke halaman login
-      </NuxtLink>
+      <UButton variant="link" size="xl" as-child>
+        <NuxtLink to="/login"> Kembali ke halaman login </NuxtLink>
+      </UButton>
     </div>
   </div>
 </template>

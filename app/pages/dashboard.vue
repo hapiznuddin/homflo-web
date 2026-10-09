@@ -17,7 +17,7 @@ function retry(): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-5">
+  <div class="flex flex-col gap-4 sm:gap-5 w-full">
     <div v-if="pending && !data" class="flex flex-col gap-4" aria-label="Memuat dashboard">
       <USkeleton class="h-16 w-2/3" />
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">

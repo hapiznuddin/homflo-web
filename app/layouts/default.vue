@@ -53,6 +53,33 @@ async function onLogout(): Promise<void> {
   await auth.logout()
   await navigateTo('/login')
 }
+
+const logoSet = computed(() => ({
+  expanded: [
+    { src: '/img/homflo-light-horizontal.webp', class: 'dark:hidden' },
+    { src: '/img/homflo-dark-horizontal.webp', class: 'hidden dark:block' }
+  ],
+  collapsed: [
+    { src: '/img/homflo-light-icon.webp', class: 'dark:hidden' },
+    { src: '/img/homflo-dark-icon.webp', class: 'hidden dark:block' }
+  ]
+}))
+
+const pastelColors = [
+  { bg: '#FDE7F3', text: '#9D174D' },
+  { bg: '#E0F2FE', text: '#1D4ED8' },
+  { bg: '#DCFCE7', text: '#166534' },
+  { bg: '#FEF3C7', text: '#92400E' },
+  { bg: '#F3E8FF', text: '#6B21A8' },
+  { bg: '#E0F7FA', text: '#0F766E' }
+]
+
+const avatarTheme = computed(() => {
+  const name = auth.user.value?.name ?? 'Pengguna'
+  const sum = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+  const color = pastelColors[sum % pastelColors.length]
+  return color
+})
 </script>
 
 <template>
@@ -60,58 +87,75 @@ async function onLogout(): Promise<void> {
     <UDashboardSidebar
       collapsible
       resizable
-      class="hidden md:flex"
+      class="hidden lg:flex"
       :ui="{ footer: 'border-t border-default' }"
     >
       <template #header="{ collapsed }">
-        <span v-if="!collapsed" class="text-base font-bold">Homflo</span>
-        <UIcon v-else name="i-lucide-house" class="mx-auto size-5 text-primary" />
+        <div class="flex items-center justify-center w-full">
+          <NuxtImg
+            v-for="(logo, index) in collapsed ? logoSet.collapsed : logoSet.expanded"
+            :key="index"
+            :src="logo.src"
+            alt="Homflo Logo"
+            width="100%"
+            height="100%"
+            :class="['mx-auto w-full max-w-30', logo.class]"
+          />
+        </div>
       </template>
 
       <template #default="{ collapsed }">
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="items[0]"
-          orientation="vertical"
-        />
-        <p v-if="!collapsed" class="mt-4 mb-1 px-2 text-xs font-medium text-muted uppercase">
+        <UNavigationMenu :collapsed="collapsed" :items="items[0]" orientation="vertical" />
+        <p v-if="!collapsed" class="mt-2 px-2 text-xs font-medium text-muted uppercase">
           Rumah Tangga
         </p>
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="items[1]"
-          orientation="vertical"
-        />
-        <p v-if="!collapsed" class="mt-4 mb-1 px-2 text-xs font-medium text-muted uppercase">
-          Sistem
-        </p>
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="items[2]"
-          orientation="vertical"
-        />
+        <UNavigationMenu :collapsed="collapsed" :items="items[1]" orientation="vertical" />
+        <p v-if="!collapsed" class="mt-2 px-2 text-xs font-medium text-muted uppercase">Sistem</p>
+        <UNavigationMenu :collapsed="collapsed" :items="items[2]" orientation="vertical" />
       </template>
 
       <template #footer="{ collapsed }">
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-6 my-4 w-full">
           <div v-if="!collapsed" class="flex items-center gap-2 px-2 py-1">
-            <UAvatar :text="userInitial" size="sm" :alt="auth.user.value?.name ?? 'Pengguna'" />
+            <UAvatar
+              :text="userInitial"
+              size="md"
+              :alt="auth.user.value?.name ?? 'Pengguna'"
+              :style="{
+                backgroundColor: avatarTheme.bg,
+                color: avatarTheme.text,
+                border: '1px solid rgba(0,0,0,0.04)'
+              }"
+              class="font-semibold"
+            />
             <div class="min-w-0 flex-1 leading-tight">
               <p class="truncate text-sm font-medium">{{ auth.user.value?.name ?? '-' }}</p>
               <p class="truncate text-xs text-muted">{{ auth.household.value?.role ?? '-' }}</p>
             </div>
           </div>
-          <div v-if="!collapsed" class="flex items-center justify-between px-2 py-1 text-sm">
-            <span>Tema gelap</span>
-            <ThemeSwitch />
+          <div v-if="collapsed" class="flex items-center justify-center">
+            <UAvatar
+              :text="userInitial"
+              size="md"
+              :alt="auth.user.value?.name ?? 'Pengguna'"
+              :style="{
+                backgroundColor: avatarTheme.bg,
+                color: avatarTheme.text,
+                border: '1px solid rgba(0,0,0,0.04)'
+              }"
+              class="font-semibold"
+            />
           </div>
+          <!-- <div v-if="!collapsed" class="flex items-center justify-between px-2 py-1 text-sm">
+            <ThemeSwitch />
+          </div> -->
           <UButton
             :label="collapsed ? undefined : 'Keluar'"
             icon="i-lucide-log-out"
-            color="neutral"
             variant="ghost"
             :block="!collapsed"
             :square="collapsed"
+            class="justify-start dark:text-white"
             @click="onLogout()"
           />
         </div>
@@ -120,20 +164,32 @@ async function onLogout(): Promise<void> {
 
     <UDashboardPanel>
       <template #header>
-        <UDashboardNavbar title="Homflo">
+        <UDashboardNavbar>
           <template #leading>
             <UDashboardSidebarCollapse class="md:hidden" />
           </template>
 
           <template #right>
-            <ThemeSwitch />
-            <UAvatar :text="userInitial" size="sm" :alt="auth.user.value?.name ?? 'Pengguna'" />
+            <div class="flex items-center gap-4">
+              <ThemeSwitch />
+              <UAvatar
+                :text="userInitial"
+                size="md"
+                :alt="auth.user.value?.name ?? 'Pengguna'"
+                :style="{
+                  backgroundColor: avatarTheme.bg,
+                  color: avatarTheme.text,
+                  border: '1px solid rgba(0,0,0,0.04)'
+                }"
+                class="font-semibold"
+              />
+            </div>
           </template>
         </UDashboardNavbar>
       </template>
 
       <template #body>
-        <div class="mx-auto w-full max-w-2xl px-4 pb-28 pt-4 md:pb-10 lg:max-w-5xl">
+        <div class="mx-auto w-full pb-28 pt-2 md:pb-20 lg:pb-10">
           <slot />
         </div>
       </template>
@@ -144,7 +200,7 @@ async function onLogout(): Promise<void> {
 
     <nav
       aria-label="Navigasi utama"
-      class="fixed inset-x-0 bottom-0 z-10 border-t border-default bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+      class="fixed inset-x-0 bottom-0 z-10 border-t border-default bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <div class="mx-auto grid w-full max-w-2xl grid-cols-2">
         <NuxtLink
