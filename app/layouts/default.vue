@@ -3,6 +3,8 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 
 const auth = useAuth()
 
+const sidebarMobileWidth = 'w-56 max-w-[72vw]'
+
 const items: NavigationMenuItem[][] = [
   [
     {
@@ -12,13 +14,11 @@ const items: NavigationMenuItem[][] = [
     },
     {
       label: 'Uang',
-      icon: 'i-lucide-circle-dollar-sign',
-      disabled: true
+      icon: 'i-lucide-circle-dollar-sign'
     },
     {
       label: 'Daftar',
-      icon: 'i-lucide-list',
-      disabled: true
+      icon: 'i-lucide-list'
     }
   ],
   [
@@ -77,7 +77,7 @@ const pastelColors = [
 const avatarTheme = computed(() => {
   const name = auth.user.value?.name ?? 'Pengguna'
   const sum = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  const color = pastelColors[sum % pastelColors.length]
+  const color = pastelColors[sum % pastelColors.length]!
   return color
 })
 </script>
@@ -88,10 +88,12 @@ const avatarTheme = computed(() => {
       collapsible
       resizable
       class="hidden lg:flex"
-      :ui="{ footer: 'border-t border-default' }"
+      open
+      toggle-side="right"
+      :ui="{ content: sidebarMobileWidth }"
     >
       <template #header="{ collapsed }">
-        <div class="flex items-center justify-center w-full">
+        <div class="lg:w-full">
           <NuxtImg
             v-for="(logo, index) in collapsed ? logoSet.collapsed : logoSet.expanded"
             :key="index"
@@ -105,13 +107,34 @@ const avatarTheme = computed(() => {
       </template>
 
       <template #default="{ collapsed }">
-        <UNavigationMenu :collapsed="collapsed" :items="items[0]" orientation="vertical" />
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="items[0]"
+          orientation="vertical"
+          :ui="{
+            link: 'rounded-full before:rounded-full text-stone-500 hover:before:bg-accent dark:text-stone-400 dark:hover:before:bg-accent data-active:bg-accent/30 data-active:text-primary dark:data-active:text-primary-dark'
+          }"
+        />
         <p v-if="!collapsed" class="mt-2 px-2 text-xs font-medium text-muted uppercase">
           Rumah Tangga
         </p>
-        <UNavigationMenu :collapsed="collapsed" :items="items[1]" orientation="vertical" />
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="items[1]"
+          orientation="vertical"
+          :ui="{
+            link: 'rounded-full before:rounded-full text-stone-500 hover:before:bg-accent dark:text-stone-400 dark:hover:before:bg-accent data-active:bg-accent/30 data-active:text-primary dark:data-active:text-primary-dark'
+          }"
+        />
         <p v-if="!collapsed" class="mt-2 px-2 text-xs font-medium text-muted uppercase">Sistem</p>
-        <UNavigationMenu :collapsed="collapsed" :items="items[2]" orientation="vertical" />
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="items[2]"
+          orientation="vertical"
+          :ui="{
+            link: 'rounded-full before:rounded-full text-stone-500 hover:before:bg-accent dark:text-stone-400 dark:hover:before:bg-accent data-active:bg-accent/30 data-active:text-primary dark:data-active:text-primary-dark'
+          }"
+        />
       </template>
 
       <template #footer="{ collapsed }">
@@ -164,7 +187,13 @@ const avatarTheme = computed(() => {
 
     <UDashboardPanel>
       <template #header>
-        <UDashboardNavbar>
+        <UDashboardNavbar
+          :toggle="{
+            color: 'neutral',
+            variant: 'subtle',
+            class: 'rounded-xl'
+          }"
+        >
           <template #leading>
             <UDashboardSidebarCollapse class="md:hidden" />
           </template>

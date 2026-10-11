@@ -38,10 +38,10 @@ onMounted(async () => {
       </div>
 
       <div class="mt-6 flex flex-col gap-4 w-full">
-        <UButton as-child size="xl">
+        <UButton as-child size="xl" block>
           <NuxtLink to="/login">Masuk</NuxtLink>
         </UButton>
-        <UButton variant="outline" as-child size="xl">
+        <UButton variant="outline" as-child size="xl" block>
           <NuxtLink to="/register">Daftar</NuxtLink>
         </UButton>
       </div>

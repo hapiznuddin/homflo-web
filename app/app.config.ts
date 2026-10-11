@@ -428,7 +428,7 @@ export default defineAppConfig({
     dashboardSidebar: {
       slots: {
         root: 'relative hidden lg:flex flex-col min-h-svh min-w-16 w-(--width) shrink-0 border-r border-stone-400 dark:border-stone-600 bg-background',
-        header: 'h-(--ui-header-height) shrink-0 flex items-center gap-1.5 px-4',
+        header: 'flex items-center justify-between px-4',
         body: 'flex flex-col gap-4 flex-1 overflow-y-auto px-4 py-2',
         footer:
           'shrink-0 flex items-center gap-1.5 px-4 py-2 border-t border-stone-300 dark:border-stone-600',
@@ -458,7 +458,7 @@ export default defineAppConfig({
             toggle: ''
           },
           right: {
-            toggle: 'ms-auto'
+            toggle: 'w-fit '
           }
         }
       }
