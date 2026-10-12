@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import MobileNavbar from '~/components/MobileNavbar.vue'
 
 const auth = useAuth()
 
@@ -83,7 +84,8 @@ const avatarTheme = computed(() => {
 </script>
 
 <template>
-  <UDashboardGroup>
+  <div>
+    <UDashboardGroup>
     <UDashboardSidebar
       collapsible
       resizable
@@ -139,21 +141,26 @@ const avatarTheme = computed(() => {
 
       <template #footer="{ collapsed }">
         <div class="flex flex-col gap-6 my-4 w-full">
-          <div v-if="!collapsed" class="flex items-center gap-2 px-2 py-1">
-            <UAvatar
-              :text="userInitial"
-              size="md"
-              :alt="auth.user.value?.name ?? 'Pengguna'"
-              :style="{
-                backgroundColor: avatarTheme.bg,
-                color: avatarTheme.text,
-                border: '1px solid rgba(0,0,0,0.04)'
-              }"
-              class="font-semibold"
-            />
-            <div class="min-w-0 flex-1 leading-tight">
-              <p class="truncate text-sm font-medium">{{ auth.user.value?.name ?? '-' }}</p>
-              <p class="truncate text-xs text-muted">{{ auth.household.value?.role ?? '-' }}</p>
+          <div
+            v-if="!collapsed"
+            class="flex items-center bg-stone-200/30 p-1 rounded-xl dark:bg-stone-700/50"
+          >
+            <div class="flex items-center gap-2 px-2 py-1">
+              <UAvatar
+                :text="userInitial"
+                size="md"
+                :alt="auth.user.value?.name ?? 'Pengguna'"
+                :style="{
+                  backgroundColor: avatarTheme.bg,
+                  color: avatarTheme.text,
+                  border: '1px solid rgba(0,0,0,0.04)'
+                }"
+                class="font-semibold"
+              />
+              <div class="min-w-0 flex-1 leading-tight">
+                <p class="truncate text-sm font-medium">{{ auth.user.value?.name ?? '-' }}</p>
+                <p class="truncate text-xs text-muted">{{ auth.household.value?.role ?? '-' }}</p>
+              </div>
             </div>
           </div>
           <div v-if="collapsed" class="flex items-center justify-center">
@@ -226,27 +233,8 @@ const avatarTheme = computed(() => {
 
     <PwaInstallBanner />
     <PwaUpdatePrompt />
+    </UDashboardGroup>
 
-    <nav
-      aria-label="Navigasi utama"
-      class="fixed inset-x-0 bottom-0 z-10 border-t border-default bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
-    >
-      <div class="mx-auto grid w-full max-w-2xl grid-cols-2">
-        <NuxtLink
-          to="/dashboard"
-          class="flex min-h-16 flex-col items-center justify-center gap-1 text-xs"
-        >
-          <UIcon name="i-lucide-house" class="size-6" aria-hidden="true" />
-          Beranda
-        </NuxtLink>
-        <NuxtLink
-          to="/account"
-          class="flex min-h-16 flex-col items-center justify-center gap-1 text-xs"
-        >
-          <UIcon name="i-lucide-user" class="size-6" aria-hidden="true" />
-          Akun
-        </NuxtLink>
-      </div>
-    </nav>
-  </UDashboardGroup>
+    <MobileNavbar />
+  </div>
 </template>

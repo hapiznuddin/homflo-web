@@ -5,11 +5,32 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISS_KEY = 'homflo-pwa-install-dismissed'
 
+// Banner boleh muncul lagi sekian jam setelah pengguna menekan "Nanti".
+const DISMISS_COOLDOWN_MS = 12 * 60 * 60 * 1000
+
+// Cek murni (tanpa Nuxt/storage) agar mudah diuji: entri dianggap segar
+// hanya bila timestamp-nya masih dalam masa cooldown.
+export function isDismissalFresh(stored: string | null, now: number): boolean {
+  if (stored === null) {
+    return false
+  }
+
+  const dismissedAt = Number.parseInt(stored, 10)
+
+  if (Number.isNaN(dismissedAt)) {
+    return false
+  }
+
+  return now - dismissedAt < DISMISS_COOLDOWN_MS
+}
+
 export function usePwaInstall() {
   const deferred = useState<BeforeInstallPromptEvent | null>('pwa-install-event', () => null)
   const dismissed = useState<boolean>('pwa-install-dismissed', () => {
+    // Di server tidak ada localStorage; klien memulihkan lewat
+    // restoreDismissal() saat mount (lihat bawah).
     try {
-      return localStorage.getItem(DISMISS_KEY) === '1'
+      return isDismissalFresh(localStorage.getItem(DISMISS_KEY), Date.now())
     } catch {
       return false
     }
@@ -58,9 +79,25 @@ export function usePwaInstall() {
     dismissed.value = true
 
     try {
-      localStorage.setItem(DISMISS_KEY, '1')
+      localStorage.setItem(DISMISS_KEY, String(Date.now()))
     } catch {
       // Storage unavailable: banner simply reappears next visit.
+    }
+  }
+
+  // Dipanggil saat komponen mount di klien. Menutup lubang SSR: state
+  // `dismissed` hasil render server selalu false (tanpa localStorage) dan
+  // ikut ter-serialize ke payload, sehingga tanpa pemulihan di sini banner
+  // selalu muncul lagi setiap refresh walau pengguna sudah menekan "Nanti".
+  function restoreDismissal(): void {
+    if (import.meta.server) {
+      return
+    }
+
+    try {
+      dismissed.value = isDismissalFresh(localStorage.getItem(DISMISS_KEY), Date.now())
+    } catch {
+      dismissed.value = false
     }
   }
 
@@ -71,11 +108,14 @@ export function usePwaInstall() {
       return
     }
 
-    await event.prompt()
-    await event.userChoice
-    deferred.value = null
-    dismiss()
+    try {
+      await event.prompt()
+      await event.userChoice
+    } finally {
+      deferred.value = null
+      dismiss()
+    }
   }
 
-  return { shouldShow, isIos, capture, markInstalled, dismiss, install }
+  return { shouldShow, isIos, capture, markInstalled, dismiss, install, restoreDismissal }
 }
