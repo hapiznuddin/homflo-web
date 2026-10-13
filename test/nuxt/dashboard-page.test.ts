@@ -1,7 +1,18 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { LaravelDashboardPayload } from '~/utils/dashboardMapper'
 import { greetingForHour } from '~/utils/format'
-import DashboardPage from '~/pages/dashboard.vue'
+import DashboardPage from '~/pages/dashboard/index.vue'
+
+// $fetch auto-import Nuxt berasal dari #build/fetch.mjs (bukan global),
+// sehingga vi.stubGlobal tidak mempan. Mock modulnya langsung.
+const fetchMock = vi.hoisted(() => vi.fn())
+
+vi.mock('#build/fetch.mjs', async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>
+
+  return { ...original, $fetch: fetchMock }
+})
 
 // useAuth di-mock agar boundary autentikasi terisolasi dari backend:
 // halaman di-mount langsung dan tidak boleh memicu logout dari dalam
@@ -25,8 +36,39 @@ const authMock = vi.hoisted(() => ({
 
 mockNuxtImport('useAuth', () => () => authMock)
 
+// Boundary /api/dashboard di-stub dengan payload API (snake_case) agar
+// halaman diuji end-to-end lewat mapper tanpa network/Laravel running.
+function apiPayload(): LaravelDashboardPayload {
+  return {
+    period: { year: 2026, month: 10, key: '2026-10' },
+    household: { id: 'h1', name: 'Rumah Budi', role: 'owner', member_count: 2, pending_invitations: 0 },
+    financial: {
+      income: 15000000,
+      expense: 7000000,
+      net_cash_flow: 8000000,
+      income_change_percent: 8,
+      budget_usage_percent: 56,
+      cash_flow_status: 'surplus'
+    },
+    budget: [
+      { id: 'kebutuhan', name: 'Kebutuhan Rumah', icon: 'i-lucide-shopping-basket', spent: 1000000, budget: 2000000, kind: 'kebutuhan' },
+      { id: 'tagihan', name: 'Tagihan & Utilitas', icon: 'i-lucide-receipt', spent: 2850000, budget: 3000000, kind: 'tagihan' }
+    ],
+    upcoming_bills: [
+      { id: 'bill-1', title: 'Internet', icon: 'i-lucide-wifi', due_date: '2026-10-05', amount: 416250 }
+    ],
+    recent_transactions: [
+      { id: 'tx-1', title: 'Belanja Supermarket', icon: 'i-lucide-shopping-cart', occurred_at: '2026-10-02T10:00:00Z', wallet: 'Rekening BCA Utama', amount: 685000, direction: 'out' }
+    ],
+    maintenance: [
+      { id: 'mnt-1', title: 'Cuci & Service AC Master', scheduled_date: '2026-10-03', priority: 'rutin', location: 'Kamar Utama' }
+    ]
+  }
+}
+
 async function mountPage() {
-  // useDashboard fixture asli: async setup menyelesaikan load() sebelum mount.
+  // useDashboard asli: async setup menyelesaikan load() (via $fetch stub)
+  // sebelum mount.
   return mountSuspended(DashboardPage, { route: '/dashboard' })
 }
 
@@ -34,12 +76,23 @@ describe('dashboard page (success path)', () => {
   beforeEach(() => {
     authMock.bootstrap.mockClear()
     authMock.logout.mockClear()
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValue({ success: true, data: apiPayload() })
   })
 
   it('menyapa pengguna dengan nama depan sesuai jam', async () => {
     const wrapper = await mountPage()
 
     expect(wrapper.text()).toContain(`${greetingForHour(new Date().getHours())}, Budi`)
+  })
+
+  it('menampilkan nama household di atas greeting', async () => {
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+    const greeting = `${greetingForHour(new Date().getHours())}, Budi`
+
+    expect(text).toContain('Rumah Budi')
+    expect(text.indexOf('Rumah Budi')).toBeLessThan(text.indexOf(greeting))
   })
 
   it('menampilkan tiga kartu KPI utama', async () => {
@@ -64,7 +117,7 @@ describe('dashboard page (success path)', () => {
     expect(text).toContain('Aksi Cepat')
   })
 
-  it('read-model fixture memunculkan peringatan budget near-limit (95%)', async () => {
+  it('kategori budget 95% memunculkan peringatan near-limit (Mendekati limit)', async () => {
     const wrapper = await mountPage()
 
     expect(wrapper.text()).toContain('Mendekati limit')

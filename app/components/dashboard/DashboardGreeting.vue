@@ -5,6 +5,7 @@ import { greetingForHour } from '~/utils/format'
 
 interface Props {
   userName: string
+  householdName: string
   periods: DashboardPeriod[]
   currentKey: string
 }
@@ -12,10 +13,13 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ select: [period: DashboardPeriod] }>()
 
-const greeting = computed(() => `${greetingForHour(new Date().getHours())}, ${props.userName.split(' ')[0]}`)
+const greeting = computed(
+  () => `${greetingForHour(new Date().getHours())}, ${props.userName.split(' ')[0]}`
+)
+const householdName = computed(() => props.householdName)
 
 const periodItems = computed<DropdownMenuItem[][]>(() => [
-  props.periods.map(period => ({
+  props.periods.map((period) => ({
     label: period.label,
     icon: period.key === props.currentKey ? 'i-lucide-check' : undefined,
     onSelect: () => emit('select', period)
@@ -23,19 +27,28 @@ const periodItems = computed<DropdownMenuItem[][]>(() => [
 ])
 
 const currentLabel = computed(
-  () => props.periods.find(period => period.key === props.currentKey)?.label ?? ''
+  () => props.periods.find((period) => period.key === props.currentKey)?.label ?? ''
 )
 </script>
 
 <template>
-  <div class="flex flex-wrap items-start justify-between gap-3">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-1 w-full">
     <div class="min-w-0">
+      <p
+        v-if="householdName"
+        class="flex items-center gap-1.5 text-sm md:text-base font-medium text-muted"
+      >
+        <UIcon name="i-lucide-house" class="size-4" aria-hidden="true" />
+        {{ householdName }}
+      </p>
       <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">
         {{ greeting }}
       </h1>
-      <p class="mt-0.5 text-sm text-muted">Kelola rumah tangga dalam satu tempat.</p>
+      <p class="mt-0.5 text-sm text-muted hidden lg:block">
+        Kelola rumah tangga dalam satu tempat.
+      </p>
     </div>
-    <div class="flex shrink-0 items-center gap-2">
+    <div class="lg:flex shrink-0 items-center gap-2 hidden">
       <UDropdownMenu :items="periodItems">
         <UButton
           color="neutral"
@@ -53,6 +66,29 @@ const currentLabel = computed(
         icon="i-lucide-bell"
         aria-label="Notifikasi"
       />
+    </div>
+
+    <div class="flex justify-between items-center gap-3 sm:gap-4 w-full lg:hidden md:-mt-2">
+      <p class="mt-0.5 text-sm text-muted">Kelola rumah tangga dalam satu tempat.</p>
+      <div class="flex shrink-0 items-center gap-2">
+        <UDropdownMenu :items="periodItems">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-calendar"
+            :label="currentLabel"
+            trailing-icon="i-lucide-chevron-down"
+            aria-label="Pilih periode"
+          />
+        </UDropdownMenu>
+        <UButton
+          color="neutral"
+          variant="outline"
+          square
+          icon="i-lucide-bell"
+          aria-label="Notifikasi"
+        />
+      </div>
     </div>
   </div>
 </template>

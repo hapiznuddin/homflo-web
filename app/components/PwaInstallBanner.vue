@@ -24,7 +24,7 @@ onUnmounted(() => {
       class="flex flex-col gap-4 rounded-2xl border border-border bg-background p-4 shadow-lg w-full"
     >
       <p class="text-sm font-medium">Pasang Homflo di perangkat Anda</p>
-      <p v-if="isIos" class="text-sm text-slate-600">
+      <p v-if="isIos" class="text-sm text-stone-500 dark:text-stone-400">
         Ketuk Bagikan lalu "Add to Home Screen".
       </p>
       <div class="flex gap-2">

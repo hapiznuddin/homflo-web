@@ -1,4 +1,5 @@
 import { defineVitestProject } from '@nuxt/test-utils/config'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 // Tiga project dipisah sesuai kebutuhan:
@@ -30,6 +31,14 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['test/unit/**/*.test.ts']
+        },
+        // Samakan alias `~` Nuxt agar util app yang memakai `~/...`
+        // dapat diimpor langsung tanpa Nuxt runtime.
+        resolve: {
+          alias: [
+            { find: /^~\//, replacement: `${resolve('app')}/` },
+            { find: /^~$/, replacement: resolve('app') }
+          ]
         }
       },
       {

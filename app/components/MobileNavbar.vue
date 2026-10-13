@@ -18,7 +18,7 @@ const quickActions = [
   >
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute inset-0 z-1001 rounded-full border border-border bg-white shadow-sm dark:bg-stone-950"
+      class="pointer-events-none absolute inset-0 z-1001 rounded-full border border-border bg-background shadow-lg"
     />
 
     <div class="grid grid-cols-5">

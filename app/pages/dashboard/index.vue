@@ -4,12 +4,12 @@ import { formatRupiah } from '~/utils/format'
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const auth = useAuth()
-const { user } = auth
+const { user, household } = auth
 const { period, data, pending, error, load, setPeriod, periodOptions } = useDashboard()
 
 await load()
-
 const firstName = computed(() => user.value?.name.split(' ')[0] ?? 'Keluarga')
+const householdName = computed(() => household.value?.name ?? '')
 
 function retry(): void {
   void load()
@@ -41,6 +41,7 @@ function retry(): void {
     <template v-else-if="data">
       <DashboardGreeting
         :user-name="firstName"
+        :household-name="householdName"
         :periods="periodOptions()"
         :current-key="period.key"
         @select="setPeriod"

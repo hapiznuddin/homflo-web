@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { DashboardPeriod, DashboardResponse } from '~/types/dashboard'
 import DashboardGreeting from '~/components/dashboard/DashboardGreeting.vue'
-import DashboardPage from '~/pages/dashboard.vue'
+import DashboardPage from '~/pages/dashboard/index.vue'
 
 const dashMock = vi.hoisted(() => ({ api: undefined as unknown }))
 const authMock = vi.hoisted(() => ({
@@ -17,6 +17,7 @@ const authMock = vi.hoisted(() => ({
     }
   },
   onboarding: { value: { required: false } },
+  household: { value: { id: 'h1', name: 'Rumah Budi', role: 'owner' } },
   bootstrap: vi.fn(async () => 'authenticated'),
   logout: vi.fn()
 }))

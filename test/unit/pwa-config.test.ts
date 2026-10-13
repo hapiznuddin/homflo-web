@@ -88,6 +88,7 @@ describe('nuxt.config PWA contract', () => {
 
     expect(matches({ url: new URL('https://example.com/api/auth/me') })).toBe(true)
     expect(matches({ url: new URL('https://example.com/api/households/1/dashboard') })).toBe(true)
+    expect(matches({ url: new URL('https://example.com/api/dashboard?month=10&year=2026') })).toBe(true)
     expect(matches({ url: new URL('https://example.com/dashboard') })).toBe(false)
     expect(matches({ url: new URL('https://example.com/_nuxt/entry.js') })).toBe(false)
   })
