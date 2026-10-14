@@ -25,7 +25,7 @@ const periods: DashboardPeriod[] = [
 describe('DashboardGreeting', () => {
   it('menyapa nama depan dengan greeting sesuai jam saat ini', async () => {
     const wrapper = await mountSuspended(DashboardGreeting, {
-      props: { userName: 'Budi Santoso', periods, currentKey: '2026-10' },
+      props: { userName: 'Budi Santoso', householdName: 'Rumah Budi', periods, currentKey: '2026-10' },
       route: false
     })
 
@@ -37,7 +37,7 @@ describe('DashboardGreeting', () => {
 
   it('menampilkan label periode aktif pada trigger dropdown', async () => {
     const wrapper = await mountSuspended(DashboardGreeting, {
-      props: { userName: 'Budi', periods, currentKey: '2026-10' },
+      props: { userName: 'Budi', householdName: 'Rumah Budi', periods, currentKey: '2026-10' },
       route: false
     })
 
@@ -49,7 +49,7 @@ describe('DashboardGreeting', () => {
 
   it('memilih periode lain memancarkan event select dengan periode yang tepat', async () => {
     const wrapper = await mountSuspended(DashboardGreeting, {
-      props: { userName: 'Budi', periods, currentKey: '2026-10' },
+      props: { userName: 'Budi', householdName: 'Rumah Budi', periods, currentKey: '2026-10' },
       route: false
     })
 
