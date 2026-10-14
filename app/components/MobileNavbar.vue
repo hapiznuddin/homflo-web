@@ -30,7 +30,7 @@ const quickActions = [
         Beranda
       </NuxtLink>
       <NuxtLink
-        to="/dashboard"
+        to="/transactions"
         class="relative z-2001 flex min-h-16 flex-col items-center justify-center gap-1 text-xs"
       >
         <UIcon name="i-lucide-chart-no-axes-column-increasing" class="size-5" aria-hidden="true" />

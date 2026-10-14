@@ -19,7 +19,9 @@ const CODE_MESSAGES: Record<string, string> = {
   INVITATION_ALREADY_ACCEPTED: 'Undangan ini sudah diterima sebelumnya.',
   INVITATION_EXPIRED: 'Undangan sudah kedaluwarsa.',
   ALREADY_HOUSEHOLD_MEMBER: 'Pengguna sudah menjadi anggota rumah tangga ini.',
-  INVITED_USER_NOT_FOUND: 'Email tersebut belum terdaftar.'
+  INVITED_USER_NOT_FOUND: 'Email tersebut belum terdaftar.',
+  TRANSACTION_NOT_FOUND: 'Transaksi tidak ditemukan.',
+  CATEGORY_NOT_FOUND: 'Kategori tidak ditemukan.'
 }
 
 // Exact English backend messages mapped to Indonesian.
@@ -38,7 +40,19 @@ const FIELD_LABELS: Record<string, string> = {
   name: 'nama',
   username: 'nama pengguna',
   current_password: 'kata sandi saat ini',
-  token: 'token'
+  token: 'token',
+  type: 'jenis',
+  amount: 'nominal',
+  occurred_on: 'tanggal',
+  description: 'deskripsi',
+  wallet: 'dompet',
+  category_id: 'kategori',
+  date_from: 'tanggal mulai',
+  date_to: 'tanggal akhir',
+  sort_by: 'urutan',
+  sort_dir: 'arah urutan',
+  per_page: 'jumlah per halaman',
+  page: 'halaman'
 }
 
 function fieldLabel(field: string): string {
@@ -51,6 +65,14 @@ const MESSAGE_PATTERNS: Array<[RegExp, (field: string, extra?: string) => string
   [/^The (.+) must be a valid email address\.$/, field => `Kolom ${fieldLabel(field)} harus berupa email yang valid.`],
   [/^The (.+) confirmation does not match\.$/, field => `Konfirmasi ${fieldLabel(field)} tidak cocok.`],
   [/^The (.+) must be at least (\d+) characters\.$/, (field, extra) => `${fieldLabel(field)} minimal ${extra} karakter.`],
+  [/^The (.+) must be a number\.$/, field => `Kolom ${fieldLabel(field)} harus berupa angka.`],
+  [/^The (.+) must be an integer\.$/, field => `Kolom ${fieldLabel(field)} harus berupa bilangan bulat.`],
+  [/^The (.+) must be at least ([\d.]+)\.$/, (field, extra) => `Kolom ${fieldLabel(field)} minimal ${extra}.`],
+  [/^The (.+) may not be greater than ([\d.]+)\.$/, (field, extra) => `Kolom ${fieldLabel(field)} maksimal ${extra}.`],
+  [/^The (.+) must not be greater than (\d+) characters\.$/, (field, extra) => `Kolom ${fieldLabel(field)} maksimal ${extra} karakter.`],
+  [/^The (.+) does not match the format (.+)\.$/, (field, extra) => `Kolom ${fieldLabel(field)} harus berformat ${extra}.`],
+  [/^The (.+) must be a valid ULID\.$/, field => `Kolom ${fieldLabel(field)} harus berupa ID yang valid.`],
+  [/^The (.+) must be a date after or equal to (.+)\.$/, (field, extra) => `Kolom ${fieldLabel(field)} tidak boleh mendahului ${fieldLabel(extra ?? '')}.`],
   [/^The selected (.+) is invalid\.$/, field => `${fieldLabel(field)} yang dipilih tidak valid.`],
   [/^The (.+) has already been taken\.$/, field => `${fieldLabel(field)} sudah digunakan.`]
 ]
@@ -86,6 +108,55 @@ function extractMessage(body: ApiErrorBody | null | undefined): string | undefin
   const raw = firstFieldError ?? body.error?.message ?? body.message
 
   return raw ? translateMessage(raw) : undefined
+}
+
+// Field errors Laravel (satu pesan pertama per field, diterjemahkan)
+// untuk ditampilkan di bawah input terkait.
+export function readFieldErrors(error: unknown): Record<string, string> {
+  for (const body of errorBodies(error)) {
+    const errors = (body as ApiErrorBody).errors
+
+    if (typeof errors !== 'object' || errors === null) {
+      continue
+    }
+
+    const mapped: Record<string, string> = {}
+
+    for (const [field, messages] of Object.entries(errors)) {
+      if (Array.isArray(messages) && typeof messages[0] === 'string') {
+        mapped[field] = translateMessage(messages[0])
+      }
+    }
+
+    if (Object.keys(mapped).length > 0) {
+      return mapped
+    }
+  }
+
+  return {}
+}
+
+function errorBodies(error: unknown): Array<Record<string, unknown>> {
+  if (typeof error !== 'object' || error === null) {
+    return []
+  }
+
+  const body = (error as { data?: unknown }).data ?? error
+
+  if (typeof body !== 'object' || body === null) {
+    return []
+  }
+
+  const nested = (body as { data?: unknown }).data
+  const bodies: Array<Record<string, unknown>> = []
+
+  if (typeof nested === 'object' && nested !== null) {
+    bodies.push(nested as Record<string, unknown>)
+  }
+
+  bodies.push(body as Record<string, unknown>)
+
+  return bodies
 }
 
 // Map backend/validation failures to a single human-readable message.

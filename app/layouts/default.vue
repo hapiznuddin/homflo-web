@@ -15,7 +15,8 @@ const items: NavigationMenuItem[][] = [
     },
     {
       label: 'Uang',
-      icon: 'i-lucide-circle-dollar-sign'
+      icon: 'i-lucide-circle-dollar-sign',
+      to: '/transactions'
     },
     {
       label: 'Daftar',

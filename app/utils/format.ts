@@ -30,6 +30,14 @@ export function formatFullDate(date: Date): string {
   return fullDateFormatter.format(date)
 }
 
+// Format tanggal Y-m-d backend ("2026-10-05") sebagai tanggal lokal
+// (parse per komponen agar tidak bergeser zona waktu).
+export function formatYmd(value: string): string {
+  const [year, month, day] = value.split('-').map(Number) as [number, number, number]
+
+  return formatFullDate(new Date(year, month - 1, day))
+}
+
 export function greetingForHour(hour: number): string {
   if (hour < 11) {
     return 'Selamat pagi'
