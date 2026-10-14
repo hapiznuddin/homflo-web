@@ -19,6 +19,11 @@ const items: NavigationMenuItem[][] = [
       to: '/transactions'
     },
     {
+      label: 'Kategori',
+      icon: 'i-lucide-tags',
+      to: '/categories'
+    },
+    {
       label: 'Daftar',
       icon: 'i-lucide-list'
     }

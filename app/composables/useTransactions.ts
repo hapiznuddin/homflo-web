@@ -146,7 +146,8 @@ export function useTransactions() {
       amount,
       occurred_on: values.occurred_on,
       description: values.description === '' ? null : values.description,
-      wallet: values.wallet === '' ? null : values.wallet
+      wallet: values.wallet === '' ? null : values.wallet,
+      category_id: values.category_id === '' ? null : values.category_id
     }
   }
 

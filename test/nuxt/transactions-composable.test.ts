@@ -153,7 +153,8 @@ describe('useTransactions', () => {
       amount: '150000,50',
       occurred_on: '2026-10-06',
       description: 'Belanja',
-      wallet: ''
+      wallet: '',
+      category_id: ''
     })
 
     expect(saved?.id).toBe('01J0000000000000000000002')
@@ -167,11 +168,33 @@ describe('useTransactions', () => {
       amount: '150000.50',
       occurred_on: '2026-10-06',
       description: 'Belanja',
-      wallet: null
+      wallet: null,
+      category_id: null
     })
     // POST + refresh GET.
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(tx.items.value).toHaveLength(2)
+  })
+
+  it('create() meneruskan ID kategori apa adanya tanpa dihitung ulang', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem({ id: '01J0000000000000000000002' }) })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.create({
+      type: 'income',
+      amount: '25000',
+      occurred_on: '2026-10-06',
+      description: '',
+      wallet: '',
+      category_id: 'c9'
+    })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+
+    expect(options.method).toBe('POST')
+    expect(options.body).toMatchObject({ category_id: 'c9', amount: '25000' })
   })
 
   it('create() dengan nominal invalid tidak menyentuh network', async () => {
@@ -182,7 +205,8 @@ describe('useTransactions', () => {
       amount: '150.000',
       occurred_on: '2026-10-06',
       description: '',
-      wallet: ''
+      wallet: '',
+      category_id: ''
     })
 
     expect(saved).toBeNull()
@@ -208,7 +232,8 @@ describe('useTransactions', () => {
       amount: '12',
       occurred_on: '2026-10-06',
       description: '',
-      wallet: ''
+      wallet: '',
+      category_id: ''
     })
 
     expect(saved).toBeNull()
@@ -232,14 +257,16 @@ describe('useTransactions', () => {
       amount: '100',
       occurred_on: '2026-10-06',
       description: '',
-      wallet: ''
+      wallet: '',
+      category_id: ''
     })
     const second = await tx.create({
       type: 'expense',
       amount: '100',
       occurred_on: '2026-10-06',
       description: '',
-      wallet: ''
+      wallet: '',
+      category_id: ''
     })
 
     expect(second).toBeNull()
@@ -262,7 +289,8 @@ describe('useTransactions', () => {
       amount: '200000',
       occurred_on: '2026-10-05',
       description: 'revisi',
-      wallet: 'Kas Tunai'
+      wallet: 'Kas Tunai',
+      category_id: ''
     })
 
     expect(saved?.description).toBe('revisi')

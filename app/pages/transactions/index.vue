@@ -11,7 +11,11 @@ const toast = useToast()
 const tx = useTransactions()
 const { items, meta, pending, submitting, error, fieldErrors } = tx
 
+const categories = useCategories()
+const { items: categoryItems, pending: categoriesPending, error: categoriesError } = categories
+
 const typeFilter = ref<'all' | TransactionType>('all')
+const categoryFilter = ref('all')
 const dateFrom = ref('')
 const dateTo = ref('')
 
@@ -25,7 +29,7 @@ const detailLoading = ref(false)
 const detailError = ref<string | null>(null)
 const confirmDelete = ref(false)
 
-const hasActiveFilter = computed(() => typeFilter.value !== 'all' || dateFrom.value !== '' || dateTo.value !== '')
+const hasActiveFilter = computed(() => typeFilter.value !== 'all' || categoryFilter.value !== 'all' || dateFrom.value !== '' || dateTo.value !== '')
 
 function displayTitle(item: TransactionItem): string {
   if (item.description && item.description.trim() !== '') {
@@ -50,6 +54,7 @@ function typeIcon(item: TransactionItem): string {
 async function applyFilters(): Promise<void> {
   await tx.load({
     ...(typeFilter.value === 'all' ? {} : { type: typeFilter.value }),
+    ...(categoryFilter.value === 'all' ? {} : { category_id: categoryFilter.value }),
     ...(dateFrom.value === '' ? {} : { date_from: dateFrom.value }),
     ...(dateTo.value === '' ? {} : { date_to: dateTo.value })
   }, true)
@@ -57,6 +62,7 @@ async function applyFilters(): Promise<void> {
 
 async function resetFilters(): Promise<void> {
   typeFilter.value = 'all'
+  categoryFilter.value = 'all'
   dateFrom.value = ''
   dateTo.value = ''
 
@@ -166,6 +172,7 @@ function retry(): void {
 }
 
 await tx.load()
+await categories.load()
 </script>
 
 <template>
@@ -175,7 +182,10 @@ await tx.load()
         <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Transaksi</h1>
         <p class="mt-0.5 text-sm text-muted">Arus kas keluar &amp; masuk rumah tangga.</p>
       </div>
-      <UButton icon="i-lucide-plus" class="shrink-0" @click="openCreate()">Tambah</UButton>
+      <div class="flex shrink-0 gap-2">
+        <UButton icon="i-lucide-tags" color="neutral" variant="outline" to="/categories">Kelola kategori</UButton>
+        <UButton icon="i-lucide-plus" @click="openCreate()">Tambah</UButton>
+      </div>
     </div>
 
     <div class="flex flex-col gap-2 rounded-2xl border border-default bg-background p-3 sm:flex-row sm:items-end">
@@ -193,6 +203,23 @@ await tx.load()
           class="w-full"
           @change="applyFilters()"
         />
+      </div>
+      <div class="min-w-0 flex-1">
+        <label for="tx-filter-category" class="mb-1 block text-xs font-medium text-muted">Kategori</label>
+        <USelect
+          id="tx-filter-category"
+          v-model="categoryFilter"
+          :items="[{ label: 'Semua', value: 'all' }, ...categoryItems.map(category => ({ label: category.name, value: category.id }))]"
+          value-key="value"
+          class="w-full"
+          :loading="categoriesPending"
+          :disabled="categoriesPending || categoriesError !== null"
+          @change="applyFilters()"
+        />
+        <p v-if="categoriesError" class="mt-1 text-xs text-error">
+          {{ categoriesError }}
+          <UButton variant="link" size="xs" class="px-1" @click="categories.refresh()">Coba lagi</UButton>
+        </p>
       </div>
       <div class="min-w-0 flex-1">
         <label for="tx-filter-from" class="mb-1 block text-xs font-medium text-muted">Dari tanggal</label>
@@ -284,7 +311,11 @@ await tx.load()
       :editing="editing"
       :submitting="submitting"
       :field-errors="fieldErrors"
+      :categories="categoryItems"
+      :categories-pending="categoriesPending"
+      :categories-error="categoriesError"
       @submit="onFormSubmit"
+      @retry-categories="categories.refresh()"
     />
 
     <TransactionDetailModal

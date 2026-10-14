@@ -1,5 +1,7 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import USelect from '@nuxt/ui/components/Select.vue'
 import { DOMWrapper } from '@vue/test-utils'
+import TransactionFormModal from '~/components/transactions/TransactionFormModal.vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { TransactionFilters, TransactionItem, TransactionListMeta } from '~/types/transactions'
@@ -47,6 +49,10 @@ interface MockTransactionsState {
 const txMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useTransactions', () => () => txMock.api)
+
+const catMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useCategories', () => () => catMock.api)
 
 function sampleItem(overrides: Partial<TransactionItem> = {}): TransactionItem {
   return {
@@ -104,11 +110,37 @@ async function mountPage() {
   return mountSuspended(TransactionsPage, { route: '/transactions' })
 }
 
+function setCategories(
+  items: Array<{ id: string, name: string, icon: string | null }>,
+  error: string | null = null
+): void {
+  const api = catMock.api as {
+    items: Ref<Array<{ id: string, name: string, icon: string | null }>>
+    error: Ref<string | null>
+  }
+
+  api.items.value = items
+  api.error.value = error
+}
+
 describe('transactions page', () => {
   beforeEach(() => {
     authMock.bootstrap.mockClear()
     authMock.logout.mockClear()
     toastMock.add.mockClear()
+    catMock.api = {
+      items: ref([]),
+      pending: ref(false),
+      submitting: ref(false),
+      error: ref(null),
+      fieldErrors: ref({}),
+      load: vi.fn(async () => {}),
+      refresh: vi.fn(async () => {}),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      clearError: vi.fn()
+    }
   })
 
   // UModal me-render via teleport yang tidak selalu ikut ter-unmount
@@ -338,5 +370,109 @@ describe('transactions page', () => {
 
     expect(authMock.logout).not.toHaveBeenCalled()
     expect(authMock.bootstrap.mock.calls.length).toBeLessThanOrEqual(1)
+  })
+
+  it('filter kategori memuat ulang dengan category_id dan tanpa page', async () => {
+    const state = setupTransactionsState()
+
+    setCategories([{ id: 'c1', name: 'Dapur', icon: null }])
+
+    const wrapper = await mountPage()
+    // USelect ke-2 di halaman adalah filter kategori (pertama: filter jenis).
+    const selects = wrapper.findAllComponents(USelect)
+
+    expect(selects.length).toBeGreaterThanOrEqual(2)
+
+    // Simulasi persis 2 emit yang dihasilkan USelect saat opsi dipilih
+    // (update:modelValue lalu change, sesuai implementasi Select.vue).
+    selects[1]!.vm.$emit('update:modelValue', 'c1')
+    await selects[1]!.vm.$emit('change', new Event('change'))
+
+    expect(state.load).toHaveBeenCalledWith({ category_id: 'c1' }, true)
+  })
+
+  it('form menampilkan opsi kategori dan submit meneruskan ID', async () => {
+    const state = setupTransactionsState()
+
+    setCategories([{ id: 'c1', name: 'Dapur', icon: null }])
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    await new DOMWrapper(document.body.querySelector('#tx-category') as Element).trigger('click')
+    await flush()
+
+    const labels = Array.from(document.body.querySelectorAll('[role="option"]'))
+      .map(el => el.textContent?.trim())
+
+    expect(labels).toContain('Tanpa kategori')
+    expect(labels).toContain('Dapur')
+
+    // Pilih via 2 emit USelect (update:modelValue; change tidak relevan
+    // di form karena submit membaca model). Klik DOM pada option reka
+    // tidak selektif di happy-dom, jadi emit dipanggil langsung —
+    // setara dengan yang dihasilkan USelect saat opsi dipilih.
+    // Select dalam modal yang di-teleport dicari dari subtree modal.
+    const modal = wrapper.findComponent(TransactionFormModal)
+    const modalSelects = modal.findAllComponents(USelect)
+
+    expect(modalSelects).toHaveLength(2)
+
+    modalSelects[1]!.vm.$emit('update:modelValue', 'c1')
+
+    const amountInput = document.body.querySelector('#tx-amount')
+
+    await new DOMWrapper(amountInput as Element).setValue('50000')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category_id: 'c1', amount: '50000' })
+    )
+  })
+
+  it('transaksi dengan kategori menampilkan chip nama; tanpa kategori tidak', async () => {
+    setupTransactionsState({
+      items: [
+        sampleItem({ id: 'a', description: 'Ikan', category: { id: 'c1', name: 'Dapur', icon: null } }),
+        sampleItem({ id: 'b', description: 'Parkir', category: null })
+      ]
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Dapur')
+    expect(text).toContain('Ikan')
+    expect(text).toContain('Parkir')
+  })
+
+  it('kegagalan kategori menampilkan retry tanpa fixture dan tanpa blokir form', async () => {
+    const state = setupTransactionsState()
+
+    setCategories([], 'Koneksi terputus')
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Koneksi terputus')
+
+    const retryButton = wrapper.findAll('button').find(button => button.text().includes('Coba lagi'))
+
+    expect(retryButton).toBeDefined()
+
+    await retryButton!.trigger('click')
+
+    const api = catMock.api as { refresh: ReturnType<typeof vi.fn> }
+
+    expect(api.refresh).toHaveBeenCalledTimes(1)
+    // Daftar transaksi tetap tampil; tidak diganti fixture kategori.
+    expect(wrapper.text()).toContain('Belanja Supermarket')
+    expect(state.load).toHaveBeenCalled()
   })
 })

@@ -56,4 +56,6 @@ export interface TransactionFormValues {
   occurred_on: string
   description: string
   wallet: string
+  /** ID kategori dari API; '' berarti tanpa kategori (didukung backend). */
+  category_id: string
 }

@@ -21,7 +21,9 @@ const CODE_MESSAGES: Record<string, string> = {
   ALREADY_HOUSEHOLD_MEMBER: 'Pengguna sudah menjadi anggota rumah tangga ini.',
   INVITED_USER_NOT_FOUND: 'Email tersebut belum terdaftar.',
   TRANSACTION_NOT_FOUND: 'Transaksi tidak ditemukan.',
-  CATEGORY_NOT_FOUND: 'Kategori tidak ditemukan.'
+  CATEGORY_NOT_FOUND: 'Kategori tidak ditemukan.',
+  CATEGORY_ALREADY_EXISTS: 'Nama kategori tersebut sudah dipakai di rumah tangga ini.',
+  CATEGORY_IN_USE: 'Kategori masih dipakai oleh anggaran sehingga tidak dapat dihapus.'
 }
 
 // Exact English backend messages mapped to Indonesian.

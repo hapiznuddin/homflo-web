@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CategoryItem } from '~/types/categories'
 import type { TransactionFormValues, TransactionItem, TransactionType } from '~/types/transactions'
 
 interface Props {
@@ -6,12 +7,16 @@ interface Props {
   editing: TransactionItem | null
   submitting: boolean
   fieldErrors: Record<string, string>
+  categories: CategoryItem[]
+  categoriesPending: boolean
+  categoriesError: string | null
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:open': [open: boolean]
   'submit': [values: TransactionFormValues]
+  'retry-categories': []
 }>()
 
 const modalOpen = computed({
@@ -29,7 +34,8 @@ const form = reactive<TransactionFormValues>({
   amount: '',
   occurred_on: '',
   description: '',
-  wallet: ''
+  wallet: '',
+  category_id: ''
 })
 
 function todayYmd(): string {
@@ -46,6 +52,9 @@ function resetForm(): void {
   form.occurred_on = props.editing?.occurred_on ?? todayYmd()
   form.description = props.editing?.description ?? ''
   form.wallet = props.editing?.wallet ?? ''
+  // Reka SelectItem melarang value string kosong; 'none' dipetakan
+  // kembali ke '' (tanpa kategori) saat submit.
+  form.category_id = props.editing?.category?.id ?? 'none'
 }
 
 watch(() => [props.open, props.editing] as const, ([open]) => {
@@ -59,7 +68,7 @@ function close(): void {
 }
 
 function onSubmit(): void {
-  emit('submit', { ...form })
+  emit('submit', { ...form, category_id: form.category_id === 'none' ? '' : form.category_id })
 }
 </script>
 
@@ -129,7 +138,24 @@ function onSubmit(): void {
           <p v-if="props.fieldErrors.wallet" class="mt-1 text-xs text-error">{{ props.fieldErrors.wallet }}</p>
         </div>
 
-        <p class="text-xs text-muted">Kategori belum dapat dipilih — pengelolaan kategori menyusul setelah Categories API tersedia.</p>
+        <div>
+          <label for="tx-category" class="mb-1 block text-sm font-medium">Kategori <span class="font-normal text-muted">(opsional)</span></label>
+          <USelect
+            id="tx-category"
+            v-model="form.category_id"
+            :items="[{ label: 'Tanpa kategori', value: 'none' }, ...props.categories.map(category => ({ label: category.name, value: category.id }))]"
+            value-key="value"
+            class="w-full"
+            :loading="props.categoriesPending"
+            :disabled="props.categoriesPending || props.categoriesError !== null"
+            placeholder="Pilih kategori"
+          />
+          <p v-if="props.categoriesError" class="mt-1 text-xs text-error">
+            {{ props.categoriesError }}
+            <UButton variant="link" size="xs" class="px-1" @click="emit('retry-categories')">Coba lagi</UButton>
+          </p>
+          <p v-if="props.fieldErrors.category_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.category_id }}</p>
+        </div>
 
         <div class="flex gap-2">
           <UButton type="button" color="neutral" variant="outline" block @click="close">Batal</UButton>
