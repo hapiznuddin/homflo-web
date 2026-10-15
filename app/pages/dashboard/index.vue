@@ -50,23 +50,23 @@ function retry(): void {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <DashboardKpiCard
           title="Pendapatan Bulan Ini"
-          :value="formatRupiah(data.financial.income)"
-          :subtitle="`↑ +${data.financial.incomeChangePercent}% dari bulan lalu`"
+          :value="data.availability.income ? formatRupiah(data.financial.income) : '—'"
+          :subtitle="data.availability.income ? `Bulan ${data.period.label}` : 'Belum tersedia'"
           icon="i-lucide-trending-up"
-          tone="positive"
+          :tone="data.availability.income ? 'positive' : 'neutral'"
         />
         <DashboardKpiCard
           title="Pengeluaran Bulan Ini"
-          :value="formatRupiah(data.financial.expense)"
-          :subtitle="`${data.financial.budgetUsagePercent}% dari alokasi anggaran`"
+          :value="data.availability.expense ? formatRupiah(data.financial.expense) : '—'"
+          :subtitle="data.availability.expense ? `Bulan ${data.period.label}` : 'Belum tersedia'"
           icon="i-lucide-trending-down"
         />
         <DashboardKpiCard
           title="Arus Kas Bersih"
-          :value="formatRupiah(data.financial.netCashFlow, true)"
-          :subtitle="data.financial.cashFlowStatus === 'surplus' ? 'Surplus bulan ini' : 'Perlu perhatian bulan ini'"
+          :value="data.availability.netCashFlow ? formatRupiah(data.financial.netCashFlow, true) : '—'"
+          :subtitle="data.availability.netCashFlow ? (data.financial.cashFlowStatus === 'surplus' ? 'Surplus bulan ini' : 'Perlu perhatian bulan ini') : 'Belum tersedia'"
           icon="i-lucide-wallet"
-          :tone="data.financial.cashFlowStatus === 'surplus' ? 'positive' : 'negative'"
+          :tone="data.availability.netCashFlow ? (data.financial.cashFlowStatus === 'surplus' ? 'positive' : 'negative') : 'neutral'"
         />
       </div>
 

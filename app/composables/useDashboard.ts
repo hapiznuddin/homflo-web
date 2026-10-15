@@ -3,8 +3,12 @@ import type {
   DashboardResponse
 } from '~/types/dashboard'
 import { formatMonthLabel } from '~/utils/format'
-import type { LaravelDashboardPayload } from '~/utils/dashboardMapper'
-import { mapDashboardResponse } from '~/utils/dashboardMapper'
+import type {
+  LaravelBudgetsPayload,
+  LaravelDashboardPayload,
+  LaravelTransactionsPayload
+} from '~/utils/dashboardMapper'
+import { mapDashboardFinance, mapDashboardResponse } from '~/utils/dashboardMapper'
 import { readError } from '~/composables/useApiError'
 
 // ---------------------------------------------------------------------------
@@ -85,11 +89,26 @@ export function useDashboard() {
         }
       }
 
-      const envelope = await $fetch<{ success: boolean, data: LaravelDashboardPayload }>('/api/dashboard', {
-        params: { month, year },
-        credentials: 'include',
-        headers
-      })
+      // Tiga request paralel di bawah satu guard sequencing: agregat
+      // periode, target budget + actual spending server, dan transaksi
+      // terbaru. Gagal satu = error state (tanpa data nol palsu).
+      const [dashboardEnvelope, budgetsEnvelope, transactionsEnvelope] = await Promise.all([
+        $fetch<{ success: boolean, data: LaravelDashboardPayload }>('/api/dashboard', {
+          params: { month, year },
+          credentials: 'include',
+          headers
+        }),
+        $fetch<{ success: boolean, data: LaravelBudgetsPayload['data'], meta?: LaravelBudgetsPayload['meta'] }>('/api/budgets', {
+          params: { month, year },
+          credentials: 'include',
+          headers
+        }),
+        $fetch<{ success: boolean, data: LaravelTransactionsPayload }>('/api/transactions', {
+          params: { sort_by: 'occurred_on', sort_dir: 'desc', per_page: 5 },
+          credentials: 'include',
+          headers
+        })
+      ])
 
       if (current !== requestSeq.value) {
         return
@@ -97,7 +116,16 @@ export function useDashboard() {
 
       // Server route meneruskan envelope Laravel apa adanya (pola
       // me.get.ts); unwrap di sini agar mapper menerima objek data.
-      data.value = mapDashboardResponse(envelope.data)
+      const base = mapDashboardResponse(dashboardEnvelope.data)
+      const finance = mapDashboardFinance(
+        base,
+        { data: budgetsEnvelope.data, meta: budgetsEnvelope.meta },
+        transactionsEnvelope.data,
+        year,
+        month
+      )
+
+      data.value = { ...base, ...finance }
     } catch (err) {
       if (current !== requestSeq.value) {
         return

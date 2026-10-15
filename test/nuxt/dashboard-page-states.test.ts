@@ -46,6 +46,11 @@ const sampleData: DashboardResponse = {
     budgetUsagePercent: 56,
     cashFlowStatus: 'surplus'
   },
+  availability: {
+    income: true,
+    expense: true,
+    netCashFlow: true
+  },
   budget: [
     {
       id: 'kebutuhan',
@@ -174,5 +179,21 @@ describe('dashboard page states (loading / error / retry)', () => {
 
     expect(state.setPeriod).toHaveBeenCalledTimes(1)
     expect(state.setPeriod).toHaveBeenCalledWith(nextPeriod)
+  })
+
+  it('KPI yang belum didukung API menampilkan status jujur tanpa angka nol palsu', async () => {
+    setupDashboardState({
+      data: {
+        ...sampleData,
+        financial: { ...sampleData.financial, income: 0, netCashFlow: 0 },
+        availability: { income: false, expense: true, netCashFlow: false }
+      }
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Belum tersedia')
+    expect(text).not.toContain('Rp0')
   })
 })

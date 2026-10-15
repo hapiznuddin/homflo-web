@@ -71,4 +71,20 @@ export interface DashboardResponse {
   upcomingBills: DashboardUpcomingBill[]
   recentTransactions: DashboardTransaction[]
   maintenance: DashboardMaintenance[]
+  /**
+   * Ketersediaan data aktual per KPI. `false` berarti API sumber belum
+   * mendukung metrik tersebut — UI wajib menampilkan status jujur
+   * (bukan angka nol seolah terverifikasi).
+   */
+  availability: DashboardDataAvailability
+}
+
+/**
+ * Sumber data aktual per KPI. income/netCashFlow belum didukung API
+ * agregat mana pun; expense tersedia bila meta household cocok periode.
+ */
+export interface DashboardDataAvailability {
+  income: boolean
+  expense: boolean
+  netCashFlow: boolean
 }

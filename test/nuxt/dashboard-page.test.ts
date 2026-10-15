@@ -66,6 +66,56 @@ function apiPayload(): LaravelDashboardPayload {
   }
 }
 
+// Boundary di-stub per URL: agregat nol-jujur, budgets + meta aktual,
+// dan transaksi terbaru — tanpa network/Laravel running.
+function budgetsFixture() {
+  return {
+    data: [
+      {
+        id: 'bg-kebutuhan',
+        household_id: 'h1',
+        category: { id: 'kebutuhan', name: 'Kebutuhan Rumah', icon: 'i-lucide-shopping-basket' },
+        year: 2026,
+        month: 10,
+        amount: '5000000.00',
+        actual_spending: '4200000.00',
+        remaining: '800000.00',
+        usage_percentage: 84,
+        usage_status: 'normal',
+        created_at: '2026-10-01T00:00:00.000000Z',
+        updated_at: '2026-10-01T00:00:00.000000Z'
+      },
+      {
+        id: 'bg-tagihan',
+        household_id: 'h1',
+        category: { id: 'tagihan', name: 'Tagihan & Utilitas', icon: 'i-lucide-receipt' },
+        year: 2026,
+        month: 10,
+        amount: '3000000.00',
+        actual_spending: '2850000.00',
+        remaining: '150000.00',
+        usage_percentage: 95,
+        usage_status: 'normal',
+        created_at: '2026-10-01T00:00:00.000000Z',
+        updated_at: '2026-10-01T00:00:00.000000Z'
+      }
+    ],
+    meta: {
+      period: { year: 2026, month: 10 },
+      household: { actual_spending: '6500000.00' }
+    }
+  }
+}
+
+function transactionsFixture() {
+  return {
+    data: [
+      { id: 'tx-1', household_id: 'h1', type: 'expense', amount: '685000.00', occurred_on: '2026-10-02', description: 'Belanja Supermarket', wallet: 'Rekening BCA Utama', category: { id: 'kebutuhan', name: 'Kebutuhan Rumah', icon: 'i-lucide-shopping-basket' }, created_at: '2026-10-02T10:00:00.000000Z', updated_at: '2026-10-02T10:00:00.000000Z' }
+    ],
+    meta: { current_page: 1, per_page: 5, total: 1, last_page: 1 }
+  }
+}
+
 async function mountPage() {
   // useDashboard asli: async setup menyelesaikan load() (via $fetch stub)
   // sebelum mount.
@@ -77,7 +127,17 @@ describe('dashboard page (success path)', () => {
     authMock.bootstrap.mockClear()
     authMock.logout.mockClear()
     fetchMock.mockReset()
-    fetchMock.mockResolvedValue({ success: true, data: apiPayload() })
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/budgets') {
+        return { success: true, ...budgetsFixture() }
+      }
+
+      if (url === '/api/transactions') {
+        return { success: true, data: transactionsFixture() }
+      }
+
+      return { success: true, data: apiPayload() }
+    })
   })
 
   it('menyapa pengguna dengan nama depan sesuai jam', async () => {
@@ -102,8 +162,17 @@ describe('dashboard page (success path)', () => {
     expect(text).toContain('Pendapatan Bulan Ini')
     expect(text).toContain('Pengeluaran Bulan Ini')
     expect(text).toContain('Arus Kas Bersih')
-    expect(text).toContain('dari bulan lalu')
-    expect(text).toContain('dari alokasi anggaran')
+  })
+
+  it('KPI pengeluaran memakai total meta aktual; pendapatan dan arus kas jujur belum tersedia', async () => {
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    // Meta 6.500.000 dipakai apa adanya (bukan jumlah kategori).
+    expect(text).toContain('6.500.000')
+    expect(text).not.toContain('Rp0')
+    // Income dan arus kas belum didukung API agregat mana pun.
+    expect(text).toContain('Belum tersedia')
   })
 
   it('menampilkan seluruh section: Budget, Akan Datang, Transaksi, Perawatan, Aksi Cepat', async () => {
