@@ -24,6 +24,11 @@ const items: NavigationMenuItem[][] = [
       to: '/categories'
     },
     {
+      label: 'Anggaran',
+      icon: 'i-lucide-wallet',
+      to: '/budgets'
+    },
+    {
       label: 'Daftar',
       icon: 'i-lucide-list'
     }

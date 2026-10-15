@@ -78,7 +78,10 @@ await cat.load()
         <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Kategori</h1>
         <p class="mt-0.5 text-sm text-muted">Kelompok pengeluaran dan pemasukan rumah tangga.</p>
       </div>
-      <UButton icon="i-lucide-plus" class="shrink-0" @click="openCreate()">Tambah</UButton>
+      <div class="flex shrink-0 gap-2">
+        <UButton icon="i-lucide-wallet" color="neutral" variant="outline" to="/budgets">Kelola anggaran</UButton>
+        <UButton icon="i-lucide-plus" @click="openCreate()">Tambah</UButton>
+      </div>
     </div>
 
     <div v-if="pending && items.length === 0" class="flex flex-col gap-3" aria-label="Memuat kategori">

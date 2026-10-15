@@ -55,6 +55,15 @@ describe('readError kode transaksi', () => {
     ).toBe('Kategori tidak ditemukan.')
   })
 
+  it('memetakan BUDGET_NOT_FOUND dan BUDGET_ALREADY_EXISTS', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'BUDGET_NOT_FOUND' } } } }, 'x')
+    ).toBe('Anggaran tidak ditemukan.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'BUDGET_ALREADY_EXISTS' } } } }, 'x')
+    ).toBe('Anggaran untuk kategori dan periode tersebut sudah ada.')
+  })
+
   it('mengambil field error pertama saat kode tak dikenal', () => {
     const err = {
       data: {

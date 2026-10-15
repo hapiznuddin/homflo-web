@@ -23,7 +23,9 @@ const CODE_MESSAGES: Record<string, string> = {
   TRANSACTION_NOT_FOUND: 'Transaksi tidak ditemukan.',
   CATEGORY_NOT_FOUND: 'Kategori tidak ditemukan.',
   CATEGORY_ALREADY_EXISTS: 'Nama kategori tersebut sudah dipakai di rumah tangga ini.',
-  CATEGORY_IN_USE: 'Kategori masih dipakai oleh anggaran sehingga tidak dapat dihapus.'
+  CATEGORY_IN_USE: 'Kategori masih dipakai oleh anggaran sehingga tidak dapat dihapus.',
+  BUDGET_NOT_FOUND: 'Anggaran tidak ditemukan.',
+  BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.'
 }
 
 // Exact English backend messages mapped to Indonesian.
@@ -45,6 +47,8 @@ const FIELD_LABELS: Record<string, string> = {
   token: 'token',
   type: 'jenis',
   amount: 'nominal',
+  year: 'tahun',
+  month: 'bulan',
   occurred_on: 'tanggal',
   description: 'deskripsi',
   wallet: 'dompet',
