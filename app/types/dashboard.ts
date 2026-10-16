@@ -31,6 +31,14 @@ export interface DashboardBudgetCategory {
   percent: number
   status: BudgetStatus
   note?: string
+  /**
+   * False ketika backend melaporkan `usage_status = no_budget` (kategori
+   * tanpa target anggaran). UI tidak boleh menampilkan persentase numerik,
+   * progress bar, maupun aria-label persen untuk kategori semacam ini;
+   * `percent`/`status` pada model tersebut hanya placeholder yang tidak
+   * dirender.
+   */
+  hasTarget: boolean
 }
 
 export interface DashboardUpcomingBill {

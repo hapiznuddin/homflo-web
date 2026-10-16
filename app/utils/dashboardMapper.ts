@@ -234,7 +234,10 @@ function mapBudgetCategory(item: LaravelBudgetItem): DashboardBudgetCategory {
     budget,
     percent,
     status,
-    note: percent >= 90 && percent < 100 ? 'Mendekati limit' : undefined
+    note: percent >= 90 && percent < 100 ? 'Mendekati limit' : undefined,
+    // Jalur agregat lama selalu membawa target valid (budget > 0
+    // divalidasi di atas), sehingga persentase aman ditampilkan.
+    hasTarget: true
   }
 }
 
@@ -348,9 +351,12 @@ export function mapBudgetApiItem(item: LaravelBudgetApiItem): DashboardBudgetCat
       icon,
       spent: Number(spent),
       budget: Number(budget),
+      // Placeholder yang tidak dirender: kategori tanpa target tidak boleh
+      // menampilkan persentase numerik apa pun (lihat hasTarget + UI).
       percent: 0,
       status: 'normal',
-      note: `Tanpa target · ${remainingNote}`
+      note: `Tanpa target · ${remainingNote}`,
+      hasTarget: false
     }
   }
 
@@ -371,7 +377,8 @@ export function mapBudgetApiItem(item: LaravelBudgetApiItem): DashboardBudgetCat
     status,
     note: percent >= 90 && percent < 100
       ? `Mendekati limit · ${remainingNote}`
-      : remainingNote
+      : remainingNote,
+    hasTarget: true
   }
 }
 

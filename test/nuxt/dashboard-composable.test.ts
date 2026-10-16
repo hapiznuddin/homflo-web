@@ -301,13 +301,18 @@ describe('useDashboard read-model contract', () => {
 
     expect(byId['bg-kebutuhan']?.percent).toBe(84)
     expect(byId['bg-kebutuhan']?.status).toBe('warning')
+    expect(byId['bg-kebutuhan']?.hasTarget).toBe(true)
     expect(byId['bg-kebutuhan']?.note).toContain('Sisa')
     expect(byId['bg-tagihan']?.percent).toBe(95)
     expect(byId['bg-tagihan']?.status).toBe('near-limit')
+    expect(byId['bg-tagihan']?.hasTarget).toBe(true)
     expect(byId['bg-tagihan']?.note).toContain('Mendekati limit')
 
     const nol = byId['bg-nol']
 
+    // Semantik no_budget dipertahankan sampai model: UI memakai flag ini
+    // untuk menyembunyikan persentase numerik, progress, dan aria persen.
+    expect(nol?.hasTarget).toBe(false)
     expect(nol?.percent).toBe(0)
     expect(nol?.status).toBe('normal')
     expect(nol?.note).toContain('Tanpa target')

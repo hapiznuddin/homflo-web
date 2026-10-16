@@ -59,7 +59,8 @@ const sampleData: DashboardResponse = {
       spent: 1000000,
       budget: 2000000,
       percent: 50,
-      status: 'normal'
+      status: 'normal',
+      hasTarget: true
     }
   ],
   upcomingBills: [

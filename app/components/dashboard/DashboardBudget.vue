@@ -38,13 +38,15 @@ const barColor: Record<BudgetStatus, string> = {
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline justify-between gap-2">
               <p class="truncate text-sm font-medium text-highlighted">{{ category.name }}</p>
-              <p class="shrink-0 text-xs text-muted">{{ category.percent }}%</p>
+              <p v-if="category.hasTarget" class="shrink-0 text-xs text-muted">{{ category.percent }}%</p>
+              <p v-else class="shrink-0 text-xs text-muted">Tanpa target</p>
             </div>
             <p class="mt-0.5 truncate text-xs text-muted">
               {{ formatRupiah(category.spent) }} / {{ formatRupiah(category.budget) }}
               <span v-if="category.note" class="font-medium text-warning"> · {{ category.note }}</span>
             </p>
             <UProgress
+              v-if="category.hasTarget"
               :model-value="Math.min(category.percent, 100)"
               :ui="{ indicator: barColor[category.status] }"
               class="mt-2"

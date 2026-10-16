@@ -211,6 +211,7 @@ describe('mapBudgetApiItem', () => {
     expect(mapped.budget).toBe(5000000)
     expect(mapped.percent).toBe(84)
     expect(mapped.status).toBe('warning')
+    expect(mapped.hasTarget).toBe(true)
     expect(mapped.note).toContain('Sisa')
     expect(mapped.note).toContain('800.000')
   })
@@ -231,6 +232,9 @@ describe('mapBudgetApiItem', () => {
       usage_status: 'no_budget'
     }))
 
+    // percent/status hanyalah placeholder model yang tidak boleh dirender
+    // (kontrak: tanpa persentase numerik untuk kategori tanpa target).
+    expect(mapped.hasTarget).toBe(false)
     expect(mapped.percent).toBe(0)
     expect(mapped.status).toBe('normal')
     expect(mapped.note).toContain('Tanpa target')

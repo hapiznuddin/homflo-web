@@ -126,7 +126,8 @@ describe('DashboardBudget', () => {
       spent: 4200000,
       budget: 5000000,
       percent: 84,
-      status: 'warning'
+      status: 'warning',
+      hasTarget: true
     },
     {
       id: 'tagihan',
@@ -136,7 +137,8 @@ describe('DashboardBudget', () => {
       budget: 3000000,
       percent: 95,
       status: 'near-limit',
-      note: 'Mendekati limit'
+      note: 'Mendekati limit',
+      hasTarget: true
     },
     {
       id: 'kendaraan',
@@ -145,7 +147,19 @@ describe('DashboardBudget', () => {
       spent: 1650000,
       budget: 1500000,
       percent: 110,
-      status: 'over'
+      status: 'over',
+      hasTarget: true
+    },
+    {
+      id: 'darurat',
+      name: 'Dana Darurat',
+      icon: 'i-lucide-piggy-bank',
+      spent: 50000,
+      budget: 0,
+      percent: 0,
+      status: 'normal',
+      note: 'Tanpa target · Lebih Rp50.000',
+      hasTarget: false
     }
   ]
 
@@ -174,6 +188,22 @@ describe('DashboardBudget', () => {
 
     expect(wrapper.find('[aria-label="Tagihan & Utilitas 95 persen"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="Operasional Kendaraan 110 persen"]').exists()).toBe(true)
+  })
+
+  it('kategori tanpa target tidak menampilkan persentase numerik, progress, maupun aria persen', async () => {
+    const wrapper = await mountSuspended(DashboardBudget, { props: { categories }, route: false })
+
+    const noTargetLi = wrapper.findAll('li').find(li => li.text().includes('Dana Darurat'))
+
+    expect(noTargetLi).toBeDefined()
+    // Nominal aktual dan keterangan tanpa-target tetap tampil.
+    expect(noTargetLi?.text()).toContain('Tanpa target')
+    expect(noTargetLi?.text()).toContain(formatRupiah(50000))
+    // Kontrak: tidak ada "0%" dan tidak ada aria-label persen untuk no_budget.
+    // (Assertion dibatasi pada baris kategori tersebut karena "110%"
+    // kategori lain secara substring memang memuat "0%".)
+    expect(noTargetLi?.text()).not.toContain('0%')
+    expect(wrapper.find('[aria-label="Dana Darurat 0 persen"]').exists()).toBe(false)
   })
 
   it('daftar kosong menampilkan empty state yang jujur', async () => {
