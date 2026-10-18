@@ -11,6 +11,13 @@ export interface DashboardPeriod {
 
 export type CashFlowStatus = 'surplus' | 'defisit' | 'seimbang'
 
+/**
+ * Ringkasan finansial untuk presentasi KPI.income/expense/netCashFlow
+ * dikonversi dari string desimal eksak backend ke number HANYA di mapper
+ * (batas presentasi); tidak pernah dihitung ulang di klien. Nilai
+ * number aman untuk display karena semua nominal berada di dalam batas
+ * schema dan `formatRupiah` hanya memformat.
+ */
 export interface DashboardFinancialSummary {
   income: number
   expense: number
@@ -80,16 +87,19 @@ export interface DashboardResponse {
   recentTransactions: DashboardTransaction[]
   maintenance: DashboardMaintenance[]
   /**
-   * Ketersediaan data aktual per KPI. `false` berarti API sumber belum
-   * mendukung metrik tersebut — UI wajib menampilkan status jujur
-   * (bukan angka nol seolah terverifikasi).
+   * Ketersediaan data aktual per KPI. Sejak blok financial divalidasi
+   * penuh di mapper (string desimal + union status), ketiganya tersedia
+   * bersamaan; `false` berarti payload belum/tidak tervalidasi — UI
+   * wajib menampilkan status jujur (bukan angka nol seolah terverifikasi).
    */
   availability: DashboardDataAvailability
 }
 
 /**
- * Sumber data aktual per KPI. income/netCashFlow belum didukung API
- * agregat mana pun; expense tersedia bila meta household cocok periode.
+ * Sumber data aktual per KPI. income/expense/netCashFlow kini semuanya
+ * berasal dari blok financial GET /api/dashboard yang tervalidasi
+ * (Phase 14.2.1 backend agregasi); ketiganya tersedia atau gagal
+ * bersamaan.
  */
 export interface DashboardDataAvailability {
   income: boolean

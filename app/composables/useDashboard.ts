@@ -90,8 +90,9 @@ export function useDashboard() {
       }
 
       // Tiga request paralel di bawah satu guard sequencing: agregat
-      // periode, target budget + actual spending server, dan transaksi
-      // terbaru. Gagal satu = error state (tanpa data nol palsu).
+      // finansial periode (income/expense/net), target budget per
+      // kategori, dan transaksi terbaru. Gagal satu = error state
+      // (tanpa data nol palsu).
       const [dashboardEnvelope, budgetsEnvelope, transactionsEnvelope] = await Promise.all([
         $fetch<{ success: boolean, data: LaravelDashboardPayload }>('/api/dashboard', {
           params: { month, year },
@@ -120,9 +121,7 @@ export function useDashboard() {
       const finance = mapDashboardFinance(
         base,
         { data: budgetsEnvelope.data, meta: budgetsEnvelope.meta },
-        transactionsEnvelope.data,
-        year,
-        month
+        transactionsEnvelope.data
       )
 
       data.value = { ...base, ...finance }

@@ -2,6 +2,7 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { DashboardPeriod, DashboardResponse } from '~/types/dashboard'
+import { formatRupiah } from '~/utils/format'
 import DashboardGreeting from '~/components/dashboard/DashboardGreeting.vue'
 import DashboardPage from '~/pages/dashboard/index.vue'
 
@@ -196,5 +197,28 @@ describe('dashboard page states (loading / error / retry)', () => {
 
     expect(text).toContain('Belum tersedia')
     expect(text).not.toContain('Rp0')
+  })
+
+  it('arus kas negatif tampil jujur dengan tanda minus dan status defisit', async () => {
+    setupDashboardState({
+      data: {
+        ...sampleData,
+        financial: {
+          ...sampleData.financial,
+          income: 10000,
+          expense: 60250.25,
+          netCashFlow: -50250.25,
+          cashFlowStatus: 'defisit'
+        },
+        availability: { income: true, expense: true, netCashFlow: true }
+      }
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    // formatRupiah(value, signed=true) -> "-Rp 50.250" (pemisah id-ID).
+    expect(text).toContain(formatRupiah(-50250.25, true))
+    expect(text).toContain('Perlu perhatian bulan ini')
   })
 })

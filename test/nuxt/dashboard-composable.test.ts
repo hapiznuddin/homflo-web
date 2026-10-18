@@ -53,9 +53,9 @@ function apiPayload(year = 2026, month = 10): LaravelDashboardPayload {
     period: { year, month, key: `${year}-${String(month).padStart(2, '0')}` },
     household: { id: 'h1', name: 'Rumah Budi', role: 'owner', member_count: 2, pending_invitations: 0 },
     financial: {
-      income: 0,
-      expense: 0,
-      net_cash_flow: 0,
+      income: '0.00',
+      expense: '0.00',
+      net_cash_flow: '0.00',
       income_change_percent: 0,
       budget_usage_percent: 0,
       cash_flow_status: 'seimbang'
@@ -227,46 +227,74 @@ describe('useDashboard read-model contract', () => {
     expect(urls.every(url => !url.includes('auth/me'))).toBe(true)
   })
 
-  it('expense memakai total meta household + availability jujur (tanpa hitung ulang)', async () => {
-    const dash = await mountDashboard()
+  it('expense memakai blok financial dashboard (bukan meta budgets) + availability jujur', async () => {
+    // Sengaja berbeda: blok dashboard expense 7.000.000 sementara meta
+    // budgets 6.500.000 dan jumlah spent kategori 8.280.000. Hanya angka
+    // dashboard yang boleh dipakai.
+    const payload = apiPayload()
 
-    await dash.load()
+    payload.financial.income = '12000000.00'
+    payload.financial.expense = '7000000.00'
+    payload.financial.net_cash_flow = '5000000.00'
+    payload.financial.cash_flow_status = 'surplus'
 
-    const data = dash.data.value
-
-    // Meta 6.500.000 dipakai apa adanya — BUKAN jumlah spent kategori
-    // (4.200.000 + 2.850.000 + 50.000 + 1.180.000 = 8.280.000).
-    expect(data?.financial.expense).toBe(6500000)
-    expect(data?.availability).toEqual({ income: false, expense: true, netCashFlow: false })
-    expect(data?.financial.income).toBe(0)
-    expect(data?.financial.netCashFlow).toBe(0)
-  })
-
-  it('meta tak-cocok periode membuat expense tidak tersedia (tanpa penjumlahan)', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === '/api/budgets') {
-        const payload = budgetsPayload()
-
-        return { success: true, data: payload.data, meta: { period: { year: 2020, month: 1 }, household: { actual_spending: '1.00' } } }
+        return { success: true, ...budgetsPayload() }
       }
 
       if (url === '/api/transactions') {
         return { success: true, data: transactionsPayload() }
       }
 
-      return { success: true, data: apiPayload() }
+      return { success: true, data: payload }
     })
 
     const dash = await mountDashboard()
 
     await dash.load()
 
-    expect(dash.data.value?.financial.expense).toBe(0)
-    expect(dash.data.value?.availability.expense).toBe(false)
+    const data = dash.data.value
+
+    expect(data?.financial.expense).toBe(7000000)
+    expect(data?.financial.income).toBe(12000000)
+    expect(data?.financial.netCashFlow).toBe(5000000)
+    expect(data?.availability).toEqual({ income: true, expense: true, netCashFlow: true })
+  })
+
+  it('meta tak-cocok periode tidak memengaruhi KPI expense (sumber: blok dashboard)', async () => {
+    const payload = apiPayload()
+
+    payload.financial.expense = '7000000.00'
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/budgets') {
+        const budgets = budgetsPayload()
+
+        return { success: true, data: budgets.data, meta: { period: { year: 2020, month: 1 }, household: { actual_spending: '1.00' } } }
+      }
+
+      if (url === '/api/transactions') {
+        return { success: true, data: transactionsPayload() }
+      }
+
+      return { success: true, data: payload }
+    })
+
+    const dash = await mountDashboard()
+
+    await dash.load()
+
+    expect(dash.data.value?.financial.expense).toBe(7000000)
+    expect(dash.data.value?.availability.expense).toBe(true)
     expect(dash.error.value).toBeNull()
   })
 
-  it('meta hilang membuat expense tidak tersedia (tanpa penjumlahan)', async () => {
+  it('meta hilang tidak memengaruhi KPI expense (sumber: blok dashboard)', async () => {
+    const payload = apiPayload()
+
+    payload.financial.expense = '7000000.00'
+
     fetchMock.mockImplementation(async (url: string) => {
       if (url === '/api/budgets') {
         return { success: true, data: budgetsPayload().data }
@@ -276,15 +304,15 @@ describe('useDashboard read-model contract', () => {
         return { success: true, data: transactionsPayload() }
       }
 
-      return { success: true, data: apiPayload() }
+      return { success: true, data: payload }
     })
 
     const dash = await mountDashboard()
 
     await dash.load()
 
-    expect(dash.data.value?.financial.expense).toBe(0)
-    expect(dash.data.value?.availability.expense).toBe(false)
+    expect(dash.data.value?.financial.expense).toBe(7000000)
+    expect(dash.data.value?.availability.expense).toBe(true)
     expect(dash.error.value).toBeNull()
   })
 
@@ -570,9 +598,9 @@ describe('useDashboard read-model contract', () => {
     empty.recent_transactions = []
     empty.maintenance = []
     empty.financial = {
-      income: 0,
-      expense: 0,
-      net_cash_flow: 0,
+      income: '0.00',
+      expense: '0.00',
+      net_cash_flow: '0.00',
       income_change_percent: 0,
       budget_usage_percent: 0,
       cash_flow_status: 'seimbang'
@@ -597,6 +625,6 @@ describe('useDashboard read-model contract', () => {
     expect(dash.data.value?.budget).toEqual([])
     expect(dash.data.value?.recentTransactions).toEqual([])
     expect(dash.data.value?.financial.income).toBe(0)
-    expect(dash.data.value?.availability).toEqual({ income: false, expense: false, netCashFlow: false })
+    expect(dash.data.value?.availability).toEqual({ income: true, expense: true, netCashFlow: true })
   })
 })

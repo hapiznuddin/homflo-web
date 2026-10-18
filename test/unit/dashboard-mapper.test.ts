@@ -15,9 +15,9 @@ function basePayload(): LaravelDashboardPayload {
     period: { year: 2026, month: 10, key: '2026-10' },
     household: { id: 'h1', name: 'Rumah Budi', role: 'owner', member_count: 2, pending_invitations: 0 },
     financial: {
-      income: 12000000,
-      expense: 6500000,
-      net_cash_flow: 5500000,
+      income: '12000000.00',
+      expense: '6500000.00',
+      net_cash_flow: '5500000.00',
       income_change_percent: 8,
       budget_usage_percent: 52,
       cash_flow_status: 'surplus'
@@ -132,7 +132,10 @@ describe('mapDashboardResponse', () => {
 
   it('payload malformed melempar Error (tidak pernah diisi karangan)', () => {
     const cases: Array<(payload: LaravelDashboardPayload) => void> = [
-      (payload) => { payload.financial.income = 'banyak' as unknown as number },
+      (payload) => { payload.financial.income = 'banyak' },
+      (payload) => { payload.financial.income = 12000000 as unknown as string },
+      (payload) => { payload.financial.expense = '' },
+      (payload) => { payload.financial.net_cash_flow = '12.345' },
       (payload) => { payload.financial.cash_flow_status = 'profit' },
       (payload) => { payload.budget = 'x' as unknown as [] },
       (payload) => { payload.budget = [{ id: 'c', name: 'K', spent: 10, budget: 0 }] },
@@ -156,6 +159,28 @@ describe('mapDashboardResponse', () => {
 
       expect(() => mapDashboardResponse(payload)).toThrowError()
     }
+  })
+
+  it('menerima string desimal: pecahan, nol, dan negatif diparse benar', () => {
+    const payload = basePayload()
+
+    payload.financial.income = '250000.75'
+    payload.financial.expense = '0.00'
+    payload.financial.net_cash_flow = '-50250.25'
+    payload.financial.cash_flow_status = 'defisit'
+
+    const data = mapDashboardResponse(payload)
+
+    expect(data.financial.income).toBe(250000.75)
+    expect(data.financial.expense).toBe(0)
+    expect(data.financial.netCashFlow).toBe(-50250.25)
+    expect(data.financial.cashFlowStatus).toBe('defisit')
+  })
+
+  it('blok financial valid menandai income/expense/netCashFlow tersedia bersamaan', () => {
+    const data = mapDashboardResponse(basePayload())
+
+    expect(data.availability).toEqual({ income: true, expense: true, netCashFlow: true })
   })
 
   it('mapCashFlowStatus menerima trio valid dan menolak sisanya', () => {
@@ -326,45 +351,28 @@ describe('mapDashboardFinance', () => {
     ...overrides
   })
 
-  it('menggabung budget, transaksi, expense meta, dan availability', () => {
-    const merged = mapDashboardFinance(base(), budgets(), transactions(), 2026, 10)
+  it('menggabung budget dan transaksi; finansial tetap dari blok dashboard', () => {
+    const merged = mapDashboardFinance(base(), budgets(), transactions())
 
     expect(merged.budget).toHaveLength(1)
     expect(merged.budget[0]?.name).toBe('Kebutuhan Rumah')
     expect(merged.recentTransactions).toHaveLength(1)
     expect(merged.recentTransactions[0]?.title).toBe('Belanja Supermarket')
-    expect(merged.financial.expense).toBe(6500000)
-    expect(merged.availability).toEqual({ income: false, expense: true, netCashFlow: false })
-    // Income/net dari agregat dipertahankan apa adanya (nol-jujur).
-    expect(merged.financial.income).toBe(12000000)
   })
 
-  it('tidak menjumlahkan kategori maupun mencampur periode', () => {
+  it('meta budgets tidak memengaruhi finansial dashboard (KPI sumber tunggal)', () => {
     const differentTotals = budgets({
       data: [budgetApiItem({ actual_spending: '99999999.99' })],
       meta: { period: { year: 2026, month: 10 }, household: { actual_spending: '1.00' } }
     })
 
-    const merged = mapDashboardFinance(base(), differentTotals, transactions(), 2026, 10)
+    const baseData = base()
+    const merged = mapDashboardFinance(baseData, differentTotals, transactions())
 
-    expect(merged.financial.expense).toBe(1)
-  })
-
-  it('meta hilang atau tak-cocok membuat expense tidak tersedia', () => {
-    const noMeta = mapDashboardFinance(base(), { data: [budgetApiItem()] }, transactions(), 2026, 10)
-
-    expect(noMeta.financial.expense).toBe(0)
-    expect(noMeta.availability.expense).toBe(false)
-
-    const mismatch = mapDashboardFinance(
-      base(),
-      { data: [budgetApiItem()], meta: { period: { year: 2020, month: 1 }, household: { actual_spending: '1.00' } } },
-      transactions(),
-      2026,
-      10
-    )
-
-    expect(mismatch.financial.expense).toBe(0)
-    expect(mismatch.availability.expense).toBe(false)
+    // Finansial tidak di-override lagi oleh merge; nilai dashboard
+    // (expense 6500000.00) dipertahankan apa adanya.
+    expect(baseData.financial.expense).toBe(6500000)
+    expect(merged).not.toHaveProperty('financial')
+    expect(merged).not.toHaveProperty('availability')
   })
 })

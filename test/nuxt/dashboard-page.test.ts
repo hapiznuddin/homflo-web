@@ -43,9 +43,9 @@ function apiPayload(): LaravelDashboardPayload {
     period: { year: 2026, month: 10, key: '2026-10' },
     household: { id: 'h1', name: 'Rumah Budi', role: 'owner', member_count: 2, pending_invitations: 0 },
     financial: {
-      income: 15000000,
-      expense: 7000000,
-      net_cash_flow: 8000000,
+      income: '15000000.00',
+      expense: '7000000.00',
+      net_cash_flow: '8000000.00',
       income_change_percent: 8,
       budget_usage_percent: 56,
       cash_flow_status: 'surplus'
@@ -164,15 +164,17 @@ describe('dashboard page (success path)', () => {
     expect(text).toContain('Arus Kas Bersih')
   })
 
-  it('KPI pengeluaran memakai total meta aktual; pendapatan dan arus kas jujur belum tersedia', async () => {
+  it('KPI memakai agregat dashboard: pendapatan, pengeluaran, dan arus kas tampil penuh', async () => {
     const wrapper = await mountPage()
     const text = wrapper.text()
 
-    // Meta 6.500.000 dipakai apa adanya (bukan jumlah kategori).
-    expect(text).toContain('6.500.000')
-    expect(text).not.toContain('Rp0')
-    // Income dan arus kas belum didukung API agregat mana pun.
-    expect(text).toContain('Belum tersedia')
+    // Blok financial dashboard (income 15jt, expense 7jt, net +8jt)
+    // dipakai apa adanya; tidak ada "Belum tersedia" lagi untuk KPI ini.
+    expect(text).toContain('15.000.000')
+    expect(text).toContain('7.000.000')
+    expect(text).toContain('8.000.000')
+    expect(text).not.toContain('Belum tersedia')
+    expect(text).toContain('Surplus bulan ini')
   })
 
   it('menampilkan seluruh section: Budget, Akan Datang, Transaksi, Perawatan, Aksi Cepat', async () => {

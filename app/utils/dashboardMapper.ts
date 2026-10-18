@@ -6,8 +6,6 @@ import type {
   BudgetStatus,
   CashFlowStatus,
   DashboardBudgetCategory,
-  DashboardDataAvailability,
-  DashboardFinancialSummary,
   DashboardMaintenance,
   DashboardResponse,
   DashboardTransaction,
@@ -24,9 +22,12 @@ export interface LaravelDashboardPeriod {
 }
 
 export interface LaravelDashboardFinancial {
-  income: number
-  expense: number
-  net_cash_flow: number
+  /** String desimal eksak backend, mis. "250000.75" (boleh negatif). */
+  income: string
+  /** String desimal eksak backend, mis. "50250.25". */
+  expense: string
+  /** String desimal eksak backend, boleh negatif, mis. "-50250.25". */
+  net_cash_flow: string
   income_change_percent: number
   budget_usage_percent: number
   cash_flow_status: string
@@ -412,51 +413,24 @@ export function mapTransactionApiItem(item: LaravelTransactionApiItem): Dashboar
 export interface DashboardFinanceMerge {
   budget: DashboardBudgetCategory[]
   recentTransactions: DashboardTransaction[]
-  financial: DashboardFinancialSummary
-  availability: DashboardDataAvailability
 }
 
 // Menggabungkan seksi finansial aktual ke read-model dashboard.
 // - budget: dari endpoint Budgets (apa adanya, tanpa hitung ulang).
 // - recentTransactions: dari endpoint Transactions (apa adanya).
-// - expense: HANYA dari meta.household bila periodenya cocok dengan
-//   periode yang diminta; selain itu ditandai tidak tersedia.
-// - income/netCashFlow: selalu tidak tersedia (belum ada API agregat).
-// - meta yang hilang/tak-cocok TIDAK pernah diganti penjumlahan
-//   kategori (dilarang kontrak).
+// - income/expense/netCashFlow/cash_flow_status: sepenuhnya dari blok
+//   financial GET /api/dashboard (sudah divalidasi mapDashboardResponse).
+//   Meta budgets TIDAK dipakai sebagai sumber KPI expense — hanya
+//   konteks Budget. Tidak ada penjumlahan kategori di klien.
 export function mapDashboardFinance(
   base: DashboardResponse,
   budgets: LaravelBudgetsPayload,
-  transactions: LaravelTransactionsPayload,
-  year: number,
-  month: number
+  transactions: LaravelTransactionsPayload
 ): DashboardFinanceMerge {
-  const metaPeriod = budgets.meta?.period
-  const metaTotal = budgets.meta?.household?.actual_spending
-  const periodMatches = metaPeriod !== undefined
-    && metaPeriod !== null
-    && typeof metaPeriod.year === 'number'
-    && typeof metaPeriod.month === 'number'
-    && metaPeriod.year === year
-    && metaPeriod.month === month
-    && typeof metaTotal === 'string'
-
-  const expenseAvailable = periodMatches && metaTotal !== undefined
-  const expense = expenseAvailable ? Number(decimalString(metaTotal, 'meta.household.actual_spending')) : 0
-
   return {
     budget: requireArray<LaravelBudgetApiItem>(budgets.data, 'budgets.data').map(mapBudgetApiItem),
     recentTransactions: requireArray<LaravelTransactionApiItem>(transactions.data, 'transactions.data')
-      .map(mapTransactionApiItem),
-    financial: {
-      ...base.financial,
-      expense
-    },
-    availability: {
-      income: false,
-      expense: expenseAvailable,
-      netCashFlow: false
-    }
+      .map(mapTransactionApiItem)
   }
 }
 
@@ -484,12 +458,17 @@ export function mapDashboardResponse(
   const key = nonEmptyString(payload.period?.key, 'period.key')
   const financial = payload.financial ?? {}
 
+  // Nominal finansial dikirim backend sebagai string desimal eksak
+  // (Phase 14.2.1). Diparse dan divalidasi di sini; konversi number
+  // hanya untuk model presentasi — tanpa aritmetika ulang di klien.
+  // Gagal parse = melempar -> composable menampilkan error state,
+  // bukan angka nol palsu.
   return {
     period: { key, label: formatMonthLabel(year, month) },
     financial: {
-      income: finiteNumber(financial.income, 'financial.income'),
-      expense: finiteNumber(financial.expense, 'financial.expense'),
-      netCashFlow: finiteNumber(financial.net_cash_flow, 'financial.net_cash_flow'),
+      income: Number(decimalString(financial.income, 'financial.income')),
+      expense: Number(decimalString(financial.expense, 'financial.expense')),
+      netCashFlow: Number(decimalString(financial.net_cash_flow, 'financial.net_cash_flow')),
       incomeChangePercent: finiteNumber(financial.income_change_percent, 'financial.income_change_percent'),
       budgetUsagePercent: finiteNumber(financial.budget_usage_percent, 'financial.budget_usage_percent'),
       cashFlowStatus: mapCashFlowStatus(typeof financial.cash_flow_status === 'string' ? financial.cash_flow_status : '')
@@ -501,8 +480,9 @@ export function mapDashboardResponse(
       .map(mapTransaction),
     maintenance: requireArray<LaravelMaintenanceItem>(payload.maintenance, 'maintenance')
       .map(mapMaintenance),
-    // Agregat bawaan tidak membawa finansial terverifikasi; seksi
-    // finansial aktual diisi mapDashboardFinance dari endpoint khusus.
-    availability: { income: false, expense: false, netCashFlow: false }
+    // Blok financial tervalidasi penuh di atas (income/expense/net +
+    // union status) sehingga ketiga KPI agregat resmi tersedia. Nilai
+    // nol yang tampil berikutnya adalah nol terverifikasi backend.
+    availability: { income: true, expense: true, netCashFlow: true }
   }
 }
