@@ -1,8 +1,19 @@
 <script setup lang="ts">
 const quickActionsOpen = ref(false)
 
-const quickActions = [
-  { label: 'Tagihan', detail: 'Listrik, WiFi, & PDAM', caption: 'Jatuh Tempo', icon: 'i-lucide-zap', iconClass: 'text-amber-600' },
+interface QuickAction {
+  label: string
+  detail: string
+  caption: string
+  icon: string
+  iconClass: string
+  wide?: boolean
+  /** Tujuan navigasi; tanpa `to` aksi tetap disabled (coming soon). */
+  to?: string
+}
+
+const quickActions: QuickAction[] = [
+  { label: 'Tagihan', detail: 'Listrik, WiFi, & PDAM', caption: 'Jatuh Tempo', icon: 'i-lucide-zap', iconClass: 'text-amber-600', to: '/bills' },
   { label: 'Daftar Belanja', detail: 'Bahan dapur & harian', caption: 'Belanja', icon: 'i-lucide-shopping-bag', iconClass: 'text-rose-600' },
   { label: 'Aset Rumah', detail: 'Elektronik & mebel', caption: 'Garansi', icon: 'i-lucide-house', iconClass: 'text-blue-600' },
   { label: 'Maintenance', detail: 'Cuci AC, filter & servis', caption: 'Jadwal', icon: 'i-lucide-puzzle', iconClass: 'text-emerald-700' },
@@ -107,13 +118,15 @@ const quickActions = [
                 <UButton
                   v-for="action in quickActions"
                   :key="action.label"
-                  disabled
-                  aria-disabled="true"
+                  :to="action.to"
+                  :disabled="!action.to"
+                  :aria-disabled="!action.to"
                   color="neutral"
                   variant="outline"
                   class="min-h-19 justify-start gap-2 rounded-2xl border-stone-200 bg-stone-50 px-2.5 py-2 text-left opacity-100 disabled:opacity-100 dark:border-stone-800 dark:bg-stone-900"
                   :class="action.wide ? 'col-span-2' : ''"
-                  title="Fitur segera hadir"
+                  :title="action.to ? undefined : 'Fitur segera hadir'"
+                  @click="action.to ? (quickActionsOpen = false) : undefined"
                 >
                   <UIcon :name="action.icon" class="size-6 shrink-0" :class="action.iconClass" aria-hidden="true" />
                   <span class="min-w-0 flex-1">

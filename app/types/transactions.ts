@@ -22,6 +22,13 @@ export interface TransactionItem {
   description: string | null
   wallet: string | null
   category: TransactionCategory | null
+  /**
+   * Tautan morph sumber bill (D-08, selalu dikirim backend): non-null
+   * berarti baris ini pembayaran tagihan — TIDAK boleh menawarkan
+   * edit/hapus generik (guard backend BILL_PAYMENT_LOCKED tetap
+   * otoritas; penyembunyian aksi hanya UX).
+   */
+  bill_payment: { bill_id: string, bill_title: string } | null
   created_at: string
   updated_at: string
 }

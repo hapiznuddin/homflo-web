@@ -56,6 +56,21 @@ const typeLabel = computed(() => props.item?.type === 'income' ? 'Pemasukan' : '
           </div>
         </div>
 
+        <!-- Sumber transaksi dari pembayaran tagihan (D-08): tampilan
+             read-only + aksi edit/hapus disembunyikan — guard backend
+             BILL_PAYMENT_LOCKED tetap otoritas; ini UX saja. -->
+        <div
+          v-if="props.item.bill_payment"
+          class="flex items-start gap-2 rounded-2xl border border-default bg-elevated/50 px-3 py-2 text-sm"
+        >
+          <UIcon name="i-lucide-receipt" class="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />
+          <p class="min-w-0">
+            <span class="font-medium text-highlighted">Pembayaran tagihan</span>
+            — {{ props.item.bill_payment.bill_title }}. Transaksi ini terkait pembayaran tagihan dan tidak
+            dapat diubah atau dihapus dari sini.
+          </p>
+        </div>
+
         <dl class="flex flex-col gap-2 text-sm">
           <div class="flex justify-between gap-3">
             <dt class="text-muted">Tanggal</dt>
@@ -75,18 +90,20 @@ const typeLabel = computed(() => props.item?.type === 'income' ? 'Pemasukan' : '
           </div>
         </dl>
 
-        <div v-if="!props.confirmDelete" class="flex gap-2 pt-1">
-          <UButton color="neutral" variant="outline" block @click="emit('edit', props.item)">Ubah</UButton>
-          <UButton color="error" variant="outline" block @click="emit('delete')">Hapus</UButton>
-        </div>
-
-        <div v-else class="flex flex-col gap-2 pt-1">
-          <UAlert color="error" variant="soft" title="Hapus transaksi ini?" description="Data yang dihapus tidak dapat dikembalikan." />
-          <div class="flex gap-2">
-            <UButton color="neutral" variant="outline" block @click="emit('cancel-delete')">Batal</UButton>
-            <UButton color="error" block :loading="props.deleting" :disabled="props.deleting" @click="emit('delete')">Ya, hapus</UButton>
+        <template v-if="!props.item.bill_payment">
+          <div v-if="!props.confirmDelete" class="flex gap-2 pt-1">
+            <UButton color="neutral" variant="outline" block @click="emit('edit', props.item)">Ubah</UButton>
+            <UButton color="error" variant="outline" block @click="emit('delete')">Hapus</UButton>
           </div>
-        </div>
+
+          <div v-else class="flex flex-col gap-2 pt-1">
+            <UAlert color="error" variant="soft" title="Hapus transaksi ini?" description="Data yang dihapus tidak dapat dikembalikan." />
+            <div class="flex gap-2">
+              <UButton color="neutral" variant="outline" block @click="emit('cancel-delete')">Batal</UButton>
+              <UButton color="error" block :loading="props.deleting" :disabled="props.deleting" @click="emit('delete')">Ya, hapus</UButton>
+            </div>
+          </div>
+        </template>
       </div>
     </template>
   </UModal>

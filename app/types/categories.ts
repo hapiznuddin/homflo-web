@@ -6,6 +6,12 @@ export interface CategoryItem {
   id: string
   name: string
   icon: string | null
+  /**
+   * Jenis kategori dari backend (presentCategory mengirimkannya).
+   * null = kategori legacy tanpa tipe — ditolak backend untuk bill
+   * (CATEGORY_TYPE_MISMATCH), jadi tidak ditawarkan pada form Bills.
+   */
+  type?: 'expense' | 'income' | null
 }
 
 export interface CategoryFormValues {

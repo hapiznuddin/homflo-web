@@ -64,6 +64,7 @@ function sampleItem(overrides: Partial<TransactionItem> = {}): TransactionItem {
     description: 'Belanja Supermarket',
     wallet: 'Kas Tunai',
     category: null,
+    bill_payment: null,
     created_at: '2026-10-02T00:00:00.000000Z',
     updated_at: '2026-10-02T00:00:00.000000Z',
     ...overrides
@@ -451,6 +452,57 @@ describe('transactions page', () => {
     expect(text).toContain('Dapur')
     expect(text).toContain('Ikan')
     expect(text).toContain('Parkir')
+  })
+
+  it('transaksi pembayaran tagihan tanpa aksi Ubah/Hapus + label "Pembayaran tagihan" (D-08)', async () => {
+    const billPayment = { bill_id: 'b1', bill_title: 'Tagihan Listrik' }
+
+    const state = setupTransactionsState({
+      items: [
+        sampleItem({
+          id: 'bp1',
+          description: null,
+          category: { id: 'c1', name: 'Listrik', icon: null },
+          bill_payment: billPayment
+        })
+      ]
+    })
+
+    // Detail harus memuat baris yang sama (mock fetchOne generik tidak
+    // membawa bill_payment).
+    state.fetchOne.mockImplementation(async (id: string) => sampleItem({
+      id,
+      description: null,
+      category: { id: 'c1', name: 'Listrik', icon: null },
+      bill_payment: billPayment
+    }))
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('ul button').trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Pembayaran tagihan')
+    expect(bodyText()).toContain('Tagihan Listrik')
+
+    const labels = Array.from(document.body.querySelectorAll('button'))
+      .map(button => (button.textContent ?? '').trim())
+
+    expect(labels).not.toContain('Ubah')
+    expect(labels).not.toContain('Hapus')
+  })
+
+  it('transaksi generik (bill_payment null) tetap menawarkan Ubah/Hapus — regresi', async () => {
+    setupTransactionsState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('ul button').trigger('click')
+    await flush()
+
+    expect(bodyText()).not.toContain('Pembayaran tagihan')
+    expect(bodyText()).toContain('Ubah')
+    expect(bodyText()).toContain('Hapus')
   })
 
   it('kegagalan kategori menampilkan retry tanpa fixture dan tanpa blokir form', async () => {

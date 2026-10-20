@@ -29,6 +29,11 @@ const items: NavigationMenuItem[][] = [
       to: '/budgets'
     },
     {
+      label: 'Tagihan',
+      icon: 'i-lucide-receipt',
+      to: '/bills'
+    },
+    {
       label: 'Daftar',
       icon: 'i-lucide-list'
     }

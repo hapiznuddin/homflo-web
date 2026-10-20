@@ -48,6 +48,7 @@ function txItem(overrides: Partial<TransactionItem> = {}): TransactionItem {
     description: 'Belanja dapur',
     wallet: 'Kas Tunai',
     category: null,
+    bill_payment: null,
     created_at: '2026-10-05T00:00:00.000000Z',
     updated_at: '2026-10-05T00:00:00.000000Z',
     ...overrides

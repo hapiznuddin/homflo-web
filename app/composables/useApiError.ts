@@ -25,7 +25,15 @@ const CODE_MESSAGES: Record<string, string> = {
   CATEGORY_ALREADY_EXISTS: 'Nama kategori tersebut sudah dipakai di rumah tangga ini.',
   CATEGORY_IN_USE: 'Kategori masih dipakai oleh anggaran sehingga tidak dapat dihapus.',
   BUDGET_NOT_FOUND: 'Anggaran tidak ditemukan.',
-  BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.'
+  BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.',
+  BILL_NOT_FOUND: 'Tagihan tidak ditemukan.',
+  BILL_ALREADY_PAID: 'Tagihan ini sudah dibayar.',
+  BILL_NOT_PAID: 'Hanya tagihan lunas yang bisa diarsipkan.',
+  BILL_ARCHIVED: 'Tagihan sudah diarsipkan.',
+  BILL_PAYMENT_LOCKED: 'Pembayaran tagihan tidak dapat diubah atau dihapus.',
+  INSUFFICIENT_FUNDS: 'Saldo dompet tidak cukup.',
+  WALLET_NOT_FOUND: 'Dompet tidak ditemukan atau tidak aktif.',
+  CATEGORY_TYPE_MISMATCH: 'Kategori harus berjenis pengeluaran.'
 }
 
 // Exact English backend messages mapped to Indonesian.
@@ -52,13 +60,20 @@ const FIELD_LABELS: Record<string, string> = {
   occurred_on: 'tanggal',
   description: 'deskripsi',
   wallet: 'dompet',
+  wallet_id: 'dompet',
   category_id: 'kategori',
   date_from: 'tanggal mulai',
   date_to: 'tanggal akhir',
   sort_by: 'urutan',
   sort_dir: 'arah urutan',
   per_page: 'jumlah per halaman',
-  page: 'halaman'
+  page: 'halaman',
+  title: 'judul',
+  notes: 'catatan',
+  due_date: 'tanggal jatuh tempo',
+  due_day: 'tanggal jatuh tempo',
+  frequency: 'frekuensi',
+  recurrence: 'pengulangan'
 }
 
 function fieldLabel(field: string): string {
