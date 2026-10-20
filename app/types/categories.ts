@@ -18,4 +18,6 @@ export interface CategoryFormValues {
   name: string
   /** Identifier ikon bebas (mis. "i-lucide-tag"); kosong = tanpa ikon. */
   icon: string
+  /** Jenis kategori: 'income' atau 'expense'. Wajib diisi. */
+  type: 'income' | 'expense'
 }

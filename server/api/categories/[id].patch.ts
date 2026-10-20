@@ -2,7 +2,8 @@
 // ownership tidak pernah dapat diubah dari sini.
 const ALLOWED_BODY_KEYS = [
   'name',
-  'icon'
+  'icon',
+  'type'
 ] as const
 
 export default defineEventHandler(async (event) => {

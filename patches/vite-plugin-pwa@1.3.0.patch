@@ -1,0 +1,13 @@
+diff --git a/dist/index.js b/dist/index.js
+index 84bf280f220d12313d0523b2160f7f6eb64fd81a..7e983fb7009103dca971a0d07a7d6d82bfda407a 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -570,7 +570,7 @@ function DevPlugin(ctx) {
+             if (!existsSync2(globDirectory))
+               mkdirSync(globDirectory, { recursive: true });
+             const swDest = resolve4(globDirectory, "sw.js");
+-            if (!swDevOptions.swDevGenerated) {
++            if (!swDevOptions.swDevGenerated || !existsSync2(swDest)) {
+               let suppressWarnings;
+               if (options.devOptions.suppressWarnings === true) {
+                 suppressWarnings = normalizePath(resolve4(globDirectory, "suppress-warnings.js"));

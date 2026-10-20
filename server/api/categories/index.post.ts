@@ -2,7 +2,8 @@
 // household ditentukan server.
 const ALLOWED_BODY_KEYS = [
   'name',
-  'icon'
+  'icon',
+  'type'
 ] as const
 
 export default defineEventHandler(async (event) => {

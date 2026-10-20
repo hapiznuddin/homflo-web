@@ -86,6 +86,7 @@ export function useCategories() {
   function toPayload(values: CategoryFormValues): Record<string, unknown> {
     return {
       name: values.name.trim(),
+      type: values.type,
       icon: values.icon.trim() === '' ? null : values.icon.trim()
     }
   }
