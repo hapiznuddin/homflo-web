@@ -26,9 +26,7 @@ const amountClass: Record<TransactionDirection, string> = {
           <h2 class="text-base font-semibold text-highlighted">Transaksi Terbaru</h2>
           <p class="mt-0.5 text-sm text-muted">Aktivitas arus kas keluar &amp; masuk terakhir</p>
         </div>
-        <!-- "Semua transaksi" aktif menuju /transactions (Phase 15.1).
-             Tombol "Tambah Transaksi" tetap disabled — create transaksi
-             belum tersedia di UI. -->
+        <!-- "Semua transaksi" aktif menuju /transactions (Phase 15.1). -->
         <UButton color="neutral" variant="ghost" size="sm" to="/transactions">
           Semua transaksi
         </UButton>
@@ -37,7 +35,11 @@ const amountClass: Record<TransactionDirection, string> = {
 
     <div v-if="transactions.length === 0" class="py-6 text-center">
       <p class="text-sm text-muted">Belum ada transaksi bulan ini</p>
-      <UButton color="neutral" variant="outline" size="sm" class="mt-3" disabled aria-disabled="true" title="Segera hadir">
+      <!-- CTA kosong menavigasi ke /transactions — alur create transaksi
+           tersedia di halaman tersebut (modal TransactionFormModal, Phase
+           15.1); tidak ada lagi tombol mati "Segera hadir" (GAP-1,
+           Phase 15.3.4). -->
+      <UButton color="neutral" variant="outline" size="sm" class="mt-3" to="/transactions">
         Tambah Transaksi
       </UButton>
     </div>

@@ -291,6 +291,20 @@ describe('DashboardUpcomingBills', () => {
     expect(wrapper.text()).toContain('Internet')
     expect(wrapper.text()).toContain('Komitmen tagihan terdekat')
   })
+
+  it('footer "Jadwal lengkap" dihapus — tanpa tombol mati; tujuan jadwal = link header /bills (GAP-3, Phase 15.3.4)', async () => {
+    const wrapper = await mountSuspended(DashboardUpcomingBills, { props: { bills }, route: false })
+
+    // Tombol disabled "Segera hadir" tidak lagi ada — kartu tidak
+    // menampilkan elemen interaktif tanpa tindakan valid.
+    expect(wrapper.text()).not.toContain('Jadwal lengkap')
+    expect(wrapper.find('[disabled]').exists()).toBe(false)
+    expect(wrapper.find('[aria-disabled="true"]').exists()).toBe(false)
+
+    // Fungsi melihat seluruh jadwal/tagihan terwakili link header menuju
+    // Overview Bills (satu-satunya pintu masuk jadwal dalam sitemap).
+    expect(wrapper.find('a[href="/bills"]').exists()).toBe(true)
+  })
 })
 
 describe('DashboardRecentTransactions', () => {
@@ -422,13 +436,16 @@ describe('DashboardRecentTransactions', () => {
     expect(wrapper.text()).toContain('Belum ada transaksi bulan ini')
     expect(wrapper.text()).toContain('Tambah Transaksi')
 
-    // Create transaksi belum tersedia di UI — tombol tambah tetap
-    // jujur disabled (Phase 15.1 tidak mengaktifkan fitur ini).
-    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah Transaksi'))
+    // CTA kosong adalah navigasi nyata ke /transactions — alur create
+    // transaksi tersedia di halaman itu (GAP-1 closure, Phase 15.3.4);
+    // tidak ada lagi tombol disabled "Segera hadir". Dipilih berdasarkan
+    // teks karena header "Semua transaksi" berbagi href yang sama.
+    const addButton = wrapper.findAll('a[href="/transactions"]')
+      .find(link => link.text().includes('Tambah Transaksi'))
 
     expect(addButton).toBeDefined()
-    expect(addButton!.attributes('aria-disabled')).toBe('true')
-    expect(addButton!.attributes('title')).toBe('Segera hadir')
+    expect(addButton!.attributes('aria-disabled')).not.toBe('true')
+    expect(addButton!.attributes('disabled')).toBeUndefined()
   })
 })
 

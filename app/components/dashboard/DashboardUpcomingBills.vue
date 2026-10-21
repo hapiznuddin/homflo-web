@@ -53,10 +53,10 @@ withDefaults(defineProps<Props>(), { unsupported: false })
       </li>
     </ul>
 
-    <template v-if="bills.length > 0" #footer>
-      <UButton color="neutral" variant="ghost" block size="sm" disabled aria-disabled="true" title="Segera hadir">
-        Jadwal lengkap
-      </UButton>
-    </template>
+    <!-- Footer "Jadwal lengkap" (disabled) dihapus — Phase 15.3.4/GAP-3:
+         tidak ada halaman jadwal khusus dalam sitemap (jadwal tagihan
+         tercakup Overview Bills via link header "Semua tagihan" → /bills);
+         tombol mati redundan lebih jujur dihapus daripada diarahkan ke
+         tujuan yang tidak mewakili fungsi jadwal tersendiri. -->
   </UCard>
 </template>
