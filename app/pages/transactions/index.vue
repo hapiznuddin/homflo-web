@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import TransactionDetailModal from '~/components/transactions/TransactionDetailModal.vue'
 import TransactionFormModal from '~/components/transactions/TransactionFormModal.vue'
 import type { TransactionFormValues, TransactionItem, TransactionType } from '~/types/transactions'
 import { formatTransactionAmount, transactionAmountClass, transactionAmountSign, transactionTypeIcon, transactionTypeLabel } from '~/utils/transactions'
@@ -26,14 +25,6 @@ const dateFrom = ref('')
 const dateTo = ref('')
 
 const formOpen = ref(false)
-const editing = ref<TransactionItem | null>(null)
-
-const detailOpen = ref(false)
-const detailId = ref('')
-const detailItem = ref<TransactionItem | null>(null)
-const detailLoading = ref(false)
-const detailError = ref<string | null>(null)
-const confirmDelete = ref(false)
 
 const hasActiveFilter = computed(() => typeFilter.value !== 'all' || categoryFilter.value !== 'all' || dateFrom.value !== '' || dateTo.value !== '')
 
@@ -84,92 +75,20 @@ async function goToPage(page: number): Promise<void> {
 }
 
 function openCreate(): void {
-  editing.value = null
   tx.clearError()
   formOpen.value = true
 }
 
-function openEdit(item: TransactionItem): void {
-  editing.value = item
-  detailOpen.value = false
-  confirmDelete.value = false
-  tx.clearError()
-  formOpen.value = true
-}
-
+// Create saja — edit/hapus hidup di halaman detail /transactions/[id]
+// (Phase 15.2.3).
 async function onFormSubmit(values: TransactionFormValues): Promise<void> {
-  const saved = editing.value
-    ? await tx.update(editing.value.id, values)
-    : await tx.create(values)
+  const saved = await tx.create(values)
 
   if (saved) {
-    const wasEditing = editing.value !== null
-
     formOpen.value = false
-    editing.value = null
     toast.add({
-      title: wasEditing ? 'Transaksi diubah' : 'Transaksi ditambah',
+      title: 'Transaksi ditambah',
       description: 'Data tersimpan.',
-      color: 'success'
-    })
-  }
-}
-
-async function openDetail(item: TransactionItem): Promise<void> {
-  detailId.value = item.id
-  detailItem.value = null
-  detailError.value = null
-  confirmDelete.value = false
-  detailLoading.value = true
-  detailOpen.value = true
-
-  try {
-    detailItem.value = await tx.fetchOne(item.id)
-  } catch (err) {
-    detailError.value = readError(err, 'Detail belum dapat dimuat.')
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-async function retryDetail(): Promise<void> {
-  if (detailId.value === '') {
-    return
-  }
-
-  detailError.value = null
-  detailLoading.value = true
-
-  try {
-    detailItem.value = await tx.fetchOne(detailId.value)
-  } catch (err) {
-    detailError.value = readError(err, 'Detail belum dapat dimuat.')
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-async function onDeleteRequest(): Promise<void> {
-  if (!detailItem.value) {
-    return
-  }
-
-  if (!confirmDelete.value) {
-    confirmDelete.value = true
-
-    return
-  }
-
-  const id = detailItem.value.id
-  const ok = await tx.remove(id)
-
-  if (ok) {
-    detailOpen.value = false
-    detailItem.value = null
-    confirmDelete.value = false
-    toast.add({
-      title: 'Transaksi dihapus',
-      description: 'Data terhapus.',
       color: 'success'
     })
   }
@@ -272,10 +191,11 @@ void wallets.load()
 
       <ul v-else class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4">
         <li v-for="item in items" :key="item.id">
-          <button
-            type="button"
+          <!-- Deep-link ke detail (Phase 15.2.3): baris daftar menuju
+               /transactions/{id} — sumber tampilan detail tunggal. -->
+          <NuxtLink
+            :to="`/transactions/${item.id}`"
             class="flex w-full items-center gap-3 py-3 text-left first:pt-3 last:pb-3"
-            @click="openDetail(item)"
           >
             <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
               <UIcon :name="typeIcon(item)" class="size-4.5 text-default" />
@@ -292,7 +212,7 @@ void wallets.load()
                 {{ item.category.name }}
               </span>
             </span>
-          </button>
+          </NuxtLink>
         </li>
       </ul>
 
@@ -321,7 +241,7 @@ void wallets.load()
 
     <TransactionFormModal
       v-model:open="formOpen"
-      :editing="editing"
+      :editing="null"
       :submitting="submitting"
       :submit-error="error"
       :field-errors="fieldErrors"
@@ -334,19 +254,6 @@ void wallets.load()
       @submit="onFormSubmit"
       @retry-categories="categories.refresh()"
       @retry-wallets="wallets.refresh()"
-    />
-
-    <TransactionDetailModal
-      v-model:open="detailOpen"
-      :item="detailItem"
-      :loading="detailLoading"
-      :error="detailError"
-      :deleting="submitting"
-      :confirm-delete="confirmDelete"
-      @edit="openEdit"
-      @delete="onDeleteRequest"
-      @cancel-delete="confirmDelete = false"
-      @retry="retryDetail"
     />
   </div>
 </template>

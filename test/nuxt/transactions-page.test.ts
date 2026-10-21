@@ -60,7 +60,8 @@ const walletsMock = vi.hoisted(() => ({ api: undefined as unknown }))
 mockNuxtImport('useWallets', () => () => walletsMock.api)
 
 // Satu dompet aktif (ditawarkan form) + satu non-aktif (harus
-// disaring client — pola BillPaymentModal).
+// disaring client — pola BillPaymentModal) + dompet aktif kedua untuk
+// alur transfer (sumber≠tujuan).
 function sampleWallets(): WalletItem[] {
   return [
     {
@@ -82,6 +83,17 @@ function sampleWallets(): WalletItem[] {
       opening_balance: '0',
       is_active: false,
       balance: '0.00',
+      created_at: '2026-10-01T00:00:00.000000Z',
+      updated_at: '2026-10-01T00:00:00.000000Z'
+    },
+    {
+      id: 'w3',
+      household_id: 'h1',
+      name: 'Rekening BCA',
+      type: 'bank',
+      opening_balance: '0',
+      is_active: true,
+      balance: '1500000.00',
       created_at: '2026-10-01T00:00:00.000000Z',
       updated_at: '2026-10-01T00:00:00.000000Z'
     }
@@ -339,41 +351,14 @@ describe('transactions page', () => {
     expect(state.load).toHaveBeenCalledWith({}, true)
   })
 
-  it('klik baris membuka detail via fetchOne()', async () => {
-    const state = setupTransactionsState()
+  it('baris adalah deep-link ke /transactions/{id} (detail route, Phase 15.2.3)', async () => {
+    setupTransactionsState()
 
     const wrapper = await mountPage()
-    const row = wrapper.find('ul button')
+    const rowLink = wrapper.find('ul a[href="/transactions/01J0000000000000000000001"]')
 
-    expect(row.exists()).toBe(true)
-
-    await row.trigger('click')
-
-    expect(state.fetchOne).toHaveBeenCalledWith('01J0000000000000000000001')
-  })
-
-  it('hapus dari detail memakai konfirmasi dua langkah lalu memanggil remove()', async () => {
-    const state = setupTransactionsState()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Hapus')
-
-    await bodyButton('Hapus').trigger('click')
-
-    // Konfirmasi dua langkah muncul; remove() belum dipanggil.
-    expect(state.remove).not.toHaveBeenCalled()
-    expect(bodyText()).toContain('Ya, hapus')
-
-    await bodyButton('Ya, hapus').trigger('click')
-
-    expect(state.remove).toHaveBeenCalledWith('01J0000000000000000000001')
-    expect(toastMock.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Transaksi dihapus' })
-    )
+    expect(rowLink.exists()).toBe(true)
+    expect(rowLink.text()).toContain('Belanja Supermarket')
   })
 
   it('tombol Tambah membuka form dan submit memanggil create() dengan dompet terpilih', async () => {
@@ -580,29 +565,115 @@ describe('transactions page', () => {
     expect(wallets.refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('edit transaksi menampilkan dompet read-only tanpa select pemindahan', async () => {
-    const state = setupTransactionsState()
-
-    state.fetchOne.mockImplementation(async (id: string) => sampleItem({ id, wallet: 'Kas Tunai' }))
+  // Phase 15.2.3 — form transfer: dua select dompet, kategori
+  // disembunyikan, guard sumber≠tujuan.
+  it('memilih jenis Transfer menampilkan sumber+tujuan dan menyembunyikan kategori', async () => {
+    setupTransactionsState()
 
     const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
 
-    await wrapper.find('ul button').trigger('click')
+    await addButton!.trigger('click')
     await flush()
 
-    await bodyButton('Ubah').trigger('click')
-    await flush()
-
-    const walletField = document.body.querySelector('#tx-wallet')
-
-    expect(walletField).not.toBeNull()
-    expect(walletField?.tagName).toBe('P')
-    expect(walletField?.textContent).toContain('Kas Tunai')
-
-    // Hanya jenis + kategori yang selectable; dompet tidak editable.
     const modal = wrapper.findComponent(TransactionFormModal)
+    const typeSelect = modal.findAllComponents(USelect)[0]!
 
-    expect(modal.findAllComponents(USelect)).toHaveLength(2)
+    typeSelect.vm.$emit('update:modelValue', 'transfer')
+    await flush()
+
+    // Kategori disembunyikan (prohibited_if backend); tujuan muncul.
+    expect(document.body.querySelector('#tx-destination')).not.toBeNull()
+    expect(document.body.querySelector('#tx-category')).toBeNull()
+    expect(bodyText()).toContain('Dompet sumber')
+    expect(bodyText()).toContain('Dompet tujuan')
+    // Tanpa default otomatis: tujuan belum dipilih.
+    expect(bodyText()).toContain('Pilih dompet tujuan')
+  })
+
+  it('guard menolak transfer dengan sumber = tujuan sebelum memanggil create()', async () => {
+    const state = setupTransactionsState()
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    const modal = wrapper.findComponent(TransactionFormModal)
+    const modalSelects = modal.findAllComponents(USelect)
+
+    modalSelects[0]!.vm.$emit('update:modelValue', 'transfer')
+    await flush()
+
+    const afterType = wrapper.findComponent(TransactionFormModal)
+    const selectsAfterType = afterType.findAllComponents(USelect)
+
+    // jenis, sumber, tujuan (kategori tersembunyi).
+    selectsAfterType[1]!.vm.$emit('update:modelValue', 'w1')
+    selectsAfterType[2]!.vm.$emit('update:modelValue', 'w1')
+
+    const amountInput = document.body.querySelector('#tx-amount')
+
+    await new DOMWrapper(amountInput as Element).setValue('416250')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+    await flush()
+
+    // Guard lokal: create() TIDAK dipanggil, pesan jelas tampil.
+    expect(state.create).not.toHaveBeenCalled()
+    expect(bodyText()).toContain('Dompet sumber dan tujuan harus berbeda.')
+  })
+
+  it('submit transfer memanggil create() dengan destination_wallet_id', async () => {
+    const state = setupTransactionsState()
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    const modal = wrapper.findComponent(TransactionFormModal)
+    const modalSelects = modal.findAllComponents(USelect)
+
+    modalSelects[0]!.vm.$emit('update:modelValue', 'transfer')
+    await flush()
+
+    const selectsAfterType = wrapper.findComponent(TransactionFormModal).findAllComponents(USelect)
+
+    selectsAfterType[1]!.vm.$emit('update:modelValue', 'w1')
+    selectsAfterType[2]!.vm.$emit('update:modelValue', 'w3')
+
+    const amountInput = document.body.querySelector('#tx-amount')
+
+    await new DOMWrapper(amountInput as Element).setValue('416250')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.create).toHaveBeenCalledTimes(1)
+
+    const values = state.create.mock.calls[0]?.[0] as {
+      type: string
+      wallet_id: string
+      destination_wallet_id: string
+      category_id: string
+    }
+
+    expect(values.type).toBe('transfer')
+    expect(values.wallet_id).toBe('w1')
+    expect(values.destination_wallet_id).toBe('w3')
+    // Kategori kosong utk transfer (payload create tanpa key category_id).
+    expect(values.category_id).toBe('')
+    expect(toastMock.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Transaksi ditambah' })
+    )
   })
 
   it('transaksi dengan kategori menampilkan chip nama; tanpa kategori tidak', async () => {
@@ -671,78 +742,6 @@ describe('transactions page', () => {
 
     expect(wrapper.text()).toContain('Pembayaran tagihan')
     expect(wrapper.text()).toContain('Listrik')
-  })
-
-  it('detail transfer menampilkan label "Transfer", bukan "Pengeluaran"', async () => {
-    const state = setupTransactionsState({
-      items: [sampleItem({ id: 'tf2', type: 'transfer', description: null, category: null })]
-    })
-
-    state.fetchOne.mockImplementation(async (id: string) => sampleItem({
-      id,
-      type: 'transfer',
-      description: null,
-      category: null
-    }))
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Transfer')
-    expect(bodyText()).not.toContain('Pengeluaran')
-  })
-
-  it('transaksi pembayaran tagihan tanpa aksi Ubah/Hapus + label "Pembayaran tagihan" (D-08)', async () => {
-    const billPayment = { bill_id: 'b1', bill_title: 'Tagihan Listrik' }
-
-    const state = setupTransactionsState({
-      items: [
-        sampleItem({
-          id: 'bp1',
-          description: null,
-          category: { id: 'c1', name: 'Listrik', icon: null },
-          bill_payment: billPayment
-        })
-      ]
-    })
-
-    // Detail harus memuat baris yang sama (mock fetchOne generik tidak
-    // membawa bill_payment).
-    state.fetchOne.mockImplementation(async (id: string) => sampleItem({
-      id,
-      description: null,
-      category: { id: 'c1', name: 'Listrik', icon: null },
-      bill_payment: billPayment
-    }))
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Pembayaran tagihan')
-    expect(bodyText()).toContain('Tagihan Listrik')
-
-    const labels = Array.from(document.body.querySelectorAll('button'))
-      .map(button => (button.textContent ?? '').trim())
-
-    expect(labels).not.toContain('Ubah')
-    expect(labels).not.toContain('Hapus')
-  })
-
-  it('transaksi generik (bill_payment null) tetap menawarkan Ubah/Hapus — regresi', async () => {
-    setupTransactionsState()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyText()).not.toContain('Pembayaran tagihan')
-    expect(bodyText()).toContain('Ubah')
-    expect(bodyText()).toContain('Hapus')
   })
 
   it('kegagalan kategori menampilkan retry tanpa fixture dan tanpa blokir form', async () => {

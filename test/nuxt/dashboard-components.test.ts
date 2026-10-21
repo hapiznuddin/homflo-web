@@ -353,6 +353,17 @@ describe('DashboardRecentTransactions', () => {
     expect(allLink.attributes('aria-disabled')).not.toBe('true')
   })
 
+  it('baris transaksi adalah deep-link ke /transactions/{id} (Phase 15.2.3)', async () => {
+    const wrapper = await mountSuspended(DashboardRecentTransactions, {
+      props: { transactions },
+      route: false
+    })
+
+    expect(wrapper.find('li a[href="/transactions/tx-1"]').exists()).toBe(true)
+    expect(wrapper.find('li a[href="/transactions/tx-2"]').exists()).toBe(true)
+    expect(wrapper.find('li a[href="/transactions/tx-1"]').text()).toContain('Belanja Supermarket')
+  })
+
   it('transfer: netral text-default, nominal unsigned, ikon arrow-right-left — bukan warna in/out (Phase 15.1)', async () => {
     const wrapper = await mountSuspended(DashboardRecentTransactions, {
       props: {

@@ -3,8 +3,7 @@ import type {
   TransactionFormValues,
   TransactionItem,
   TransactionListData,
-  TransactionListMeta,
-  TransactionType
+  TransactionListMeta
 } from '~/types/transactions'
 import { readError, readFieldErrors } from '~/composables/useApiError'
 import { normalizeAmountInput } from '~/utils/transactions'
@@ -132,7 +131,24 @@ export function useTransactions() {
     return envelope.data
   }
 
-  function toPayload(values: TransactionFormValues): Record<string, unknown> | null {
+  /**
+   * Membangun body transaksi per mode (kontrak FormRequest Laravel):
+   *
+   * - CREATE transfer: sertakan `destination_wallet_id`, tanpa key
+   *   `category_id` (StoreTransactionRequest: prohibited_if:type,transfer).
+   * - CREATE income/expense: TANPA key `destination_wallet_id`
+   *   (prohibited_unless:type,transfer), `category_id` id‖null.
+   * - UPDATE (PATCH): selalu menyertakan KEDUA key —
+   *   `destination_wallet_id` (id utk transfer; NULL utk non-transfer
+   *   agar konversi transfer→expense menghapus tujuan lama; change()
+   *   membaca via array_key_exists, key absen = tujuan lama terbawa →
+   *   422 TRANSACTION_INVALID) dan `category_id` (null utk transfer —
+   *   key absen + type=transfer = kategori lama terbawa → 422).
+   */
+  function toPayload(
+    values: TransactionFormValues,
+    mode: 'create' | 'update'
+  ): Record<string, unknown> | null {
     const amount = normalizeAmountInput(values.amount)
 
     if (amount === null) {
@@ -141,19 +157,35 @@ export function useTransactions() {
       return null
     }
 
-    return {
-      type: values.type satisfies TransactionType,
+    const isTransfer = values.type === 'transfer'
+    const body: Record<string, unknown> = {
+      type: values.type,
       amount,
       occurred_on: values.occurred_on,
       description: values.description === '' ? null : values.description,
       wallet: values.wallet === '' ? null : values.wallet,
       // ID dompet (ULID) dari Wallet API — kolom posting sesungguhnya;
-      // '' (edit read-only / belum pilih) tidak mengirim key sehingga
-      // create kena validasi required backend dan PATCH tetap tanpa
-      // wallet_id (whitelist [id].patch tidak meneruskannya).
-      ...(values.wallet_id === '' ? {} : { wallet_id: values.wallet_id }),
-      category_id: values.category_id === '' ? null : values.category_id
+      // '' (belum pilih) tidak mengirim key sehingga create kena
+      // validasi required backend.
+      ...(values.wallet_id === '' ? {} : { wallet_id: values.wallet_id })
     }
+
+    if (isTransfer) {
+      if (values.destination_wallet_id !== '') {
+        body.destination_wallet_id = values.destination_wallet_id
+      }
+    } else if (mode === 'update') {
+      // Konversi transfer→non-transfer: null eksplisit (lihat doc toPayload).
+      body.destination_wallet_id = null
+    }
+
+    if (!(isTransfer && mode === 'create')) {
+      body.category_id = !isTransfer && values.category_id !== ''
+        ? values.category_id
+        : null
+    }
+
+    return body
   }
 
   async function create(values: TransactionFormValues): Promise<TransactionItem | null> {
@@ -161,7 +193,7 @@ export function useTransactions() {
       return null
     }
 
-    const body = toPayload(values)
+    const body = toPayload(values, 'create')
 
     if (body === null) {
       return null
@@ -197,7 +229,7 @@ export function useTransactions() {
       return null
     }
 
-    const body = toPayload(values)
+    const body = toPayload(values, 'update')
 
     if (body === null) {
       return null

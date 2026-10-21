@@ -33,6 +33,7 @@ const CODE_MESSAGES: Record<string, string> = {
   BILL_PAYMENT_LOCKED: 'Pembayaran tagihan tidak dapat diubah atau dihapus.',
   INSUFFICIENT_FUNDS: 'Saldo dompet tidak cukup.',
   WALLET_NOT_FOUND: 'Dompet tidak ditemukan atau tidak aktif.',
+  TRANSACTION_INVALID: 'Transaksi tidak valid. Periksa jenis, kategori, dan dompet.',
   CATEGORY_TYPE_MISMATCH: 'Kategori harus berjenis pengeluaran.'
 }
 
@@ -61,6 +62,7 @@ const FIELD_LABELS: Record<string, string> = {
   description: 'deskripsi',
   wallet: 'dompet',
   wallet_id: 'dompet',
+  destination_wallet_id: 'dompet tujuan',
   category_id: 'kategori',
   date_from: 'tanggal mulai',
   date_to: 'tanggal akhir',

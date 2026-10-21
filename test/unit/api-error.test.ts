@@ -55,6 +55,23 @@ describe('readError kode transaksi', () => {
     ).toBe('Kategori tidak ditemukan.')
   })
 
+  // Phase 15.2.3 — konversi tipe/payload transfer yang ditolak backend
+  // (CategoryTypeMismatch/InvalidTransfer) keluar sebagai TRANSACTION_INVALID.
+  it('memetakan TRANSACTION_INVALID ke pesan Indonesia', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'TRANSACTION_INVALID' } } } }, 'x')
+    ).toBe('Transaksi tidak valid. Periksa jenis, kategori, dan dompet.')
+  })
+
+  it('memetakan label destination_wallet_id (dompet tujuan)', () => {
+    expect(translateMessage('The destination_wallet_id field is required.')).toBe(
+      'Kolom dompet tujuan wajib diisi.'
+    )
+    expect(translateMessage('The destination wallet id and wallet id must be different.')).toBe(
+      'The destination wallet id and wallet id must be different.'
+    )
+  })
+
   it('memetakan BUDGET_NOT_FOUND dan BUDGET_ALREADY_EXISTS', () => {
     expect(
       readError({ data: { data: { success: false, error: { code: 'BUDGET_NOT_FOUND' } } } }, 'x')

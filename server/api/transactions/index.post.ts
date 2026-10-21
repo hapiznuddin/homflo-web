@@ -1,8 +1,7 @@
 // Mencatat transaksi. Field di-whitelist sesuai StoreTransactionRequest
-// (helper teruji unit di server/utils/transactionBody — termasuk
-// wallet_id sejak Phase 15.2.2; destination_wallet_id menyusul bersama
-// fitur transfer 15.2.3); household ditentukan server, source_* tidak
-// pernah diteruskan.
+// (helper teruji unit di server/utils/transactionBody — wallet_id sejak
+// Phase 15.2.2, destination_wallet_id sejak 15.2.3 khusus transfer);
+// household ditentukan server, source_* tidak pernah diteruskan.
 import { pickTransactionCreateBody } from '../../utils/transactionBody'
 
 export default defineEventHandler(async (event) => {

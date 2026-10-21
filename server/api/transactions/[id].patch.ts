@@ -1,29 +1,15 @@
-// Mengubah transaksi. Field di-whitelist sesuai UpdateTransactionRequest;
-// ownership dan source_* tidak pernah dapat diubah dari sini.
-const ALLOWED_BODY_KEYS = [
-  'type',
-  'category_id',
-  'amount',
-  'occurred_on',
-  'description',
-  'wallet'
-] as const
+// Mengubah transaksi. Field di-whitelist sesuai UpdateTransactionRequest
+// via pickTransactionUpdateBody (teruji unit — termasuk wallet_id dan
+// destination_wallet_id sejak Phase 15.2.3); ownership dan source_*
+// tidak pernah dapat diubah dari sini.
+import { pickTransactionUpdateBody } from '../../utils/transactionBody'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const raw = await readBody<Record<string, unknown>>(event)
-  const body: Record<string, unknown> = {}
-
-  for (const key of ALLOWED_BODY_KEYS) {
-    const value = raw?.[key]
-
-    if (value !== undefined) {
-      body[key] = value
-    }
-  }
 
   return laravelFetch(event, `/transactions/${encodeURIComponent(String(id))}`, {
     method: 'PATCH',
-    body
+    body: pickTransactionUpdateBody(raw)
   })
 })

@@ -156,6 +156,7 @@ describe('useTransactions', () => {
       description: 'Belanja',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -194,6 +195,7 @@ describe('useTransactions', () => {
       description: '',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: 'c9'
     })
 
@@ -218,6 +220,7 @@ describe('useTransactions', () => {
       description: 'Kopi',
       wallet: 'Kas Tunai',
       wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -247,6 +250,7 @@ describe('useTransactions', () => {
       description: '',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -275,6 +279,7 @@ describe('useTransactions', () => {
       description: '',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -301,6 +306,7 @@ describe('useTransactions', () => {
       description: '',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
     const second = await tx.create({
@@ -310,6 +316,7 @@ describe('useTransactions', () => {
       description: '',
       wallet: '',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -335,6 +342,7 @@ describe('useTransactions', () => {
       description: 'revisi',
       wallet: 'Kas Tunai',
       wallet_id: '',
+      destination_wallet_id: '',
       category_id: ''
     })
 
@@ -386,5 +394,144 @@ describe('useTransactions', () => {
 
     expect(item.id).toBe('01J0000000000000000000001')
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/transactions/01J0000000000000000000001')
+  })
+
+  // Phase 15.2.3 — kontrak payload transfer & konversi tipe (PATCH).
+  it('create() transfer mengirim destination_wallet_id tanpa key category_id', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem({ type: 'transfer' }) })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.create({
+      type: 'transfer',
+      amount: '416250',
+      occurred_on: '2026-10-08',
+      description: 'Pindah dompet',
+      wallet: 'Kas Tunai',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '01J00000000000000000DEST01',
+      category_id: ''
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+
+    expect(url).toBe('/api/transactions')
+    expect(options.method).toBe('POST')
+    expect(options.body).toMatchObject({
+      type: 'transfer',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '01J00000000000000000DEST01'
+    })
+    // prohibited_if:type,transfer — key category_id tidak boleh ada
+    // sama sekali pada create transfer (bukan null).
+    expect(options.body).not.toHaveProperty('category_id')
+  })
+
+  it('create() income/expense tidak pernah mengirim destination_wallet_id', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem() })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.create({
+      type: 'expense',
+      amount: '1000',
+      occurred_on: '2026-10-08',
+      description: '',
+      wallet: '',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '',
+      category_id: ''
+    })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, { body: Record<string, unknown> }]
+
+    // prohibited_unless:type,transfer — key tidak boleh diteruskan
+    // untuk income/expense (bukan sekadar null).
+    expect(options.body).not.toHaveProperty('destination_wallet_id')
+  })
+
+  it('update() non-transfer selalu menyertakan destination_wallet_id null (konversi aman)', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem() })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.update('01J0000000000000000000001', {
+      type: 'expense',
+      amount: '200000',
+      occurred_on: '2026-10-05',
+      description: 'revisi',
+      wallet: 'Kas Tunai',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '',
+      category_id: ''
+    })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+
+    expect(options.method).toBe('PATCH')
+    // change() membaca destination via array_key_exists: null eksplisit
+    // agar tujuan lama tidak terbawa saat konversi transfer→expense.
+    expect(options.body).toHaveProperty('destination_wallet_id', null)
+    expect(options.body).toHaveProperty('category_id', null)
+    expect(options.body).toHaveProperty('wallet_id', '01J00000000000000000WALLET1')
+  })
+
+  it('update() transfer menyertakan destination_wallet_id dan category_id null', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem({ type: 'transfer' }) })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.update('01J0000000000000000000001', {
+      type: 'transfer',
+      amount: '416250',
+      occurred_on: '2026-10-08',
+      description: 'Pindah dompet',
+      wallet: 'Kas Tunai',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '01J00000000000000000DEST01',
+      category_id: ''
+    })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, { body: Record<string, unknown> }]
+
+    expect(options.body).toMatchObject({
+      type: 'transfer',
+      destination_wallet_id: '01J00000000000000000DEST01'
+    })
+    // Kategori transfer wajib null eksplisit: key absen + type=transfer
+    // = kategori lama terbawa → 422 TRANSACTION_INVALID.
+    expect(options.body).toHaveProperty('category_id', null)
+  })
+
+  it('update() 422 TRANSACTION_INVALID terpetakan ke pesan Indonesia', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 422,
+      data: {
+        data: {
+          message: 'Only transfer rows may carry a destination wallet.',
+          error: { code: 'TRANSACTION_INVALID', message: 'Only transfer rows may carry a destination wallet.' }
+        }
+      }
+    })
+
+    const saved = await tx.update('01J0000000000000000000001', {
+      type: 'expense',
+      amount: '200000',
+      occurred_on: '2026-10-05',
+      description: '',
+      wallet: 'Kas Tunai',
+      wallet_id: '01J00000000000000000WALLET1',
+      destination_wallet_id: '',
+      category_id: ''
+    })
+
+    expect(saved).toBeNull()
+    expect(tx.error.value).toBe('Transaksi tidak valid. Periksa jenis, kategori, dan dompet.')
   })
 })

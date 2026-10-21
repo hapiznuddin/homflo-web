@@ -43,23 +43,27 @@ const amountClass: Record<TransactionDirection, string> = {
     </div>
 
     <ul v-else class="flex flex-col divide-y divide-default">
-      <li v-for="tx in transactions" :key="tx.id" class="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
-          <UIcon :name="tx.icon" class="size-4.5 text-default" />
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium text-highlighted">{{ tx.title }}</p>
-          <p class="truncate text-xs text-muted">{{ tx.dateLabel }} · {{ tx.wallet }}</p>
-        </div>
-        <p
-          class="shrink-0 text-sm font-semibold"
-          :class="amountClass[tx.direction]"
-        >
-          <!-- Transfer tampil UNSIGNED (tanpa +/-) agar netral dan tidak
-               mengimplikasikan arah income/expense; in/out memakai format
-               signed seperti sebelumnya. -->
-          {{ tx.direction === 'transfer' ? formatRupiah(tx.amount) : formatRupiah(tx.amount, true) }}
-        </p>
+      <li v-for="tx in transactions" :key="tx.id" class="py-3 first:pt-0 last:pb-0">
+        <!-- Deep-link detail (Phase 15.2.3): baris menuju
+             /transactions/{id} — mapper/agregasi tidak tersentuh. -->
+        <NuxtLink :to="`/transactions/${tx.id}`" class="flex w-full items-center gap-3">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
+            <UIcon :name="tx.icon" class="size-4.5 text-default" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-highlighted">{{ tx.title }}</p>
+            <p class="truncate text-xs text-muted">{{ tx.dateLabel }} · {{ tx.wallet }}</p>
+          </div>
+          <p
+            class="shrink-0 text-sm font-semibold"
+            :class="amountClass[tx.direction]"
+          >
+            <!-- Transfer tampil UNSIGNED (tanpa +/-) agar netral dan tidak
+                 mengimplikasikan arah income/expense; in/out memakai format
+                 signed seperti sebelumnya. -->
+            {{ tx.direction === 'transfer' ? formatRupiah(tx.amount) : formatRupiah(tx.amount, true) }}
+          </p>
+        </NuxtLink>
       </li>
     </ul>
   </UCard>

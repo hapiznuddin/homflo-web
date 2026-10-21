@@ -14,6 +14,13 @@ export interface TransactionCategory {
   icon: string | null
 }
 
+export interface WalletLink {
+  id: string
+  name: string
+  type: string
+  is_active: boolean
+}
+
 export interface TransactionItem {
   id: string
   household_id: string
@@ -25,6 +32,21 @@ export interface TransactionItem {
   description: string | null
   wallet: string | null
   category: TransactionCategory | null
+  /**
+   * ID dompet sumber posting (presenter: `wallet_id`) — null untuk baris
+   * legacy sebelum dompet. Dipakai prefill select dompet saat edit.
+   */
+  wallet_id?: string | null
+  /**
+   * ID dompet tujuan — hanya terisi untuk transfer (presenter backend);
+   * null untuk income/expense. Konversi tipe saat edit mengirim key ini
+   * secara eksplisit (id‖null) sesuai kontrak TransactionService::change.
+   */
+  destination_wallet_id?: string | null
+  /** Tautan dompet sumber {id,name,type,is_active} dari presenter. */
+  source_wallet?: WalletLink | null
+  /** Tautan dompet tujuan — hanya untuk transfer. */
+  destination_wallet?: WalletLink | null
   /**
    * Tautan morph sumber bill (D-08, selalu dikirim backend): non-null
    * berarti baris ini pembayaran tagihan — TIDAK boleh menawarkan
@@ -68,11 +90,19 @@ export interface TransactionFormValues {
   /** Nama dompet (kolom legacy tampilan) — bukan identifier posting. */
   wallet: string
   /**
-   * ID dompet dari Wallet API (ULID) — sumber posting sesungguhnya
-   * (StoreTransactionRequest mewajibkannya untuk create); '' = belum
-   * dipilih. Pemindahan dompet saat edit menyusul di fase transfer.
+   * ID dompet sumber dari Wallet API (ULID) — sumber posting
+   * sesungguhnya (StoreTransactionRequest mewajibkannya untuk create);
+   * '' = belum dipilih. Pemindahan dompet saat edit didukung backend
+   * (UpdateTransactionRequest: `wallet_id sometimes`).
    */
   wallet_id: string
+  /**
+   * ID dompet tujuan — HANYA untuk transfer (StoreTransactionRequest:
+   * `prohibited_unless:type,transfer` + `required_if`); '' = belum
+   * dipilih/tidak berlaku. Untuk PATCH, key selalu dikirim (id‖null)
+   * agar konversi transfer→non-transfer menghapus tujuan lama.
+   */
+  destination_wallet_id: string
   /** ID kategori dari API; '' berarti tanpa kategori (didukung backend). */
   category_id: string
 }

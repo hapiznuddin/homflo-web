@@ -33,13 +33,17 @@ const modalOpen = computed({
 
 const typeOptions: Array<{ label: string, value: TransactionType }> = [
   { label: 'Pengeluaran', value: 'expense' },
-  { label: 'Pemasukan', value: 'income' }
+  { label: 'Pemasukan', value: 'income' },
+  { label: 'Transfer', value: 'transfer' }
 ]
 
 // Hanya dompet aktif yang dapat menerima posting baru (pola persis
 // BillPaymentModal — filter client; backend tetap otoritas lewat
-// WALLET_NOT_FOUND / INSUFFICIENT_FUNDS).
+// WALLET_NOT_FOUND / INSUFFICIENT_FUNDS). Berlaku untuk sumber maupun
+// tujuan transfer.
 const activeWallets = computed(() => props.wallets.filter(wallet => wallet.is_active))
+
+const isTransfer = computed(() => form.type === 'transfer')
 
 // Nama dompet terpilih — dikirim ke kolom legacy `wallet` agar tampilan
 // daftar tetap menampilkan nama dompet; identifier posting tetap wallet_id.
@@ -54,8 +58,18 @@ const form = reactive<TransactionFormValues>({
   description: '',
   wallet: '',
   wallet_id: '',
+  destination_wallet_id: '',
   category_id: ''
 })
+
+// Guard lokal transfer (backend tetap otoritas: `different:wallet_id`,
+// required_if, dan validasi saldo semuanya di server). Hanya untuk UX
+// agar pengguna tidak menerima 422 aneh tanpa pola pesan.
+const transferGuard = ref<string | null>(null)
+
+// Tipe saat form dibuka — reset kategori hanya saat pengguna MENGUBAH
+// tipe (re-pairing kategori), bukan saat prefill edit berjalan.
+let initialType: TransactionType = 'expense'
 
 function todayYmd(): string {
   const now = new Date()
@@ -67,16 +81,20 @@ function todayYmd(): string {
 
 function resetForm(): void {
   form.type = props.editing?.type ?? 'expense'
-  form.amount = ''
+  initialType = form.type
+  form.amount = props.editing?.amount ?? ''
   form.occurred_on = props.editing?.occurred_on ?? todayYmd()
   form.description = props.editing?.description ?? ''
+  // Create & edit: tanpa default otomatis — pengguna memilih dompet
+  // secara eksplisit; edit prefill dari wallet_id/destination_wallet_id
+  // item (pemindahan dompet saat edit didukung backend, 15.2.3).
+  form.wallet_id = props.editing?.wallet_id ?? ''
+  form.destination_wallet_id = props.editing?.destination_wallet_id ?? ''
   form.wallet = ''
-  // Create: tanpa default otomatis — pengguna memilih dompet secara
-  // eksplisit; edit: dompet tampil read-only (tanpa pemindahan, 15.2.3).
-  form.wallet_id = ''
   // Reka SelectItem melarang value string kosong; 'none' dipetakan
   // kembali ke '' (tanpa kategori) saat submit.
   form.category_id = props.editing?.category?.id ?? 'none'
+  transferGuard.value = null
 }
 
 watch(() => [props.open, props.editing] as const, ([open]) => {
@@ -85,18 +103,47 @@ watch(() => [props.open, props.editing] as const, ([open]) => {
   }
 }, { immediate: true })
 
+// Ganti tipe → kategori lama tidak lagi dijamin cocok (backend
+// re-pairing CategoryTypeMismatch) → reset ke "Tanpa kategori".
+watch(() => form.type, (next) => {
+  if (next !== initialType) {
+    form.category_id = 'none'
+  }
+})
+
+// Guard sumber≠tujuan tidak boleh menggantung setelah nilai berubah.
+watch(
+  () => [form.type, form.wallet_id, form.destination_wallet_id] as const,
+  () => {
+    transferGuard.value = null
+  }
+)
+
 function close(): void {
   emit('update:open', false)
 }
 
 function onSubmit(): void {
+  if (isTransfer.value) {
+    if (form.destination_wallet_id === '') {
+      transferGuard.value = 'Pilih dompet tujuan terlebih dahulu.'
+
+      return
+    }
+
+    if (form.wallet_id !== '' && form.destination_wallet_id === form.wallet_id) {
+      transferGuard.value = 'Dompet sumber dan tujuan harus berbeda.'
+
+      return
+    }
+  }
+
   emit('submit', {
     ...form,
-    // Create: nama dompet terpilih untuk kolom legacy tampilan (ID
-    // posting dikirim via wallet_id). Edit: kirim ulang nama legacy apa
-    // adanya — dompet read-only, PATCH tanpa wallet_id (whitelist
-    // [id].patch); pemindahan dompet bagian dari fase transfer 15.2.3.
-    wallet: props.editing ? (props.editing.wallet ?? '') : selectedWalletName.value,
+    // Nama dompet terpilih untuk kolom legacy tampilan (ID posting
+    // dikirim via wallet_id); bila tanpa pilihan (baris legacy), nama
+    // lama dipertahankan apa adanya.
+    wallet: selectedWalletName.value || (props.editing?.wallet ?? ''),
     category_id: form.category_id === 'none' ? '' : form.category_id
   })
 }
@@ -155,40 +202,57 @@ function onSubmit(): void {
           <p v-if="props.fieldErrors.description" class="mt-1 text-xs text-error">{{ props.fieldErrors.description }}</p>
         </div>
 
+        <!-- Sumber posting: select aktif untuk create DAN edit
+             (pemindahan dompet didukung backend — UpdateTransactionRequest
+             `wallet_id sometimes` + revalidasi delta gabungan atomik). -->
         <div>
-          <label for="tx-wallet" class="mb-1 block text-sm font-medium">Dompet</label>
-          <!-- Edit: read-only — pemindahan dompet belum tersedia
-               (fase transfer); PATCH tidak pernah menerima wallet_id. -->
-          <p
-            v-if="props.editing"
+          <label for="tx-wallet" class="mb-1 block text-sm font-medium">
+            {{ isTransfer ? 'Dompet sumber' : 'Dompet' }}
+          </label>
+          <USelect
             id="tx-wallet"
-            class="rounded-lg bg-elevated px-3 py-2 text-sm font-medium"
-          >
-            {{ props.editing.wallet ?? 'Tanpa nama dompet' }}
+            v-model="form.wallet_id"
+            :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
+            value-key="value"
+            class="w-full"
+            :loading="props.walletsPending"
+            :disabled="props.walletsPending || props.walletsError !== null || activeWallets.length === 0"
+            placeholder="Pilih dompet"
+          />
+          <p v-if="props.walletsError" class="mt-1 text-xs text-error">
+            {{ props.walletsError }}
+            <UButton variant="link" size="xs" class="px-1" @click="emit('retry-wallets')">Coba lagi</UButton>
           </p>
-          <template v-else>
-            <USelect
-              id="tx-wallet"
-              v-model="form.wallet_id"
-              :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
-              value-key="value"
-              class="w-full"
-              :loading="props.walletsPending"
-              :disabled="props.walletsPending || props.walletsError !== null || activeWallets.length === 0"
-              placeholder="Pilih dompet"
-            />
-            <p v-if="props.walletsError" class="mt-1 text-xs text-error">
-              {{ props.walletsError }}
-              <UButton variant="link" size="xs" class="px-1" @click="emit('retry-wallets')">Coba lagi</UButton>
-            </p>
-            <p v-else-if="!props.walletsPending && activeWallets.length === 0" class="mt-1 text-xs text-muted">
-              Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.
-            </p>
-          </template>
+          <p v-else-if="!props.walletsPending && activeWallets.length === 0" class="mt-1 text-xs text-muted">
+            Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.
+          </p>
           <p v-if="props.fieldErrors.wallet_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.wallet_id }}</p>
         </div>
 
-        <div>
+        <!-- Khusus transfer: tujuan wajib berbeda dari sumber
+             (backend: required_if + different:wallet_id). Tanpa
+             pemilihan otomatis — pengguna memilih secara eksplisit. -->
+        <div v-if="isTransfer">
+          <label for="tx-destination" class="mb-1 block text-sm font-medium">Dompet tujuan</label>
+          <USelect
+            id="tx-destination"
+            v-model="form.destination_wallet_id"
+            :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
+            value-key="value"
+            class="w-full"
+            :loading="props.walletsPending"
+            :disabled="props.walletsPending || props.walletsError !== null || activeWallets.length === 0"
+            placeholder="Pilih dompet tujuan"
+          />
+          <p v-if="transferGuard" class="mt-1 text-xs text-error">{{ transferGuard }}</p>
+          <p v-if="props.fieldErrors.destination_wallet_id" class="mt-1 text-xs text-error">
+            {{ props.fieldErrors.destination_wallet_id }}
+          </p>
+        </div>
+
+        <!-- Kategori disembunyikan untuk transfer (StoreTransactionRequest:
+             category_id prohibited_if:type,transfer). -->
+        <div v-if="!isTransfer">
           <label for="tx-category" class="mb-1 block text-sm font-medium">Kategori <span class="font-normal text-muted">(opsional)</span></label>
           <USelect
             id="tx-category"
@@ -207,8 +271,9 @@ function onSubmit(): void {
           <p v-if="props.fieldErrors.category_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.category_id }}</p>
         </div>
 
-        <!-- Kegagalan mutasi non-validasi (422 INSUFFICIENT_FUNDS, 5xx)
-             tidak boleh hilang diam-diam selama form terbuka. -->
+        <!-- Kegagalan mutasi non-validasi (422 INSUFFICIENT_FUNDS,
+             422 TRANSACTION_INVALID, 5xx) tidak boleh hilang diam-diam
+             selama form terbuka. -->
         <UAlert
           v-if="props.submitError"
           color="error"
