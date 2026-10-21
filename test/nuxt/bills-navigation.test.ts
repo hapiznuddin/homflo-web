@@ -4,8 +4,9 @@ import MobileNavbar from '~/components/MobileNavbar.vue'
 import DefaultLayout from '~/layouts/default.vue'
 
 // T-7: aksesibilitas halaman Bills dari navigasi utama — item sidebar
-// "Tagihan" dan quick action MobileNavbar "Tagihan". Dashboard serta
-// DashboardQuickActions TIDAK diubah (masih disabled / tanpa label Bills).
+// "Tagihan" dan quick action MobileNavbar "Tagihan".
+// Phase 15.3.1 (OV-2): aksi "Catat Transaksi" di drawer MobileNavbar
+// kini aktif → /transactions (lihat describe "navigasi Transaksi").
 
 const authMock = vi.hoisted(() => ({
   user: {
@@ -93,5 +94,36 @@ describe('navigasi Bills', () => {
     // bertabrakan dengan state dialog yang masih terbuka.
     await opener.trigger('click')
     await flush()
+  })
+})
+
+describe('navigasi Transaksi (Phase 15.3.1)', () => {
+  it('drawer "Catat Transaksi" aktif → /transactions, bukan disabled "segera hadir"', async () => {
+    const wrapper = await mountSuspended(MobileNavbar, { route: '/dashboard' })
+
+    const opener = wrapper.find('button[aria-label="Catat baru"]')
+
+    expect(opener.exists()).toBe(true)
+
+    await opener.trigger('click')
+    await flush()
+
+    // Bottom-nav "Transaksi" juga menunjuk /transactions; pilih anchor
+    // yang berlabel "Catat Transaksi" dari isi drawer.
+    const catat = wrapper.findAll('a[href="/transactions"]')
+      .find(link => (link.text() ?? '').includes('Catat Transaksi'))
+
+    expect(catat).toBeDefined()
+    expect(catat!.attributes('aria-disabled')).not.toBe('true')
+    expect(catat!.attributes('disabled')).toBeUndefined()
+    expect(catat!.attributes('title')).not.toBe('Fitur segera hadir')
+    expect(opener.attributes('aria-expanded')).toBe('true')
+
+    // Klik aksi: NuxtLink memicu navigasi client-side (href di atas) dan
+    // @click menutup drawer — pola quick action yang sudah ada.
+    await catat!.trigger('click')
+    await flush()
+
+    expect(opener.attributes('aria-expanded')).toBe('false')
   })
 })

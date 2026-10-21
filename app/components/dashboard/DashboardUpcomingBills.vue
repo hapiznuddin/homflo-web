@@ -18,9 +18,16 @@ withDefaults(defineProps<Props>(), { unsupported: false })
 <template>
   <UCard :ui="{ body: 'p-4 sm:p-5' }">
     <template #header>
-      <div>
-        <h2 class="text-base font-semibold text-highlighted">Akan Datang</h2>
-        <p class="mt-0.5 text-sm text-muted">Komitmen tagihan terdekat</p>
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h2 class="text-base font-semibold text-highlighted">Akan Datang</h2>
+          <p class="mt-0.5 text-sm text-muted">Komitmen tagihan terdekat</p>
+        </div>
+        <!-- Tautan daftar Bills mengikuti pola "Semua anggaran" (Phase 15.3.1):
+             anchor focusable; sumber data/kontrak kartu tidak berubah. -->
+        <UButton color="neutral" variant="ghost" size="sm" to="/bills">
+          Semua tagihan
+        </UButton>
       </div>
     </template>
 

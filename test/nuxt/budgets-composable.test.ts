@@ -46,6 +46,12 @@ function bgItem(overrides: Partial<BudgetItem> = {}): BudgetItem {
     year: 2026,
     month: 10,
     amount: '500000.00',
+    // Kontrak riil Phase 12: field usage ikut dalam payload dan diteruskan
+    // utuh tanpa transformasi oleh composable.
+    actual_spending: '250000.00',
+    remaining: '250000.00',
+    usage_percentage: 50,
+    usage_status: 'normal',
     created_at: '2026-10-01T00:00:00.000000Z',
     updated_at: '2026-10-01T00:00:00.000000Z',
     ...overrides
@@ -268,15 +274,48 @@ describe('useBudgets', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('respons tidak pernah memuat spent/remaining/percent', async () => {
+  // Phase 15.3.1: kontrak riil Phase 12 — field usage server diteruskan
+  // APA ADANYA (bukan diblok); nama field lama Phase 8 tetap tidak pernah ada.
+  it('respons memuat field usage Phase 12 apa adanya tanpa transformasi', async () => {
     const bg = await mountBudgets()
 
     await bg.load()
 
-    for (const item of bg.items.value) {
-      expect(item).not.toHaveProperty('spent')
-      expect(item).not.toHaveProperty('remaining')
-      expect(item).not.toHaveProperty('percent')
-    }
+    expect(bg.items.value).toHaveLength(1)
+
+    const item = bg.items.value[0]!
+
+    expect(item).toEqual(expect.objectContaining({
+      amount: '500000.00',
+      actual_spending: '250000.00',
+      remaining: '250000.00',
+      usage_percentage: 50,
+      usage_status: 'normal'
+    }))
+
+    // Nama field lama (spent/percent) tidak pernah dipakai.
+    expect(item).not.toHaveProperty('spent')
+    expect(item).not.toHaveProperty('percent')
+  })
+
+  it('usage_percentage null (budget nol / no_budget) diteruskan apa adanya', async () => {
+    fetchMock.mockResolvedValue({
+      success: true,
+      data: [bgItem({
+        amount: '0.00',
+        actual_spending: '0.00',
+        remaining: '0.00',
+        usage_percentage: null,
+        usage_status: 'no_budget'
+      })]
+    })
+
+    const bg = await mountBudgets()
+
+    await bg.load()
+
+    expect(bg.items.value).toHaveLength(1)
+    expect(bg.items.value[0]!.usage_percentage).toBeNull()
+    expect(bg.items.value[0]!.usage_status).toBe('no_budget')
   })
 })

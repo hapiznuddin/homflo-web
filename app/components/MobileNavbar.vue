@@ -92,10 +92,9 @@ const quickActions: QuickAction[] = [
           <template #body>
             <div class="flex flex-col gap-3">
               <UButton
-                disabled
-                aria-disabled="true"
+                to="/transactions"
                 class="min-h-18 w-full justify-start gap-3 rounded-2xl bg-emerald-950 px-3 text-left text-white opacity-100 disabled:opacity-100 dark:bg-emerald-900"
-                title="Fitur segera hadir"
+                @click="quickActionsOpen = false"
               >
                 <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <UIcon name="i-lucide-plus" class="size-6" aria-hidden="true" />

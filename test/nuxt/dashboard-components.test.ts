@@ -276,6 +276,21 @@ describe('DashboardUpcomingBills', () => {
     expect(wrapper.text()).toContain('Belum tersedia')
     expect(wrapper.text()).not.toContain('Tidak ada tagihan terdekat')
   })
+
+  it('header punya link "Semua tagihan" → /bills, anchor focusable (Phase 15.3.1)', async () => {
+    const wrapper = await mountSuspended(DashboardUpcomingBills, { props: { bills }, route: false })
+
+    const link = wrapper.find('a[href="/bills"]')
+
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toContain('Semua tagihan')
+    // Navigasi nyata, bukan placeholder disabled (pola "Semua anggaran").
+    expect(link.attributes('aria-disabled')).not.toBe('true')
+    expect(link.attributes('disabled')).toBeUndefined()
+    // Sumber data/empty state kartu tidak berubah oleh tautan.
+    expect(wrapper.text()).toContain('Internet')
+    expect(wrapper.text()).toContain('Komitmen tagihan terdekat')
+  })
 })
 
 describe('DashboardRecentTransactions', () => {
@@ -492,12 +507,20 @@ describe('DashboardQuickActions', () => {
     }
   })
 
-  it('semua aksi disabled + honest label "Segera hadir" (tidak memalsukan navigasi)', async () => {
+  it('"Tambah Transaksi" link aktif → /transactions; aksi lain tetap disabled jujur (Phase 15.3.1)', async () => {
     const wrapper = await mountSuspended(DashboardQuickActions, { route: false })
 
+    const link = wrapper.find('a[href="/transactions"]')
+
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toContain('Tambah Transaksi')
+    expect(link.attributes('aria-disabled')).not.toBe('true')
+    expect(link.attributes('title')).not.toBe('Segera hadir')
+
+    // Aksi tanpa rute tetap disabled + label jujur (tidak memalsukan navigasi).
     const buttons = wrapper.findAll('button')
 
-    expect(buttons).toHaveLength(4)
+    expect(buttons).toHaveLength(3)
 
     for (const button of buttons) {
       expect(button.attributes('aria-disabled')).toBe('true')

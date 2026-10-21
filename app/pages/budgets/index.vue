@@ -108,6 +108,20 @@ function cancelDelete(): void {
   confirmDeleteId.value = null
 }
 
+// Catatan sisa mengikuti pola mapper dashboard (Sisa/Lebih) dari field
+// `remaining` server — hanya format tampilan, tanpa aritmetika baru.
+function usageNote(item: BudgetItem): string {
+  const remaining = Number(item.remaining)
+
+  if (!Number.isFinite(remaining)) {
+    return ''
+  }
+
+  return remaining < 0
+    ? `Lebih ${formatTransactionAmount(String(Math.abs(remaining)))}`
+    : `Sisa ${formatTransactionAmount(item.remaining)}`
+}
+
 function retry(): void {
   void bg.refresh()
 }
@@ -166,13 +180,26 @@ await categories.load()
           <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
             <UIcon :name="item.category?.icon ?? 'i-lucide-wallet'" class="size-4.5 text-default" />
           </span>
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-medium text-highlighted">{{ item.category?.name ?? 'Tanpa kategori' }}</span>
-            <span class="block truncate text-xs text-muted">{{ formatMonthLabel(item.year, item.month) }}</span>
-          </span>
-          <span class="shrink-0 text-sm font-semibold text-highlighted">
-            {{ formatTransactionAmount(item.amount) }}
-          </span>
+          <!-- Pemakaian memakai field usage server apa adanya (Phase 12/15.3.1):
+               tanpa agregasi/klasifikasi baru di client. no_budget jujur tanpa
+               persentase numerik. Susunan baris meniru kartu Budget dashboard. -->
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-2">
+              <p class="truncate text-sm font-medium text-highlighted">{{ item.category?.name ?? 'Tanpa kategori' }}</p>
+              <p v-if="item.usage_percentage !== null" class="shrink-0 text-xs text-muted">{{ item.usage_percentage }}%</p>
+              <p v-else class="shrink-0 text-xs text-muted">Tanpa target</p>
+            </div>
+            <p class="mt-0.5 truncate text-xs text-muted">
+              {{ formatMonthLabel(item.year, item.month) }} · {{ formatTransactionAmount(item.actual_spending) }} / {{ formatTransactionAmount(item.amount) }}<template v-if="usageNote(item)"> · {{ usageNote(item) }}</template>
+            </p>
+            <UProgress
+              v-if="item.usage_percentage !== null"
+              size="sm"
+              :model-value="Math.min(item.usage_percentage, 100)"
+              class="mt-2"
+              :aria-label="`${item.category?.name ?? 'Anggaran'} ${item.usage_percentage} persen`"
+            />
+          </div>
           <template v-if="confirmDeleteId !== item.id">
             <UButton
               color="neutral"

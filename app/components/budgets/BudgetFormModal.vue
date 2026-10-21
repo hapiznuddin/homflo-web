@@ -52,7 +52,9 @@ function resetForm(): void {
   form.category_id = props.editing?.category?.id ?? ''
   form.year = props.editing ? String(props.editing.year) : String(props.defaultYear)
   form.month = props.editing ? String(props.editing.month) : String(props.defaultMonth)
-  form.amount = ''
+  // Prefill nominal tersimpan saat edit ("500000.00" lolos validasi
+  // normalizeAmountInput — 2 desimal). Create tetap kosong (Phase 15.3.1).
+  form.amount = props.editing?.amount ?? ''
 }
 
 watch(() => [props.open, props.editing] as const, ([open]) => {

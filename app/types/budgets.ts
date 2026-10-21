@@ -1,7 +1,8 @@
 // Kontrak Budgets API (mirror presenter backend
-// BudgetController::presentBudget). Hanya target anggaran (CRUD).
-// TIDAK ada spent/remaining/percent — API tidak menyediakannya dan UI
-// dilarang menghitungnya (Phase 8).
+// BudgetController::presentBudget): target anggaran (CRUD) + field
+// derivasi usage Phase 12 (BudgetService::deriveFor). Nilai usage
+// dihitung SERVER per periode tampilan dan dipakai APA ADANYA — UI
+// dilarang menghitung ulang agregasi/status (Phase 15.3.1).
 // Amount adalah STRING desimal ("500000.00") — hanya untuk tampilan.
 
 export interface BudgetCategory {
@@ -18,6 +19,14 @@ export interface BudgetItem {
   month: number
   /** String desimal eksak dari backend, mis. "500000.00". */
   amount: string
+  /** Penggunaan aktual periode tampilan, dihitung server ("250000.00"). */
+  actual_spending: string
+  /** amount - actual_spending; BISA NEGATIF saat over-budget ("-75000.00"). */
+  remaining: string
+  /** Persentase server; null saat amount nol (no_budget) — jangan dipaksa jadi 0. */
+  usage_percentage: number | null
+  /** Status server: 'normal' | 'no_budget'. Bukan klasifikasi client. */
+  usage_status: 'normal' | 'no_budget'
   created_at: string
   updated_at: string
 }

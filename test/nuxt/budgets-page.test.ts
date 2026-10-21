@@ -7,6 +7,7 @@ import type { BudgetItem } from '~/types/budgets'
 import type { CategoryItem } from '~/types/categories'
 import BudgetFormModal from '~/components/budgets/BudgetFormModal.vue'
 import BudgetsPage from '~/pages/budgets/index.vue'
+import { formatTransactionAmount } from '~/utils/transactions'
 
 const authMock = vi.hoisted(() => ({
   user: {
@@ -62,6 +63,11 @@ function sampleItem(overrides: Partial<BudgetItem> = {}): BudgetItem {
     year: 2026,
     month: 10,
     amount: '500000.00',
+    // Field usage Phase 12 — dihitung server, dikirim apa adanya.
+    actual_spending: '250000.00',
+    remaining: '250000.00',
+    usage_percentage: 50,
+    usage_status: 'normal',
     created_at: '2026-10-01T00:00:00.000000Z',
     updated_at: '2026-10-01T00:00:00.000000Z',
     ...overrides
@@ -338,16 +344,55 @@ describe('budgets page', () => {
     )
   })
 
-  it('nominal tampil sebagai Rupiah tanpa klaim progres', async () => {
+  // Phase 15.3.1 (BG-1): halaman mengonsumsi field usage Phase 12 apa
+  // adanya dari server (spent/target, persentase, sisa, progress) —
+  // menggantikan klaim lama "tanpa klaim progres" yang kini kedaluwarsa.
+  it('baris menampilkan pemakaian server: actual / target, persentase, sisa, progress', async () => {
     setupBudgetsState()
 
     const wrapper = await mountPage()
     const text = wrapper.text()
 
-    expect(text).toContain('Rp')
-    expect(text).not.toContain('tersisa')
-    expect(text).not.toContain('terpakai')
+    expect(text).toContain(`${formatTransactionAmount('250000.00')} / ${formatTransactionAmount('500000.00')}`)
+    expect(text).toContain('50%')
+    expect(text).toContain(`Sisa ${formatTransactionAmount('250000.00')}`)
+    expect(wrapper.find('[aria-label="Dapur 50 persen"]').exists()).toBe(true)
+  })
+
+  it('usage_status no_budget: "Tanpa target" tanpa persentase numerik maupun progress', async () => {
+    setupBudgetsState({
+      items: [sampleItem({
+        amount: '0.00',
+        actual_spending: '75000.00',
+        remaining: '-75000.00',
+        usage_percentage: null,
+        usage_status: 'no_budget'
+      })]
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Tanpa target')
+    // Tanpa persentase numerik yang tidak bermakna (0% dilarang).
     expect(text).not.toContain('%')
+    expect(wrapper.find('[aria-label$="persen"]').exists()).toBe(false)
+    // Remaining negatif dari server tetap jujur: "Lebih", bukan "Sisa".
+    expect(text).toContain(`Lebih ${formatTransactionAmount('75000.00')}`)
+  })
+
+  it('edit mengisi nominal tersimpan ke form (prefill amount)', async () => {
+    setupBudgetsState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('button[aria-label="Ubah anggaran"]').trigger('click')
+    await flush()
+
+    const amountInput = document.body.querySelector('#bg-amount') as HTMLInputElement | null
+
+    expect(amountInput).not.toBeNull()
+    expect(amountInput!.value).toBe('500000.00')
   })
 
   it('halaman tidak memanggil logout atau bootstrap auth', async () => {

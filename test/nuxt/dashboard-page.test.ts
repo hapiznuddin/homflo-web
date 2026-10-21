@@ -201,13 +201,16 @@ describe('dashboard page (success path)', () => {
     expect(wrapper.find('[aria-label="Memuat dashboard"]').exists()).toBe(false)
   })
 
-  it('aksi cepat tetap disabled dengan label jujur "Segera hadir"', async () => {
+  it('"Tambah Transaksi" mengarah ke /transactions tanpa klaim "Segera hadir" (Phase 15.3.1)', async () => {
     const wrapper = await mountPage()
-    const button = wrapper.findAll('button').find(element => element.text().includes('Tambah Transaksi'))
+    // Dashboard juga punya link /transactions lain ("Semua transaksi");
+    // pilih yang berlabel Tambah Transaksi dari QuickActions.
+    const link = wrapper.findAll('a[href="/transactions"]')
+      .find(element => element.text().includes('Tambah Transaksi'))
 
-    expect(button).toBeDefined()
-    expect(button!.attributes('title')).toBe('Segera hadir')
-    expect(button!.attributes('aria-disabled')).toBe('true')
+    expect(link).toBeDefined()
+    expect(link!.attributes('aria-disabled')).not.toBe('true')
+    expect(link!.attributes('title')).not.toBe('Segera hadir')
   })
 
   it('halaman tidak memanggil logout atau bootstrap berulang (auth lock)', async () => {

@@ -3,12 +3,15 @@ interface QuickAction {
   label: string
   icon: string
   primary?: boolean
+  /** Rute tujuan bila tersedia; tanpa `to` aksi tetap disabled (jujur). */
+  to?: string
 }
 
-// Destination routes do not exist yet, so every action stays disabled
-// with an honest label instead of faking navigation.
+// "Tambah Transaksi" mengarah ke /transactions (Phase 15.3.1) dan
+// memakai alur create yang sudah ada di halaman tersebut; aksi lain
+// menunggu rutenya dan tetap disabled dengan label jujur.
 const actions: QuickAction[] = [
-  { label: 'Tambah Transaksi', icon: 'i-lucide-plus', primary: true },
+  { label: 'Tambah Transaksi', icon: 'i-lucide-plus', primary: true, to: '/transactions' },
   { label: 'Tambah Tagihan', icon: 'i-lucide-receipt' },
   { label: 'Tambah Aset', icon: 'i-lucide-wallet' },
   { label: 'Tambah Kendaraan', icon: 'i-lucide-car' }
@@ -22,13 +25,14 @@ const actions: QuickAction[] = [
       <UButton
         v-for="action in actions"
         :key="action.label"
+        :to="action.to"
         color="neutral"
         :variant="action.primary ? 'solid' : 'outline'"
         :icon="action.icon"
         block
-        disabled
-        aria-disabled="true"
-        title="Segera hadir"
+        :disabled="!action.to"
+        :aria-disabled="!action.to"
+        :title="action.to ? undefined : 'Segera hadir'"
         class="min-h-12"
         :class="action.primary ? 'bg-primary text-white hover:bg-primary/85 active:bg-primary/85' : ''"
       >
