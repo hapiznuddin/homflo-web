@@ -43,6 +43,7 @@ function catItem(overrides: Partial<CategoryItem> = {}): CategoryItem {
     id: '01J0000000000000000000001',
     name: 'Dapur',
     icon: 'i-lucide-cooking-pot',
+    type: 'expense',
     ...overrides
   }
 }
@@ -97,7 +98,7 @@ describe('useCategories', () => {
     expect(cat.pending.value).toBe(false)
   })
 
-  it('create() POST name/icon lalu refresh daftar', async () => {
+  it('create() POST name/type/icon lalu refresh daftar', async () => {
     const cat = await mountCategories()
 
     await cat.load()
@@ -106,7 +107,7 @@ describe('useCategories', () => {
     fetchMock.mockResolvedValueOnce({ success: true, data: catItem({ id: '01J0000000000000000000002', name: 'Transport' }) })
     fetchMock.mockResolvedValue({ success: true, data: [catItem(), catItem({ id: '01J0000000000000000000002', name: 'Transport' })] })
 
-    const saved = await cat.create({ name: '  Transport  ', icon: '' })
+    const saved = await cat.create({ name: '  Transport  ', icon: '', type: 'expense' })
 
     expect(saved?.name).toBe('Transport')
 
@@ -114,7 +115,7 @@ describe('useCategories', () => {
 
     expect(url).toBe('/api/categories')
     expect(options.method).toBe('POST')
-    expect(options.body).toEqual({ name: 'Transport', icon: null })
+    expect(options.body).toEqual({ name: 'Transport', icon: null, type: 'expense' })
     // POST + refresh GET.
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(cat.items.value).toHaveLength(2)
@@ -133,7 +134,7 @@ describe('useCategories', () => {
       }
     })
 
-    const saved = await cat.create({ name: 'Dapur', icon: '' })
+    const saved = await cat.create({ name: 'Dapur', icon: '', type: 'expense' })
 
     expect(saved).toBeNull()
     expect(cat.error.value).toContain('sudah dipakai')
@@ -143,10 +144,10 @@ describe('useCategories', () => {
   it('update() PATCH ke item dan refresh', async () => {
     const cat = await mountCategories()
 
-    fetchMock.mockResolvedValueOnce({ success: true, data: catItem({ name: 'Dapur Bersih' }) })
-    fetchMock.mockResolvedValue({ success: true, data: [catItem({ name: 'Dapur Bersih' })] })
+    fetchMock.mockResolvedValueOnce({ success: true, data: catItem({ name: 'Dapur Bersih', type: 'income' }) })
+    fetchMock.mockResolvedValue({ success: true, data: [catItem({ name: 'Dapur Bersih', type: 'income' })] })
 
-    const saved = await cat.update('01J0000000000000000000001', { name: 'Dapur Bersih', icon: 'i-lucide-sparkles' })
+    const saved = await cat.update('01J0000000000000000000001', { name: 'Dapur Bersih', icon: 'i-lucide-sparkles', type: 'income' })
 
     expect(saved?.name).toBe('Dapur Bersih')
 
@@ -154,7 +155,7 @@ describe('useCategories', () => {
 
     expect(url).toBe('/api/categories/01J0000000000000000000001')
     expect(options.method).toBe('PATCH')
-    expect(options.body).toEqual({ name: 'Dapur Bersih', icon: 'i-lucide-sparkles' })
+    expect(options.body).toEqual({ name: 'Dapur Bersih', icon: 'i-lucide-sparkles', type: 'income' })
   })
 
   it('remove() DELETE lalu refresh; gagal tidak menghilangkan item', async () => {
@@ -209,8 +210,8 @@ describe('useCategories', () => {
 
     fetchMock.mockReturnValueOnce(gate)
 
-    const first = cat.create({ name: 'Baru', icon: '' })
-    const second = await cat.create({ name: 'Baru', icon: '' })
+    const first = cat.create({ name: 'Baru', icon: '', type: 'expense' })
+    const second = await cat.create({ name: 'Baru', icon: '', type: 'expense' })
 
     expect(second).toBeNull()
 

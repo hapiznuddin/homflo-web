@@ -50,6 +50,7 @@ function sampleItem(overrides: Partial<CategoryItem> = {}): CategoryItem {
     id: '01J0000000000000000000001',
     name: 'Dapur',
     icon: 'i-lucide-cooking-pot',
+    type: 'expense',
     ...overrides
   }
 }
@@ -202,10 +203,52 @@ describe('categories page', () => {
     await new DOMWrapper(submitButton).trigger('click')
 
     expect(state.create).toHaveBeenCalledTimes(1)
-    expect(state.create).toHaveBeenCalledWith({ name: 'Transport', icon: '' })
+    expect(state.create).toHaveBeenCalledWith({ name: 'Transport', icon: 'i-lucide-tag', type: 'expense' })
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Kategori ditambah' })
     )
+  })
+
+  it('memilih jenis income di form ikut dikirim ke create()', async () => {
+    const state = setupCategoriesState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Tambah'))!.trigger('click')
+    await flush()
+
+    const nameInput = document.body.querySelector('#cat-name')
+
+    if (!nameInput) {
+      throw new Error('Input nama tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(nameInput as Element).setValue('Gaji freelance')
+
+    const typeSelect = document.body.querySelector('#cat-type')
+
+    if (!typeSelect) {
+      throw new Error('Select jenis tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(typeSelect as Element).setValue('income')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    if (!submitButton) {
+      throw new Error('Tombol submit tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(submitButton).trigger('click')
+
+    // Pilihan jenis pada form harus ikut terkirim, bukan hanya nama.
+    expect(state.create).toHaveBeenCalledTimes(1)
+    expect(state.create).toHaveBeenCalledWith({
+      name: 'Gaji freelance',
+      icon: 'i-lucide-tag',
+      type: 'income'
+    })
   })
 
   it('edit dari baris memanggil update() dengan id yang benar', async () => {
