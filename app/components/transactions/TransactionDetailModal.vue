@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TransactionItem } from '~/types/transactions'
-import { formatTransactionAmount } from '~/utils/transactions'
+import { formatTransactionAmount, transactionAmountClass, transactionTypeIcon, transactionTypeLabel } from '~/utils/transactions'
 import { formatYmd } from '~/utils/format'
 
 interface Props {
@@ -26,7 +26,9 @@ const modalOpen = computed({
   set: value => emit('update:open', value)
 })
 
-const typeLabel = computed(() => props.item?.type === 'income' ? 'Pemasukan' : 'Pengeluaran')
+// Transfer tampil netral ("Transfer", ikon panah dua arah, warna
+// netral) — bukan "Pengeluaran" (Phase 15.2.1, preseden dashboard 15.1).
+const typeLabel = computed(() => props.item ? transactionTypeLabel(props.item.type) : '')
 </script>
 
 <template>
@@ -46,10 +48,10 @@ const typeLabel = computed(() => props.item?.type === 'income' ? 'Pemasukan' : '
       <div v-else-if="props.item" class="flex flex-col gap-3">
         <div class="flex items-center gap-3">
           <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-elevated" aria-hidden="true">
-            <UIcon :name="props.item.type === 'income' ? 'i-lucide-trending-up' : 'i-lucide-trending-down'" class="size-5 text-default" />
+            <UIcon :name="transactionTypeIcon(props.item.type)" class="size-5 text-default" />
           </span>
           <div class="min-w-0 flex-1">
-            <p class="text-lg font-bold tracking-tight" :class="props.item.type === 'income' ? 'text-success' : 'text-highlighted'">
+            <p class="text-lg font-bold tracking-tight" :class="transactionAmountClass(props.item.type)">
               {{ formatTransactionAmount(props.item.amount) }}
             </p>
             <p class="text-sm text-muted">{{ typeLabel }}</p>

@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { CategoryItem } from '~/types/categories'
 import type { TransactionFormValues, TransactionItem, TransactionType } from '~/types/transactions'
+import type { WalletItem } from '~/types/wallets'
 
 interface Props {
   open: boolean
   editing: TransactionItem | null
   submitting: boolean
+  /** Error mutasi non-validasi (mis. INSUFFICIENT_FUNDS) — tampil sebagai alert di form. */
+  submitError: string | null
   fieldErrors: Record<string, string>
   categories: CategoryItem[]
   categoriesPending: boolean
   categoriesError: string | null
+  wallets: WalletItem[]
+  walletsPending: boolean
+  walletsError: string | null
 }
 
 const props = defineProps<Props>()
@@ -17,6 +23,7 @@ const emit = defineEmits<{
   'update:open': [open: boolean]
   'submit': [values: TransactionFormValues]
   'retry-categories': []
+  'retry-wallets': []
 }>()
 
 const modalOpen = computed({
@@ -29,12 +36,24 @@ const typeOptions: Array<{ label: string, value: TransactionType }> = [
   { label: 'Pemasukan', value: 'income' }
 ]
 
+// Hanya dompet aktif yang dapat menerima posting baru (pola persis
+// BillPaymentModal — filter client; backend tetap otoritas lewat
+// WALLET_NOT_FOUND / INSUFFICIENT_FUNDS).
+const activeWallets = computed(() => props.wallets.filter(wallet => wallet.is_active))
+
+// Nama dompet terpilih — dikirim ke kolom legacy `wallet` agar tampilan
+// daftar tetap menampilkan nama dompet; identifier posting tetap wallet_id.
+const selectedWalletName = computed(() =>
+  props.wallets.find(wallet => wallet.id === form.wallet_id)?.name ?? ''
+)
+
 const form = reactive<TransactionFormValues>({
   type: 'expense',
   amount: '',
   occurred_on: '',
   description: '',
   wallet: '',
+  wallet_id: '',
   category_id: ''
 })
 
@@ -51,7 +70,10 @@ function resetForm(): void {
   form.amount = ''
   form.occurred_on = props.editing?.occurred_on ?? todayYmd()
   form.description = props.editing?.description ?? ''
-  form.wallet = props.editing?.wallet ?? ''
+  form.wallet = ''
+  // Create: tanpa default otomatis — pengguna memilih dompet secara
+  // eksplisit; edit: dompet tampil read-only (tanpa pemindahan, 15.2.3).
+  form.wallet_id = ''
   // Reka SelectItem melarang value string kosong; 'none' dipetakan
   // kembali ke '' (tanpa kategori) saat submit.
   form.category_id = props.editing?.category?.id ?? 'none'
@@ -68,7 +90,15 @@ function close(): void {
 }
 
 function onSubmit(): void {
-  emit('submit', { ...form, category_id: form.category_id === 'none' ? '' : form.category_id })
+  emit('submit', {
+    ...form,
+    // Create: nama dompet terpilih untuk kolom legacy tampilan (ID
+    // posting dikirim via wallet_id). Edit: kirim ulang nama legacy apa
+    // adanya — dompet read-only, PATCH tanpa wallet_id (whitelist
+    // [id].patch); pemindahan dompet bagian dari fase transfer 15.2.3.
+    wallet: props.editing ? (props.editing.wallet ?? '') : selectedWalletName.value,
+    category_id: form.category_id === 'none' ? '' : form.category_id
+  })
 }
 </script>
 
@@ -126,16 +156,36 @@ function onSubmit(): void {
         </div>
 
         <div>
-          <label for="tx-wallet" class="mb-1 block text-sm font-medium">Dompet <span class="font-normal text-muted">(opsional)</span></label>
-          <UInput
+          <label for="tx-wallet" class="mb-1 block text-sm font-medium">Dompet</label>
+          <!-- Edit: read-only — pemindahan dompet belum tersedia
+               (fase transfer); PATCH tidak pernah menerima wallet_id. -->
+          <p
+            v-if="props.editing"
             id="tx-wallet"
-            v-model="form.wallet"
-            placeholder="cth. Kas Tunai"
-            maxlength="100"
-            autocomplete="off"
-            class="w-full"
-          />
-          <p v-if="props.fieldErrors.wallet" class="mt-1 text-xs text-error">{{ props.fieldErrors.wallet }}</p>
+            class="rounded-lg bg-elevated px-3 py-2 text-sm font-medium"
+          >
+            {{ props.editing.wallet ?? 'Tanpa nama dompet' }}
+          </p>
+          <template v-else>
+            <USelect
+              id="tx-wallet"
+              v-model="form.wallet_id"
+              :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
+              value-key="value"
+              class="w-full"
+              :loading="props.walletsPending"
+              :disabled="props.walletsPending || props.walletsError !== null || activeWallets.length === 0"
+              placeholder="Pilih dompet"
+            />
+            <p v-if="props.walletsError" class="mt-1 text-xs text-error">
+              {{ props.walletsError }}
+              <UButton variant="link" size="xs" class="px-1" @click="emit('retry-wallets')">Coba lagi</UButton>
+            </p>
+            <p v-else-if="!props.walletsPending && activeWallets.length === 0" class="mt-1 text-xs text-muted">
+              Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.
+            </p>
+          </template>
+          <p v-if="props.fieldErrors.wallet_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.wallet_id }}</p>
         </div>
 
         <div>
@@ -156,6 +206,16 @@ function onSubmit(): void {
           </p>
           <p v-if="props.fieldErrors.category_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.category_id }}</p>
         </div>
+
+        <!-- Kegagalan mutasi non-validasi (422 INSUFFICIENT_FUNDS, 5xx)
+             tidak boleh hilang diam-diam selama form terbuka. -->
+        <UAlert
+          v-if="props.submitError"
+          color="error"
+          variant="soft"
+          title="Transaksi belum tersimpan."
+          :description="props.submitError"
+        />
 
         <div class="flex gap-2">
           <UButton type="button" color="neutral" variant="outline" block @click="close">Batal</UButton>

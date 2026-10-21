@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatTransactionAmount,
-  normalizeAmountInput
+  normalizeAmountInput,
+  transactionAmountClass,
+  transactionAmountSign,
+  transactionTypeIcon,
+  transactionTypeLabel
 } from '../../app/utils/transactions'
 import { readFieldErrors } from '../../app/composables/useApiError'
 import { formatYmd } from '../../app/utils/format'
@@ -29,6 +33,26 @@ describe('formatTransactionAmount', () => {
     expect(formatTransactionAmount('150000.50')).toContain('150.001')
     expect(formatTransactionAmount('685000.00')).toContain('685.000')
     expect(formatTransactionAmount('685000.00').startsWith('Rp')).toBe(true)
+  })
+})
+
+describe('representasi per tipe transaksi (Phase 15.2.1)', () => {
+  it('income dan expense mempertahankan label, ikon, tanda, dan warna lama', () => {
+    expect(transactionTypeLabel('income')).toBe('Pemasukan')
+    expect(transactionTypeLabel('expense')).toBe('Pengeluaran')
+    expect(transactionTypeIcon('income')).toBe('i-lucide-trending-up')
+    expect(transactionTypeIcon('expense')).toBe('i-lucide-trending-down')
+    expect(transactionAmountSign('income')).toBe('+')
+    expect(transactionAmountSign('expense')).toBe('-')
+    expect(transactionAmountClass('income')).toBe('text-success')
+    expect(transactionAmountClass('expense')).toBe('text-highlighted')
+  })
+
+  it('transfer tampil netral: label "Transfer", tanpa tanda, warna netral, ikon panah dua arah', () => {
+    expect(transactionTypeLabel('transfer')).toBe('Transfer')
+    expect(transactionTypeIcon('transfer')).toBe('i-lucide-arrow-right-left')
+    expect(transactionAmountSign('transfer')).toBe('')
+    expect(transactionAmountClass('transfer')).toBe('text-default')
   })
 })
 

@@ -5,6 +5,7 @@ import TransactionFormModal from '~/components/transactions/TransactionFormModal
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { TransactionFilters, TransactionItem, TransactionListMeta } from '~/types/transactions'
+import type { WalletItem } from '~/types/wallets'
 import TransactionsPage from '~/pages/transactions/index.vue'
 
 const authMock = vi.hoisted(() => ({
@@ -53,6 +54,55 @@ mockNuxtImport('useTransactions', () => () => txMock.api)
 const catMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useCategories', () => () => catMock.api)
+
+const walletsMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useWallets', () => () => walletsMock.api)
+
+// Satu dompet aktif (ditawarkan form) + satu non-aktif (harus
+// disaring client — pola BillPaymentModal).
+function sampleWallets(): WalletItem[] {
+  return [
+    {
+      id: 'w1',
+      household_id: 'h1',
+      name: 'Kas Tunai',
+      type: 'cash',
+      opening_balance: '0',
+      is_active: true,
+      balance: '250000.00',
+      created_at: '2026-10-01T00:00:00.000000Z',
+      updated_at: '2026-10-01T00:00:00.000000Z'
+    },
+    {
+      id: 'w2',
+      household_id: 'h1',
+      name: 'Rekening Nonaktif',
+      type: 'bank',
+      opening_balance: '0',
+      is_active: false,
+      balance: '0.00',
+      created_at: '2026-10-01T00:00:00.000000Z',
+      updated_at: '2026-10-01T00:00:00.000000Z'
+    }
+  ]
+}
+
+function setupWalletsState(
+  overrides: { items?: WalletItem[], pending?: boolean, error?: string | null } = {}
+): { load: ReturnType<typeof vi.fn>, refresh: ReturnType<typeof vi.fn> } {
+  const api = {
+    items: ref(overrides.items ?? sampleWallets()),
+    pending: ref(overrides.pending ?? false),
+    error: ref(overrides.error ?? null),
+    load: vi.fn(async () => {}),
+    refresh: vi.fn(async () => {})
+  }
+
+  walletsMock.api = api
+
+  return api
+}
 
 function sampleItem(overrides: Partial<TransactionItem> = {}): TransactionItem {
   return {
@@ -129,6 +179,7 @@ describe('transactions page', () => {
     authMock.bootstrap.mockClear()
     authMock.logout.mockClear()
     toastMock.add.mockClear()
+    setupWalletsState()
     catMock.api = {
       items: ref([]),
       pending: ref(false),
@@ -325,7 +376,7 @@ describe('transactions page', () => {
     )
   })
 
-  it('tombol Tambah membuka form dan submit memanggil create()', async () => {
+  it('tombol Tambah membuka form dan submit memanggil create() dengan dompet terpilih', async () => {
     const state = setupTransactionsState()
 
     const wrapper = await mountPage()
@@ -335,6 +386,14 @@ describe('transactions page', () => {
     await flush()
 
     expect(bodyText()).toContain('Tambah transaksi')
+
+    // Pilih dompet aktif "Kas Tunai" (w1) — form tanpa default otomatis.
+    const modal = wrapper.findComponent(TransactionFormModal)
+    const modalSelects = modal.findAllComponents(USelect)
+
+    expect(modalSelects).toHaveLength(3)
+
+    modalSelects[1]!.vm.$emit('update:modelValue', 'w1')
 
     const amountInput = document.body.querySelector('#tx-amount')
 
@@ -355,10 +414,12 @@ describe('transactions page', () => {
 
     expect(state.create).toHaveBeenCalledTimes(1)
 
-    const values = state.create.mock.calls[0]?.[0] as { amount: string, type: string }
+    const values = state.create.mock.calls[0]?.[0] as { amount: string, type: string, wallet_id: string, wallet: string }
 
     expect(values.amount).toBe('150000')
     expect(values.type).toBe('expense')
+    expect(values.wallet_id).toBe('w1')
+    expect(values.wallet).toBe('Kas Tunai')
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Transaksi ditambah' })
     )
@@ -420,9 +481,10 @@ describe('transactions page', () => {
     const modal = wrapper.findComponent(TransactionFormModal)
     const modalSelects = modal.findAllComponents(USelect)
 
-    expect(modalSelects).toHaveLength(2)
+    // Urutan select form: jenis, dompet, kategori.
+    expect(modalSelects).toHaveLength(3)
 
-    modalSelects[1]!.vm.$emit('update:modelValue', 'c1')
+    modalSelects[2]!.vm.$emit('update:modelValue', 'c1')
 
     const amountInput = document.body.querySelector('#tx-amount')
 
@@ -436,6 +498,111 @@ describe('transactions page', () => {
     expect(state.create).toHaveBeenCalledWith(
       expect.objectContaining({ category_id: 'c1', amount: '50000' })
     )
+  })
+
+  // Phase 15.2.2 — kontrak create baru & state dompet.
+  it('kegagalan saldo (INSUFFICIENT_FUNDS) tampil sebagai alert di form, tidak disamarkan', async () => {
+    const state = setupTransactionsState()
+
+    // Meniru composable: create gagal → error terisi, hasil null, form
+    // tetap terbuka — alert submitError wajib menampilkan penyebabnya.
+    state.create.mockImplementation(async () => {
+      state.error.value = 'Saldo dompet tidak cukup.'
+
+      return null
+    })
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    const amountInput = document.body.querySelector('#tx-amount')
+
+    await new DOMWrapper(amountInput as Element).setValue('999999999')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+    await flush()
+
+    expect(state.create).toHaveBeenCalledTimes(1)
+    expect(bodyText()).toContain('Transaksi belum tersimpan.')
+    expect(bodyText()).toContain('Saldo dompet tidak cukup.')
+  })
+
+  it('error validasi 422 wallet_id dirender pada field dompet', async () => {
+    const state = setupTransactionsState()
+
+    state.fieldErrors.value = { wallet_id: 'Kolom dompet wajib diisi.' }
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Kolom dompet wajib diisi.')
+  })
+
+  it('form tanpa dompet aktif menampilkan empty state jujur tanpa pilihan', async () => {
+    setupTransactionsState()
+
+    setupWalletsState({ items: [] })
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.')
+    expect(bodyText()).toContain('Pilih dompet')
+  })
+
+  it('kegagalan memuat dompet menampilkan pesan + Coba lagi yang memanggil refresh', async () => {
+    setupTransactionsState()
+
+    const wallets = setupWalletsState({ error: 'Koneksi terputus' })
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Koneksi terputus')
+
+    await bodyButton('Coba lagi').trigger('click')
+
+    expect(wallets.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('edit transaksi menampilkan dompet read-only tanpa select pemindahan', async () => {
+    const state = setupTransactionsState()
+
+    state.fetchOne.mockImplementation(async (id: string) => sampleItem({ id, wallet: 'Kas Tunai' }))
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('ul button').trigger('click')
+    await flush()
+
+    await bodyButton('Ubah').trigger('click')
+    await flush()
+
+    const walletField = document.body.querySelector('#tx-wallet')
+
+    expect(walletField).not.toBeNull()
+    expect(walletField?.tagName).toBe('P')
+    expect(walletField?.textContent).toContain('Kas Tunai')
+
+    // Hanya jenis + kategori yang selectable; dompet tidak editable.
+    const modal = wrapper.findComponent(TransactionFormModal)
+
+    expect(modal.findAllComponents(USelect)).toHaveLength(2)
   })
 
   it('transaksi dengan kategori menampilkan chip nama; tanpa kategori tidak', async () => {
@@ -452,6 +619,79 @@ describe('transactions page', () => {
     expect(text).toContain('Dapur')
     expect(text).toContain('Ikan')
     expect(text).toContain('Parkir')
+  })
+
+  // Phase 15.2.1 — representasi transfer netral (bukan income/expense).
+  it('baris transfer tampil netral: label "Transfer", tanpa tanda, warna netral', async () => {
+    setupTransactionsState({
+      items: [sampleItem({ id: 'tf1', type: 'transfer', description: null, category: null })]
+    })
+
+    const wrapper = await mountPage()
+    const amount = wrapper.find('li span.font-semibold')
+    const amountText = amount.text().trim()
+
+    expect(wrapper.text()).toContain('Transfer')
+    expect(wrapper.text()).not.toContain('Pengeluaran')
+    expect(amountText.startsWith('Rp')).toBe(true)
+    expect(amountText).not.toMatch(/^[-+]/)
+    expect(amount.classes()).toContain('text-default')
+    expect(amount.classes()).not.toContain('text-success')
+  })
+
+  it('filter jenis dengan Transfer memuat ulang dengan type=transfer', async () => {
+    const state = setupTransactionsState()
+
+    const wrapper = await mountPage()
+    const selects = wrapper.findAllComponents(USelect)
+
+    expect(selects.length).toBeGreaterThanOrEqual(1)
+
+    // Simulasi 2 emit USelect saat opsi dipilih (update:modelValue lalu
+    // change), sama seperti test filter kategori.
+    selects[0]!.vm.$emit('update:modelValue', 'transfer')
+    await selects[0]!.vm.$emit('change', new Event('change'))
+
+    expect(state.load).toHaveBeenCalledWith({ type: 'transfer' }, true)
+  })
+
+  it('baris pembayaran tagihan menampilkan label "Pembayaran tagihan" di daftar', async () => {
+    setupTransactionsState({
+      items: [
+        sampleItem({
+          id: 'bp-list',
+          description: null,
+          category: { id: 'c1', name: 'Listrik', icon: null },
+          bill_payment: { bill_id: 'b1', bill_title: 'Tagihan Listrik' }
+        })
+      ]
+    })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Pembayaran tagihan')
+    expect(wrapper.text()).toContain('Listrik')
+  })
+
+  it('detail transfer menampilkan label "Transfer", bukan "Pengeluaran"', async () => {
+    const state = setupTransactionsState({
+      items: [sampleItem({ id: 'tf2', type: 'transfer', description: null, category: null })]
+    })
+
+    state.fetchOne.mockImplementation(async (id: string) => sampleItem({
+      id,
+      type: 'transfer',
+      description: null,
+      category: null
+    }))
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('ul button').trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Transfer')
+    expect(bodyText()).not.toContain('Pengeluaran')
   })
 
   it('transaksi pembayaran tagihan tanpa aksi Ubah/Hapus + label "Pembayaran tagihan" (D-08)', async () => {

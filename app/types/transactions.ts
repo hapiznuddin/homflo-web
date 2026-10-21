@@ -3,7 +3,10 @@
 // ("150000.50") — UI hanya memformat untuk tampilan, tidak pernah
 // berhitung dengan float. Tidak ada agregat di sisi klien.
 
-export type TransactionType = 'income' | 'expense'
+// Termasuk 'transfer' sejak Phase 15.2.1 — backend selalu mendukung
+// tiga tipe (StoreTransactionRequest: in:income,expense,transfer);
+// transfer tidak pernah direpresentasikan sebagai income maupun expense.
+export type TransactionType = 'income' | 'expense' | 'transfer'
 
 export interface TransactionCategory {
   id: string
@@ -62,7 +65,14 @@ export interface TransactionFormValues {
   amount: string
   occurred_on: string
   description: string
+  /** Nama dompet (kolom legacy tampilan) — bukan identifier posting. */
   wallet: string
+  /**
+   * ID dompet dari Wallet API (ULID) — sumber posting sesungguhnya
+   * (StoreTransactionRequest mewajibkannya untuk create); '' = belum
+   * dipilih. Pemindahan dompet saat edit menyusul di fase transfer.
+   */
+  wallet_id: string
   /** ID kategori dari API; '' berarti tanpa kategori (didukung backend). */
   category_id: string
 }

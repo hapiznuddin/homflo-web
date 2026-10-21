@@ -2,7 +2,7 @@
 import TransactionDetailModal from '~/components/transactions/TransactionDetailModal.vue'
 import TransactionFormModal from '~/components/transactions/TransactionFormModal.vue'
 import type { TransactionFormValues, TransactionItem, TransactionType } from '~/types/transactions'
-import { formatTransactionAmount } from '~/utils/transactions'
+import { formatTransactionAmount, transactionAmountClass, transactionAmountSign, transactionTypeIcon, transactionTypeLabel } from '~/utils/transactions'
 import { formatYmd } from '~/utils/format'
 
 definePageMeta({ middleware: ['auth', 'onboarding'] })
@@ -13,6 +13,12 @@ const { items, meta, pending, submitting, error, fieldErrors } = tx
 
 const categories = useCategories()
 const { items: categoryItems, pending: categoriesPending, error: categoriesError } = categories
+
+// Pilihan dompet aktif untuk form create (read-only API; hanya is_active
+// yang ditawarkan — pola bills page). Tanpa halaman manajemen dompet di
+// web, pengguna tanpa dompet melihat empty state jujur di form.
+const wallets = useWallets()
+const { items: walletItems, pending: walletsPending, error: walletsError } = wallets
 
 const typeFilter = ref<'all' | TransactionType>('all')
 const categoryFilter = ref('all')
@@ -40,7 +46,7 @@ function displayTitle(item: TransactionItem): string {
     return item.category.name
   }
 
-  return item.type === 'income' ? 'Pemasukan' : 'Pengeluaran'
+  return transactionTypeLabel(item.type)
 }
 
 function typeIcon(item: TransactionItem): string {
@@ -48,7 +54,7 @@ function typeIcon(item: TransactionItem): string {
     return item.category.icon
   }
 
-  return item.type === 'income' ? 'i-lucide-trending-up' : 'i-lucide-trending-down'
+  return transactionTypeIcon(item.type)
 }
 
 async function applyFilters(): Promise<void> {
@@ -79,6 +85,7 @@ async function goToPage(page: number): Promise<void> {
 
 function openCreate(): void {
   editing.value = null
+  tx.clearError()
   formOpen.value = true
 }
 
@@ -86,6 +93,7 @@ function openEdit(item: TransactionItem): void {
   editing.value = item
   detailOpen.value = false
   confirmDelete.value = false
+  tx.clearError()
   formOpen.value = true
 }
 
@@ -173,6 +181,10 @@ function retry(): void {
 
 await tx.load()
 await categories.load()
+
+// Non-blocking (state global dipakai bersama halaman bills; fresh-guard
+// composable mencegah pemuatan berulang).
+void wallets.load()
 </script>
 
 <template>
@@ -197,7 +209,8 @@ await categories.load()
           :items="[
             { label: 'Semua', value: 'all' },
             { label: 'Pemasukan', value: 'income' },
-            { label: 'Pengeluaran', value: 'expense' }
+            { label: 'Pengeluaran', value: 'expense' },
+            { label: 'Transfer', value: 'transfer' }
           ]"
           value-key="value"
           class="w-full"
@@ -269,11 +282,11 @@ await categories.load()
             </span>
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-medium text-highlighted">{{ displayTitle(item) }}</span>
-              <span class="block truncate text-xs text-muted">{{ formatYmd(item.occurred_on) }}<span v-if="item.wallet"> · {{ item.wallet }}</span></span>
+              <span class="block truncate text-xs text-muted">{{ formatYmd(item.occurred_on) }}<span v-if="item.wallet"> · {{ item.wallet }}</span><span v-if="item.bill_payment"> · Pembayaran tagihan</span></span>
             </span>
             <span class="flex shrink-0 flex-col items-end gap-1">
-              <span class="text-sm font-semibold" :class="item.type === 'income' ? 'text-success' : 'text-highlighted'">
-                {{ item.type === 'income' ? '+' : '-' }}{{ formatTransactionAmount(item.amount) }}
+              <span class="text-sm font-semibold" :class="transactionAmountClass(item.type)">
+                {{ transactionAmountSign(item.type) }}{{ formatTransactionAmount(item.amount) }}
               </span>
               <span v-if="item.category" class="max-w-28 truncate rounded-full bg-elevated px-2 py-0.5 text-[11px] text-muted">
                 {{ item.category.name }}
@@ -310,12 +323,17 @@ await categories.load()
       v-model:open="formOpen"
       :editing="editing"
       :submitting="submitting"
+      :submit-error="error"
       :field-errors="fieldErrors"
       :categories="categoryItems"
       :categories-pending="categoriesPending"
       :categories-error="categoriesError"
+      :wallets="walletItems"
+      :wallets-pending="walletsPending"
+      :wallets-error="walletsError"
       @submit="onFormSubmit"
       @retry-categories="categories.refresh()"
+      @retry-wallets="wallets.refresh()"
     />
 
     <TransactionDetailModal

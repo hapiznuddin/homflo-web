@@ -155,6 +155,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: 'Belanja',
       wallet: '',
+      wallet_id: '',
       category_id: ''
     })
 
@@ -164,6 +165,8 @@ describe('useTransactions', () => {
 
     expect(url).toBe('/api/transactions')
     expect(options.method).toBe('POST')
+    // Tanpa dompet terpilih, wallet_id TIDAK dikirim (key hilang total)
+    // — create kena validasi required backend, bukan string kosong.
     expect(options.body).toEqual({
       type: 'expense',
       amount: '150000.50',
@@ -172,6 +175,7 @@ describe('useTransactions', () => {
       wallet: null,
       category_id: null
     })
+    expect(options.body).not.toHaveProperty('wallet_id')
     // POST + refresh GET.
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(tx.items.value).toHaveLength(2)
@@ -189,6 +193,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: '',
       wallet: '',
+      wallet_id: '',
       category_id: 'c9'
     })
 
@@ -196,6 +201,40 @@ describe('useTransactions', () => {
 
     expect(options.method).toBe('POST')
     expect(options.body).toMatchObject({ category_id: 'c9', amount: '25000' })
+  })
+
+  // Phase 15.2.2 — create mengirim wallet_id (ULID posting) + nama
+  // dompet pada kolom legacy wallet; tanpa field terlarang.
+  it('create() mengirim wallet_id dan nama dompet legacy bersama payload', async () => {
+    const tx = await mountTransactions()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: txItem({ id: '01J0000000000000000000002' }) })
+    fetchMock.mockResolvedValue(listEnvelope())
+
+    await tx.create({
+      type: 'expense',
+      amount: '50000',
+      occurred_on: '2026-10-07',
+      description: 'Kopi',
+      wallet: 'Kas Tunai',
+      wallet_id: '01J00000000000000000WALLET1',
+      category_id: ''
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+
+    expect(url).toBe('/api/transactions')
+    expect(options.method).toBe('POST')
+    expect(options.body).toMatchObject({
+      wallet_id: '01J00000000000000000WALLET1',
+      wallet: 'Kas Tunai',
+      type: 'expense',
+      amount: '50000'
+    })
+    // Field internal/khusus transfer tidak pernah masuk payload komposable.
+    expect(options.body).not.toHaveProperty('destination_wallet_id')
+    expect(options.body).not.toHaveProperty('household_id')
+    expect(options.body).not.toHaveProperty('source_type')
   })
 
   it('create() dengan nominal invalid tidak menyentuh network', async () => {
@@ -207,6 +246,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: '',
       wallet: '',
+      wallet_id: '',
       category_id: ''
     })
 
@@ -234,6 +274,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: '',
       wallet: '',
+      wallet_id: '',
       category_id: ''
     })
 
@@ -259,6 +300,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: '',
       wallet: '',
+      wallet_id: '',
       category_id: ''
     })
     const second = await tx.create({
@@ -267,6 +309,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-06',
       description: '',
       wallet: '',
+      wallet_id: '',
       category_id: ''
     })
 
@@ -291,6 +334,7 @@ describe('useTransactions', () => {
       occurred_on: '2026-10-05',
       description: 'revisi',
       wallet: 'Kas Tunai',
+      wallet_id: '',
       category_id: ''
     })
 

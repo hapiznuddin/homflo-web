@@ -147,6 +147,11 @@ export function useTransactions() {
       occurred_on: values.occurred_on,
       description: values.description === '' ? null : values.description,
       wallet: values.wallet === '' ? null : values.wallet,
+      // ID dompet (ULID) dari Wallet API — kolom posting sesungguhnya;
+      // '' (edit read-only / belum pilih) tidak mengirim key sehingga
+      // create kena validasi required backend dan PATCH tetap tanpa
+      // wallet_id (whitelist [id].patch tidak meneruskannya).
+      ...(values.wallet_id === '' ? {} : { wallet_id: values.wallet_id }),
       category_id: values.category_id === '' ? null : values.category_id
     }
   }
