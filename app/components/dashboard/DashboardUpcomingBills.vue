@@ -4,9 +4,15 @@ import { formatRupiah } from '~/utils/format'
 
 interface Props {
   bills: DashboardUpcomingBill[]
+  /**
+   * true ketika backend melaporkan domain bills sebagai unsupported
+   * (`meta.unsupported_domains`). Status ini BERBEDA dari data kosong:
+   * card wajib jujur "Belum tersedia", bukan mengklaim "tidak ada".
+   */
+  unsupported?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), { unsupported: false })
 </script>
 
 <template>
@@ -18,7 +24,12 @@ defineProps<Props>()
       </div>
     </template>
 
-    <div v-if="bills.length === 0" class="py-6 text-center">
+    <!-- Unsupported dicek SEBELUM kosong: "Belum tersedia" ≠ "tidak ada". -->
+    <div v-if="unsupported" class="py-6 text-center">
+      <p class="text-sm text-muted">Belum tersedia</p>
+    </div>
+
+    <div v-else-if="bills.length === 0" class="py-6 text-center">
       <p class="text-sm text-muted">Tidak ada tagihan terdekat</p>
     </div>
 

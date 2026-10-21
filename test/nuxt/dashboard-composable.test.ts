@@ -627,4 +627,96 @@ describe('useDashboard read-model contract', () => {
     expect(dash.data.value?.financial.income).toBe(0)
     expect(dash.data.value?.availability).toEqual({ income: true, expense: true, netCashFlow: true })
   })
+
+  it('transfer di lima terbaru: load() tetap sukses, KPI dari blok financial (Phase 15.1)', async () => {
+    // Agregat NON-NOL agar terbukti angka KPI berasal dari blok financial
+    // dashboard, bukan diturunkan dari daftar transaksi.
+    const payload = apiPayload()
+
+    payload.financial.income = '12000000.00'
+    payload.financial.expense = '7000000.00'
+    payload.financial.net_cash_flow = '5000000.00'
+    payload.financial.cash_flow_status = 'surplus'
+
+    // Daftar transaksi terbaru memuat transfer di posisi teratas.
+    const transferRow = {
+      id: 'tx-transfer',
+      household_id: 'h1',
+      type: 'transfer',
+      amount: '500000.00',
+      occurred_on: '2026-10-30',
+      description: 'Pindah ke Tabungan',
+      wallet: 'Dompet Jago',
+      category: null,
+      created_at: '2026-10-30T10:00:00.000000Z',
+      updated_at: '2026-10-30T10:00:00.000000Z'
+    }
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/budgets') {
+        return { success: true, ...budgetsPayload() }
+      }
+
+      if (url === '/api/transactions') {
+        const tx = transactionsPayload()
+
+        return { success: true, data: { ...tx, data: [transferRow, ...tx.data] } }
+      }
+
+      return { success: true, data: payload }
+    })
+
+    const dash = await mountDashboard()
+
+    await dash.load()
+
+    // Dashboard TIDAK error/gagal ketika 5 terbaru memuat transfer.
+    expect(dash.error.value).toBeNull()
+    expect(dash.data.value).not.toBeNull()
+
+    const data = dash.data.value!
+
+    // Transfer tampil dengan arah khas — bukan 'in', bukan 'out'.
+    const transfer = data.recentTransactions.find(tx => tx.id === 'tx-transfer')
+
+    expect(transfer).toBeDefined()
+    expect(transfer!.direction).toBe('transfer')
+    expect(data.recentTransactions).toHaveLength(6)
+
+    // Agregat income/expense/net TETAP dari blok financial dashboard —
+    // transfer tidak mengubah satupun (acceptance 2 & 3).
+    expect(data.financial.income).toBe(12000000)
+    expect(data.financial.expense).toBe(7000000)
+    expect(data.financial.netCashFlow).toBe(5000000)
+    expect(data.availability).toEqual({ income: true, expense: true, netCashFlow: true })
+  })
+
+  it('meta.unsupported_domains terbawa ke read-model (state jujur vs kosong, Phase 15.1)', async () => {
+    const payload = apiPayload()
+
+    payload.meta = { unsupported_domains: ['transactions', 'budgets', 'bills', 'maintenance'] }
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/budgets') {
+        return { success: true, ...budgetsPayload() }
+      }
+
+      if (url === '/api/transactions') {
+        return { success: true, data: transactionsPayload() }
+      }
+
+      return { success: true, data: payload }
+    })
+
+    const dash = await mountDashboard()
+
+    await dash.load()
+
+    expect(dash.error.value).toBeNull()
+    expect(dash.data.value?.unsupportedDomains)
+      .toEqual(['transactions', 'budgets', 'bills', 'maintenance'])
+    // Meta hanya status ketersediaan — agregat KPI tidak berubah.
+    expect(dash.data.value?.financial.income).toBe(0)
+    expect(dash.data.value?.availability).toEqual({ income: true, expense: true, netCashFlow: true })
+  })
 })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DashboardTransaction } from '~/types/dashboard'
+import type { DashboardTransaction, TransactionDirection } from '~/types/dashboard'
 import { formatRupiah } from '~/utils/format'
 
 interface Props {
@@ -7,6 +7,15 @@ interface Props {
 }
 
 defineProps<Props>()
+
+// Warna nominal per arah: income tetap sukses, expense tetap muted,
+// transfer NETRAL (text-default) — transfer bukan income/expense dan
+// tidak pernah ikut warna keduanya.
+const amountClass: Record<TransactionDirection, string> = {
+  in: 'text-success',
+  out: 'text-muted',
+  transfer: 'text-default'
+}
 </script>
 
 <template>
@@ -17,7 +26,10 @@ defineProps<Props>()
           <h2 class="text-base font-semibold text-highlighted">Transaksi Terbaru</h2>
           <p class="mt-0.5 text-sm text-muted">Aktivitas arus kas keluar &amp; masuk terakhir</p>
         </div>
-        <UButton color="neutral" variant="ghost" size="sm" disabled aria-disabled="true" title="Segera hadir">
+        <!-- "Semua transaksi" aktif menuju /transactions (Phase 15.1).
+             Tombol "Tambah Transaksi" tetap disabled — create transaksi
+             belum tersedia di UI. -->
+        <UButton color="neutral" variant="ghost" size="sm" to="/transactions">
           Semua transaksi
         </UButton>
       </div>
@@ -41,9 +53,12 @@ defineProps<Props>()
         </div>
         <p
           class="shrink-0 text-sm font-semibold"
-          :class="tx.direction === 'in' ? 'text-success' : 'text-muted'"
+          :class="amountClass[tx.direction]"
         >
-          {{ formatRupiah(tx.amount, true) }}
+          <!-- Transfer tampil UNSIGNED (tanpa +/-) agar netral dan tidak
+               mengimplikasikan arah income/expense; in/out memakai format
+               signed seperti sebelumnya. -->
+          {{ tx.direction === 'transfer' ? formatRupiah(tx.amount) : formatRupiah(tx.amount, true) }}
         </p>
       </li>
     </ul>

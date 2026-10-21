@@ -93,7 +93,10 @@ const sampleData: DashboardResponse = {
       dateLabel: '3 Okt',
       location: 'Kamar Utama'
     }
-  ]
+  ],
+  // Status unsupported (Phase 15.1): default [] = seluruh domain
+  // supported — negatif klaim "Belum tersedia" palsu dipertahankan.
+  unsupportedDomains: []
 }
 
 function setupDashboardState(

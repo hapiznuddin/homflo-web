@@ -72,12 +72,18 @@ function retry(): void {
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <DashboardBudget :categories="data.budget" class="lg:col-span-2" />
-        <DashboardUpcomingBills :bills="data.upcomingBills" />
+        <DashboardUpcomingBills
+          :bills="data.upcomingBills"
+          :unsupported="data.unsupportedDomains.includes('bills')"
+        />
       </div>
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <DashboardRecentTransactions :transactions="data.recentTransactions" class="lg:col-span-2" />
-        <DashboardMaintenance :items="data.maintenance" />
+        <DashboardMaintenance
+          :items="data.maintenance"
+          :unsupported="data.unsupportedDomains.includes('maintenance')"
+        />
       </div>
 
       <DashboardQuickActions />

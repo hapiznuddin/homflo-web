@@ -57,7 +57,13 @@ export interface DashboardUpcomingBill {
   urgent: boolean
 }
 
-export type TransactionDirection = 'in' | 'out'
+/**
+ * Arah transaksi di daftar dashboard. `'transfer'` adalah perpindahan
+ * antar dompet: BUKAN income/expense, tidak pernah mengubah agregat
+ * income/expense/net cash flow (angka tetap dari blok financial
+ * GET /api/dashboard), dan dirender netral (tanpa tanda +/-).
+ */
+export type TransactionDirection = 'in' | 'out' | 'transfer'
 
 export interface DashboardTransaction {
   id: string
@@ -93,6 +99,15 @@ export interface DashboardResponse {
    * wajib menampilkan status jujur (bukan angka nol seolah terverifikasi).
    */
   availability: DashboardDataAvailability
+  /**
+   * Domain yang dilaporkan backend sebagai unsupported oleh
+   * GET /api/dashboard (`meta.unsupported_domains`, kontrak Phase 14.2).
+   * Field ini hanya DIBACA di klien — kontrak API tidak diubah. UI wajib
+   * membedakan status ini dari data kosong sungguhan: kartu Bills dan
+   * Maintenance menampilkan "Belum tersedia" ketika domainnya masuk
+   * daftar, bukan mengklaim "tidak ada" yang menyesatkan.
+   */
+  unsupportedDomains: string[]
 }
 
 /**

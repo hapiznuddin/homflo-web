@@ -3,9 +3,20 @@ import type { DashboardMaintenance, MaintenancePriority } from '~/types/dashboar
 
 interface Props {
   items: DashboardMaintenance[]
+  /**
+   * true ketika backend melaporkan domain maintenance sebagai
+   * unsupported (`meta.unsupported_domains`). Saat unsupported, klaim
+   * jumlah jadwal pada header diganti token "—" dan body menampilkan
+   * "Belum tersedia" — berbeda jelas dari kondisi benar-benar kosong.
+   */
+  unsupported?: boolean
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { unsupported: false })
+
+const subtitle = computed(() => (
+  props.unsupported ? '—' : `${props.items.length} jadwal pemeliharaan terdekat`
+))
 
 const priorityLabel: Record<MaintenancePriority, string> = {
   tinggi: 'Prioritas Tinggi',
@@ -25,11 +36,16 @@ const priorityClass: Record<MaintenancePriority, string> = {
     <template #header>
       <div>
         <h2 class="text-base font-semibold text-highlighted">Perawatan &amp; Pemeliharaan</h2>
-        <p class="mt-0.5 text-sm text-muted">{{ items.length }} jadwal pemeliharaan terdekat</p>
+        <p class="mt-0.5 text-sm text-muted">{{ subtitle }}</p>
       </div>
     </template>
 
-    <div v-if="items.length === 0" class="py-6 text-center">
+    <!-- Unsupported dicek SEBELUM kosong: "Belum tersedia" ≠ "tidak ada". -->
+    <div v-if="unsupported" class="py-6 text-center">
+      <p class="text-sm text-muted">Belum tersedia</p>
+    </div>
+
+    <div v-else-if="items.length === 0" class="py-6 text-center">
       <p class="text-sm text-muted">Tidak ada jadwal pemeliharaan</p>
     </div>
 

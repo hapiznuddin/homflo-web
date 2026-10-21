@@ -1,4 +1,5 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import { clearNuxtState } from '#app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LaravelDashboardPayload } from '~/utils/dashboardMapper'
 import { greetingForHour } from '~/utils/format'
@@ -216,5 +217,51 @@ describe('dashboard page (success path)', () => {
     // Bootstrap hanya boleh datang dari boundary middleware (maksimal sekali
     // per navigasi), tidak pernah dari dalam setup halaman.
     expect(authMock.bootstrap.mock.calls.length).toBeLessThanOrEqual(1)
+  })
+
+  it('meta unsupported membedakan Bills/Maintenance dari data kosong + link navigasi aktif (Phase 15.1)', async () => {
+    // State read-model persist antar mount dalam satu file; bersihkan agar
+    // load() tidak terpanggil oleh guard fresh-data dan memakai payload
+    // stub test sebelumnya (pola clearNuxtState di dashboard-composable).
+    clearNuxtState(['dashboard-period', 'dashboard-data', 'dashboard-pending', 'dashboard-error', 'dashboard-inflight', 'dashboard-request-seq'])
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/budgets') {
+        return { success: true, ...budgetsFixture() }
+      }
+
+      if (url === '/api/transactions') {
+        return { success: true, data: transactionsFixture() }
+      }
+
+      // Kontrak backend nyata: domain unsupported + data selalu kosong.
+      const payload = apiPayload()
+
+      payload.meta = { unsupported_domains: ['transactions', 'budgets', 'bills', 'maintenance'] }
+      payload.upcoming_bills = []
+      payload.maintenance = []
+
+      return { success: true, data: payload }
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    // Status unsupported ditampilkan jujur…
+    expect(text).toContain('Belum tersedia')
+    // …dan kedua kartu TIDAK mengklaim data kosong yang menyesatkan.
+    expect(text).not.toContain('Tidak ada tagihan terdekat')
+    expect(text).not.toContain('Tidak ada jadwal pemeliharaan')
+    // Header seksi tetap ada (kontrak layout tidak berubah).
+    expect(text).toContain('Akan Datang')
+    expect(text).toContain('Perawatan & Pemeliharaan')
+    // Navigasi dari halaman aktif, bukan placeholder disabled.
+    const budgetLink = wrapper.find('a[href="/budgets"]')
+    const txLink = wrapper.find('a[href="/transactions"]')
+
+    expect(budgetLink.exists()).toBe(true)
+    expect(budgetLink.attributes('aria-disabled')).not.toBe('true')
+    expect(txLink.exists()).toBe(true)
+    expect(txLink.attributes('aria-disabled')).not.toBe('true')
   })
 })

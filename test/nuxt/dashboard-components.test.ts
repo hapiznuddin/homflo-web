@@ -214,6 +214,18 @@ describe('DashboardBudget', () => {
 
     expect(wrapper.text()).toContain('Belum ada anggaran')
   })
+
+  it('header menyediakan link keyboard-focusable ke /budgets (Phase 15.1)', async () => {
+    const wrapper = await mountSuspended(DashboardBudget, { props: { categories }, route: false })
+
+    const link = wrapper.find('a[href="/budgets"]')
+
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toContain('Semua anggaran')
+    // Navigasi nyata: anchor focusable, bukan placeholder disabled.
+    expect(link.attributes('aria-disabled')).not.toBe('true')
+    expect(link.attributes('disabled')).toBeUndefined()
+  })
 })
 
 describe('DashboardUpcomingBills', () => {
@@ -253,6 +265,16 @@ describe('DashboardUpcomingBills', () => {
     })
 
     expect(wrapper.text()).toContain('Tidak ada tagihan terdekat')
+  })
+
+  it('unsupported ≠ kosong: status jujur "Belum tersedia" tanpa klaim "tidak ada" (Phase 15.1)', async () => {
+    const wrapper = await mountSuspended(DashboardUpcomingBills, {
+      props: { bills: [], unsupported: true },
+      route: false
+    })
+
+    expect(wrapper.text()).toContain('Belum tersedia')
+    expect(wrapper.text()).not.toContain('Tidak ada tagihan terdekat')
   })
 })
 
@@ -318,6 +340,53 @@ describe('DashboardRecentTransactions', () => {
     expect(incomeLi!.get('p.shrink-0').text()).toBe(formatRupiah(3500000, true))
   })
 
+  it('tombol "Semua transaksi" aktif menuju /transactions (Phase 15.1)', async () => {
+    const wrapper = await mountSuspended(DashboardRecentTransactions, {
+      props: { transactions },
+      route: false
+    })
+
+    const allLink = wrapper.find('a[href="/transactions"]')
+
+    expect(allLink.exists()).toBe(true)
+    expect(allLink.text()).toContain('Semua transaksi')
+    expect(allLink.attributes('aria-disabled')).not.toBe('true')
+  })
+
+  it('transfer: netral text-default, nominal unsigned, ikon arrow-right-left — bukan warna in/out (Phase 15.1)', async () => {
+    const wrapper = await mountSuspended(DashboardRecentTransactions, {
+      props: {
+        transactions: [
+          ...transactions,
+          {
+            id: 'tx-3',
+            title: 'Pindah Dompet',
+            icon: 'i-lucide-arrow-right-left',
+            dateLabel: '3 Okt 2026',
+            wallet: 'Dompet Jago',
+            amount: 416250,
+            direction: 'transfer'
+          }
+        ]
+      },
+      route: false
+    })
+
+    const transferLi = wrapper.findAll('li').find(li => li.text().includes('Pindah Dompet'))
+
+    expect(transferLi).toBeDefined()
+
+    const amount = transferLi!.get('p.shrink-0')
+
+    // Netral: bukan warna income, bukan warna expense.
+    expect(amount.classes()).toContain('text-default')
+    expect(amount.classes()).not.toContain('text-success')
+    expect(amount.classes()).not.toContain('text-muted')
+    // UNSIGNED — tanpa tanda +/- (transfer bukan income/expense).
+    expect(amount.text()).toBe(formatRupiah(416250))
+    expect(amount.text()).not.toContain('+')
+  })
+
   it('daftar kosong menampilkan empty state + ajakan tambah transaksi', async () => {
     const wrapper = await mountSuspended(DashboardRecentTransactions, {
       props: { transactions: [] },
@@ -326,6 +395,14 @@ describe('DashboardRecentTransactions', () => {
 
     expect(wrapper.text()).toContain('Belum ada transaksi bulan ini')
     expect(wrapper.text()).toContain('Tambah Transaksi')
+
+    // Create transaksi belum tersedia di UI — tombol tambah tetap
+    // jujur disabled (Phase 15.1 tidak mengaktifkan fitur ini).
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah Transaksi'))
+
+    expect(addButton).toBeDefined()
+    expect(addButton!.attributes('aria-disabled')).toBe('true')
+    expect(addButton!.attributes('title')).toBe('Segera hadir')
   })
 })
 
@@ -371,6 +448,20 @@ describe('DashboardMaintenance', () => {
     })
 
     expect(wrapper.text()).toContain('Tidak ada jadwal pemeliharaan')
+  })
+
+  it('unsupported ≠ kosong: header tanpa klaim jumlah, body "Belum tersedia" (Phase 15.1)', async () => {
+    const wrapper = await mountSuspended(DashboardMaintenance, {
+      props: { items: [], unsupported: true },
+      route: false
+    })
+
+    expect(wrapper.text()).toContain('Belum tersedia')
+    // Subtitle header memakai token "—" (pola KPI unavailable), tidak
+    // lagi mengklaim "N jadwal pemeliharaan terdekat".
+    expect(wrapper.text()).toContain('—')
+    expect(wrapper.text()).not.toContain('jadwal pemeliharaan terdekat')
+    expect(wrapper.text()).not.toContain('Tidak ada jadwal pemeliharaan')
   })
 })
 

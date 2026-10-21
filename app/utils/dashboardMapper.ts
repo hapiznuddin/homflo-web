@@ -315,6 +315,25 @@ function decimalString(value: unknown, field: string): string {
   return value
 }
 
+// meta.unsupported_domains dari kontrak GET /api/dashboard (Phase 14.2)
+// — hanya DIBACA, kontrak API tidak diubah. Meta absen = daftar kosong
+// (payload lama tanpa meta tetap valid); meta hadir tapi bukan array
+// string = payload malformed -> melempar seperti field lain, bukan
+// diabaikan diam-diam (prinsip "tidak pernah diisi karangan").
+function parseUnsupportedDomains(meta: LaravelDashboardPayload['meta']): string[] {
+  const domains = meta?.unsupported_domains
+
+  if (domains === undefined) {
+    return []
+  }
+
+  if (!Array.isArray(domains) || domains.some(domain => typeof domain !== 'string')) {
+    throw invalidPayload('meta.unsupported_domains bukan array string')
+  }
+
+  return [...domains]
+}
+
 // Satu item budget dari endpoint Budgets (Phase 12) -> kartu budget
 // dashboard. Persen dan status dipakai apa adanya dari server; tidak
 // ada penjumlahan atau perhitungan ulang di sini.
@@ -385,19 +404,36 @@ export function mapBudgetApiItem(item: LaravelBudgetApiItem): DashboardBudgetCat
 
 // Satu item transaksi dari endpoint Transactions (Phase 5) -> baris
 // transaksi dashboard. Judul dan ikon diturunkan untuk tampilan saja;
-// nominal dipakai apa adanya tanpa agregasi.
+// nominal dipakai apa adanya tanpa agregasi. Validasi tipe tetap
+// eksplisit: hanya income, expense, dan transfer (perpindahan antar
+// dompet, Phase 15.1) yang diterima — tipe lain MELEMPAR, tidak pernah
+// diisi karangan.
+
+const TYPE_FALLBACK: Record<TransactionDirection, { title: string, icon: string }> = {
+  in: { title: 'Pemasukan', icon: 'i-lucide-trending-up' },
+  out: { title: 'Pengeluaran', icon: 'i-lucide-trending-down' },
+  transfer: { title: 'Transfer', icon: 'i-lucide-arrow-right-left' }
+}
+
 export function mapTransactionApiItem(item: LaravelTransactionApiItem): DashboardTransaction {
-  if (item.type !== 'income' && item.type !== 'expense') {
+  if (item.type !== 'income' && item.type !== 'expense' && item.type !== 'transfer') {
     throw invalidPayload('transaction.type tidak dikenal')
   }
 
-  const direction: TransactionDirection = item.type === 'income' ? 'in' : 'out'
+  // Transfer punya arah sendiri ('transfer'): bukan 'in', bukan 'out',
+  // sehingga tidak pernah ikut warna/diarahkan sebagai income/expense.
+  // Agregat finansial tidak disentuh di sini — sepenuhnya dari blok
+  // financial GET /api/dashboard (lihat mapDashboardResponse).
+  const direction: TransactionDirection = item.type === 'income'
+    ? 'in'
+    : item.type === 'expense' ? 'out' : 'transfer'
+  const fallback = TYPE_FALLBACK[direction]
   const title = item.description && item.description.trim().length > 0
     ? item.description
-    : item.category?.name ?? (direction === 'in' ? 'Pemasukan' : 'Pengeluaran')
+    : item.category?.name ?? fallback.title
   const icon = item.category?.icon && item.category.icon.length > 0
     ? item.category.icon
-    : direction === 'in' ? 'i-lucide-trending-up' : 'i-lucide-trending-down'
+    : fallback.icon
 
   return {
     id: nonEmptyString(item.id, 'transaction.id'),
@@ -483,6 +519,9 @@ export function mapDashboardResponse(
     // Blok financial tervalidasi penuh di atas (income/expense/net +
     // union status) sehingga ketiga KPI agregat resmi tersedia. Nilai
     // nol yang tampil berikutnya adalah nol terverifikasi backend.
-    availability: { income: true, expense: true, netCashFlow: true }
+    availability: { income: true, expense: true, netCashFlow: true },
+    // Status unsupported vs kosong (Phase 15.1): daftar dari meta yang
+    // sudah ada pada kontrak Phase 14.2 — hanya dibaca, tidak diubah.
+    unsupportedDomains: parseUnsupportedDomains(payload.meta)
   }
 }

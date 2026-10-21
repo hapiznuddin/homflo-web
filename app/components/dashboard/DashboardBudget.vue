@@ -19,9 +19,17 @@ const barColor: Record<BudgetStatus, string> = {
 <template>
   <UCard :ui="{ body: 'p-4 sm:p-5' }">
     <template #header>
-      <div>
-        <h2 class="text-base font-semibold text-highlighted">Budget</h2>
-        <p class="mt-0.5 text-sm text-muted">Pengeluaran berdasarkan kategori</p>
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h2 class="text-base font-semibold text-highlighted">Budget</h2>
+          <p class="mt-0.5 text-sm text-muted">Pengeluaran berdasarkan kategori</p>
+        </div>
+        <!-- Navigasi ke /budgets (Phase 15.1): UButton + `to` merender
+             NuxtLink — anchor focusable secara alami (keyboard/fokus OK).
+             Baris kategori tetap non-interaktif. -->
+        <UButton color="neutral" variant="ghost" size="sm" to="/budgets">
+          Semua anggaran
+        </UButton>
       </div>
     </template>
 

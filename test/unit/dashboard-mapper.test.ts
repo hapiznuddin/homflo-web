@@ -53,6 +53,24 @@ describe('mapDashboardResponse', () => {
     expect(data.maintenance).toEqual([])
   })
 
+  it('meta.unsupported_domains terpetakan apa adanya; meta absen = daftar kosong (Phase 15.1)', () => {
+    const withMeta = basePayload()
+
+    withMeta.meta = { unsupported_domains: ['transactions', 'budgets', 'bills', 'maintenance'] }
+
+    expect(mapDashboardResponse(withMeta).unsupportedDomains)
+      .toEqual(['transactions', 'budgets', 'bills', 'maintenance'])
+    expect(mapDashboardResponse(basePayload()).unsupportedDomains).toEqual([])
+  })
+
+  it('meta.unsupported_domains malformed melempar (tidak diabaikan diam-diam)', () => {
+    const payload = basePayload()
+
+    payload.meta = { unsupported_domains: 'bills' as unknown as string[] }
+
+    expect(() => mapDashboardResponse(payload)).toThrowError()
+  })
+
   it('threshold status budget + note mengikuti kontrak tunggal', () => {
     const cases: Array<[number, number, string, string | undefined]> = [
       [690000, 1000000, 'normal', undefined],
@@ -329,8 +347,31 @@ describe('mapTransactionApiItem', () => {
     expect(mapTransactionApiItem(transactionApiItem({ wallet: '' })).wallet).toBe('—')
   })
 
+  it('transfer: arah netral "transfer" (bukan in/out), fallback judul/ikon khas (Phase 15.1)', () => {
+    const mapped = mapTransactionApiItem(transactionApiItem({
+      type: 'transfer',
+      description: null,
+      category: null,
+      wallet: 'Dompet Jago'
+    }))
+
+    expect(mapped.direction).toBe('transfer')
+    expect(mapped.direction).not.toBe('in')
+    expect(mapped.direction).not.toBe('out')
+    expect(mapped.title).toBe('Transfer')
+    expect(mapped.icon).toBe('i-lucide-arrow-right-left')
+    expect(mapped.amount).toBe(685000)
+    expect(mapped.wallet).toBe('Dompet Jago')
+
+    // Deskripsi eksplisit tetap menang atas fallback judul.
+    expect(mapTransactionApiItem(transactionApiItem({ type: 'transfer', description: 'Ke Tabungan' })).title)
+      .toBe('Ke Tabungan')
+  })
+
   it('menolak kontrak tak dikenal tanpa karangan', () => {
-    expect(() => mapTransactionApiItem(transactionApiItem({ type: 'transfer' }))).toThrowError()
+    // 'transfer' kini tipe VALID (Phase 15.1) dan punya test khusus di
+    // atas; tipe tak dikenal lain tetap ditolak — validasi tidak dilemahkan.
+    expect(() => mapTransactionApiItem(transactionApiItem({ type: 'mutasi' }))).toThrowError()
     expect(() => mapTransactionApiItem(transactionApiItem({ occurred_on: 'kapan' }))).toThrowError()
     expect(() => mapTransactionApiItem(transactionApiItem({ amount: 'banyak' }))).toThrowError()
   })
