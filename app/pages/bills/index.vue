@@ -1,14 +1,44 @@
 <script setup lang="ts">
-import BillDetailModal from '~/components/bills/BillDetailModal.vue'
 import BillFormModal from '~/components/bills/BillFormModal.vue'
-import BillPaymentModal from '~/components/bills/BillPaymentModal.vue'
-import BillRecurrenceModal from '~/components/bills/BillRecurrenceModal.vue'
-import type { BillDetail, BillFormValues, BillItem, BillPayFormValues, BillRecurrenceFormValues } from '~/types/bills'
+import type { BillFormValues } from '~/types/bills'
 import { BILL_UI_STATUS_LABELS, billStatusChipClass, billUiStatus, frequencyLabel } from '~/utils/bills'
 import { formatTransactionAmount } from '~/utils/transactions'
 import { formatYmd } from '~/utils/format'
 
+// Bills Overview (Phase 15.3.3): empat tab status — Akan Datang (default),
+// Terlambat, Lunas, Arsip — semuanya kelompok field status SERVER
+// (billUiStatus: unpaid/overdue/paid/archived; tanpa kalkulasi tanggal di
+// browser). Baris membuka Bill Detail (/bills/{id}) sebagai anchor biasa:
+// deep-linkable tanpa state modal. Arsip = kontrak include_archived
+// (true → aktif + arsip; tanpa param → hanya aktif); tab status lain
+// berbagi data aktif yang sama tanpa request ulang.
 definePageMeta({ middleware: ['auth', 'onboarding'] })
+
+type TabKey = 'upcoming' | 'overdue' | 'paid' | 'archive'
+
+const TABS: { key: TabKey, label: string }[] = [
+  { key: 'upcoming', label: 'Akan Datang' },
+  { key: 'overdue', label: 'Terlambat' },
+  { key: 'paid', label: 'Lunas' },
+  { key: 'archive', label: 'Arsip' }
+]
+
+const EMPTY_COPY: Record<TabKey, string> = {
+  upcoming: 'Belum ada tagihan yang akan datang.',
+  overdue: 'Tidak ada tagihan terlambat.',
+  paid: 'Belum ada tagihan lunas.',
+  archive: 'Belum ada tagihan diarsipkan.'
+}
+
+// Pemetaan key tab → status server (billUiStatus): Akan Datang = unpaid
+// (server tidak menghitung overdue di sini — field overdue server yang
+// menentukan), Terlambat = overdue, Lunas = paid, Arsip = archived.
+const TAB_STATUS: Record<TabKey, ReturnType<typeof billUiStatus>> = {
+  upcoming: 'unpaid',
+  overdue: 'overdue',
+  paid: 'paid',
+  archive: 'archived'
+}
 
 const toast = useToast()
 const auth = useAuth()
@@ -19,59 +49,32 @@ const { items, pending, submitting, error, fieldErrors } = bills
 const categories = useCategories()
 const { items: categoryItems, pending: categoriesPending, error: categoriesError } = categories
 
-const wallets = useWallets()
-const { items: walletItems, pending: walletsPending, error: walletsError } = wallets
-
-const tab = ref<'active' | 'archive'>('active')
-
+const tab = ref<TabKey>('upcoming')
 const formOpen = ref(false)
-const editing = ref<BillItem | null>(null)
-
-const detailOpen = ref(false)
-const detailId = ref('')
-const detailItem = ref<BillDetail | null>(null)
-const detailLoading = ref(false)
-const detailError = ref<string | null>(null)
-const confirmDelete = ref(false)
-const confirmArchive = ref(false)
-
-const payOpen = ref(false)
-
-const recurrenceOpen = ref(false)
-const recurrenceSource = ref<BillItem | null>(null)
-
-// include_archived=true mengembalikan aktif + terarsip (kontrak backend);
-// tab Arsip menyaring baris is_active=false di sisi tampilan (field
-// backend, bukan status yang dihitung ulang).
-const visibleItems = computed(() =>
-  items.value.filter(bill => (tab.value === 'archive' ? !bill.is_active : bill.is_active))
-)
 
 const isOwner = computed(() => auth.isHouseholdOwner.value)
 
-// Deteksi best-effort dari daftar yang sedang termuat: periode aktif
-// terakhir dari sebuah jadwal (gap G-1 — tanpa GET recurrence).
-const lastActivePeriod = computed(() => {
-  const bill = detailItem.value
-  const recurrenceId = bill?.recurrence?.id
+// Grouping tab = filter client-side dari field status server
+// (billUiStatus) — bukan query baru; backend hanya mengenal
+// include_archived untuk membedakan set data aktif vs aktif + arsip.
+const visibleItems = computed(() =>
+  items.value.filter(bill => billUiStatus(bill) === TAB_STATUS[tab.value])
+)
 
-  if (!bill || !recurrenceId) {
-    return false
-  }
-
-  return items.value.every(other =>
-    other.id === bill.id || !other.is_active || other.recurrence?.id !== recurrenceId
-  )
-})
-
-async function switchTab(next: 'active' | 'archive'): Promise<void> {
+async function switchTab(next: TabKey): Promise<void> {
   if (tab.value === next) {
     return
   }
 
+  const leavingArchive = tab.value === 'archive'
+
   tab.value = next
 
-  await bills.load({ include_archived: next === 'archive' }, true)
+  // Hanya transisi yang melibatkan tab Arsip yang butuh set data berbeda
+  // (include_archived); tiga tab status berbagi data aktif yang sama.
+  if (next === 'archive' || leavingArchive) {
+    await bills.load({ include_archived: next === 'archive' }, true)
+  }
 }
 
 function openCreate(): void {
@@ -79,206 +82,19 @@ function openCreate(): void {
     bills.clearError()
   }
 
-  editing.value = null
   formOpen.value = true
 }
 
-function openEdit(item: BillItem): void {
-  if (items.value.length > 0) {
-    bills.clearError()
-  }
-
-  editing.value = item
-  detailOpen.value = false
-  confirmDelete.value = false
-  confirmArchive.value = false
-  formOpen.value = true
-}
-
-async function reloadDetail(): Promise<void> {
-  if (detailId.value === '') {
-    return
-  }
-
-  detailError.value = null
-  detailLoading.value = true
-
-  try {
-    detailItem.value = await bills.fetchOne(detailId.value)
-  } catch (err) {
-    detailError.value = readError(err, 'Detail belum dapat dimuat.')
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-async function openDetail(item: BillItem): Promise<void> {
-  detailId.value = item.id
-  detailItem.value = null
-  detailError.value = null
-  confirmDelete.value = false
-  confirmArchive.value = false
-  detailLoading.value = true
-  detailOpen.value = true
-
-  await reloadDetail()
-}
-
-async function onFormSubmit(values: BillFormValues): Promise<void> {
-  const saved = editing.value
-    ? await bills.update(editing.value.id, values)
-    : await bills.create(values)
+async function onCreateSubmit(values: BillFormValues): Promise<void> {
+  const saved = await bills.create(values)
 
   if (saved) {
-    const wasEditing = editing.value !== null
-
     formOpen.value = false
-    editing.value = null
     toast.add({
-      title: wasEditing ? 'Tagihan diubah' : 'Tagihan ditambah',
+      title: 'Tagihan ditambah',
       description: 'Data tersimpan.',
       color: 'success'
     })
-  }
-}
-
-async function onDeleteRequest(): Promise<void> {
-  if (!detailItem.value) {
-    return
-  }
-
-  if (!confirmDelete.value) {
-    confirmDelete.value = true
-    confirmArchive.value = false
-
-    return
-  }
-
-  const target = detailItem.value
-  const ok = await bills.remove(target.id)
-
-  if (ok) {
-    detailOpen.value = false
-    detailItem.value = null
-    detailId.value = ''
-    confirmDelete.value = false
-    toast.add({
-      title: 'Tagihan dihapus',
-      description: target.recurrence
-        ? 'Periode ini dilewati secara permanen; jadwal tidak ikut berhenti.'
-        : 'Data terhapus.',
-      color: 'success'
-    })
-  }
-}
-
-async function onArchiveRequest(): Promise<void> {
-  if (!detailItem.value) {
-    return
-  }
-
-  if (!confirmArchive.value) {
-    confirmArchive.value = true
-    confirmDelete.value = false
-
-    return
-  }
-
-  const result = await bills.archive(detailItem.value.id)
-
-  if (result) {
-    detailOpen.value = false
-    detailItem.value = null
-    detailId.value = ''
-    confirmArchive.value = false
-    toast.add({
-      title: 'Tagihan diarsipkan',
-      description: 'Tersimpan di tab Arsip; riwayat pembayaran tetap ada.',
-      color: 'success'
-    })
-  }
-}
-
-function openPay(): void {
-  if (items.value.length > 0) {
-    bills.clearError()
-  }
-
-  // Dimuat saat dibutuhkan (freshness short-circuit mencegah permintaan
-  // berulang); read-only GET /api/wallets.
-  void wallets.load()
-  payOpen.value = true
-}
-
-async function onPaySubmit(values: BillPayFormValues): Promise<void> {
-  const result = await bills.pay(detailId.value, values)
-
-  if (result) {
-    payOpen.value = false
-    toast.add({
-      title: 'Tagihan dibayar',
-      description: 'Pembayaran lunas tercatat.',
-      color: 'success'
-    })
-
-    await reloadDetail()
-    void wallets.refresh()
-  }
-}
-
-function onPayOpenChange(value: boolean): void {
-  payOpen.value = value
-
-  if (!value) {
-    // Tutup gagal/selesai dari UI: buang error modal agar daftar tidak
-    // tertimpa alert, lalu segarkan status terbaru (mis. sudah dibayar).
-    bills.clearError()
-    void bills.refresh()
-    void reloadDetail()
-  }
-}
-
-function openRecurrence(bill: BillItem): void {
-  if (!bill.recurrence) {
-    return
-  }
-
-  if (items.value.length > 0) {
-    bills.clearError()
-  }
-
-  detailOpen.value = false
-  formOpen.value = false
-  recurrenceSource.value = bill
-  recurrenceOpen.value = true
-}
-
-async function onRecurrenceSubmit(changes: Partial<BillRecurrenceFormValues>): Promise<void> {
-  const source = recurrenceSource.value
-
-  if (!source?.recurrence) {
-    return
-  }
-
-  const updated = await bills.updateRecurrence(source.recurrence.id, changes)
-
-  if (updated) {
-    recurrenceOpen.value = false
-    recurrenceSource.value = null
-    toast.add({
-      title: 'Jadwal diubah',
-      description: 'Hanya periode yang belum dibayar dan aktif yang diperbarui.',
-      color: 'success'
-    })
-  }
-}
-
-function onRecurrenceOpenChange(value: boolean): void {
-  recurrenceOpen.value = value
-
-  if (!value) {
-    recurrenceSource.value = null
-    bills.clearError()
   }
 }
 
@@ -302,22 +118,15 @@ await categories.load()
 
     <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter tagihan">
       <UButton
+        v-for="item in TABS"
+        :key="item.key"
         size="sm"
-        :color="tab === 'active' ? 'primary' : 'neutral'"
-        :variant="tab === 'active' ? 'soft' : 'outline'"
-        :aria-pressed="tab === 'active'"
-        @click="switchTab('active')"
+        :color="tab === item.key ? 'primary' : 'neutral'"
+        :variant="tab === item.key ? 'soft' : 'outline'"
+        :aria-pressed="tab === item.key"
+        @click="switchTab(item.key)"
       >
-        Berjalan
-      </UButton>
-      <UButton
-        size="sm"
-        :color="tab === 'archive' ? 'primary' : 'neutral'"
-        :variant="tab === 'archive' ? 'soft' : 'outline'"
-        :aria-pressed="tab === 'archive'"
-        @click="switchTab('archive')"
-      >
-        Arsip
+        {{ item.label }}
       </UButton>
       <span class="text-xs text-muted">Tab Arsip menampilkan tagihan yang sudah diarsipkan.</span>
     </div>
@@ -338,10 +147,10 @@ await categories.load()
     <template v-else>
       <div v-if="visibleItems.length === 0" class="py-10 text-center">
         <p class="text-sm text-muted">
-          {{ tab === 'archive' ? 'Belum ada tagihan diarsipkan.' : 'Belum ada tagihan berjalan.' }}
+          {{ EMPTY_COPY[tab] }}
         </p>
         <UButton
-          v-if="tab === 'active' && isOwner"
+          v-if="tab === 'upcoming' && isOwner"
           color="neutral"
           variant="outline"
           size="sm"
@@ -354,10 +163,9 @@ await categories.load()
 
       <ul v-else class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4">
         <li v-for="item in visibleItems" :key="item.id">
-          <button
-            type="button"
+          <NuxtLink
+            :to="`/bills/${item.id}`"
             class="flex w-full items-center gap-3 py-3 text-left first:pt-3 last:pb-3"
-            @click="openDetail(item)"
           >
             <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
               <UIcon name="i-lucide-receipt" class="size-4.5 text-default" />
@@ -390,67 +198,22 @@ await categories.load()
                 </span>
               </span>
             </span>
-          </button>
+          </NuxtLink>
         </li>
       </ul>
     </template>
 
     <BillFormModal
       v-model:open="formOpen"
-      :editing="editing"
+      :editing="null"
       :submitting="submitting"
       :error="error"
       :field-errors="fieldErrors"
       :categories="categoryItems"
       :categories-pending="categoriesPending"
       :categories-error="categoriesError"
-      @submit="onFormSubmit"
+      @submit="onCreateSubmit"
       @retry-categories="categories.refresh()"
-      @open-recurrence="openRecurrence"
-    />
-
-    <BillDetailModal
-      v-model:open="detailOpen"
-      :item="detailItem"
-      :loading="detailLoading"
-      :error="detailError"
-      :deleting="submitting"
-      :confirm-delete="confirmDelete"
-      :archiving="submitting"
-      :confirm-archive="confirmArchive"
-      :is-owner="isOwner"
-      :last-active-period="lastActivePeriod"
-      @edit="openEdit"
-      @pay="openPay()"
-      @archive="onArchiveRequest()"
-      @delete="onDeleteRequest()"
-      @cancel-delete="confirmDelete = false"
-      @cancel-archive="confirmArchive = false"
-      @open-recurrence="openRecurrence"
-      @retry="reloadDetail()"
-    />
-
-    <BillPaymentModal
-      :open="payOpen"
-      :bill="detailItem"
-      :wallets="walletItems"
-      :wallets-pending="walletsPending"
-      :wallets-error="walletsError"
-      :submitting="submitting"
-      :error="error"
-      @update:open="onPayOpenChange"
-      @submit="onPaySubmit"
-      @retry-wallets="wallets.refresh()"
-    />
-
-    <BillRecurrenceModal
-      :open="recurrenceOpen"
-      :bill="recurrenceSource"
-      :submitting="submitting"
-      :error="error"
-      :field-errors="fieldErrors"
-      @update:open="onRecurrenceOpenChange"
-      @submit="onRecurrenceSubmit"
     />
   </div>
 </template>

@@ -1,19 +1,17 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
-import USelect from '@nuxt/ui/components/Select.vue'
 import { DOMWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { CategoryItem } from '~/types/categories'
-import type { BillDetail, BillItem, BillRecurrence } from '~/types/bills'
-import type { WalletItem } from '~/types/wallets'
-import BillPaymentModal from '~/components/bills/BillPaymentModal.vue'
-import BillRecurrenceModal from '~/components/bills/BillRecurrenceModal.vue'
+import type { BillItem } from '~/types/bills'
 import BillsPage from '~/pages/bills/index.vue'
 
-// Halaman Bills: state/mutasi lewat composable yang di-mock (pola
-// transactions-page) — assertions pada perilaku tampilan, navigasi tab,
-// aksi lifecycle, dan payload turunan yang diteruskan ke composable.
-// Kepatuhan payload jaringan sesungguhnya diuji di bills-composable.test.ts.
+// Halaman Bills Overview (Phase 15.3.3): empat tab status (Akan Datang
+// default/Terlambat/Lunas/Arsip) yang semuanya kelompok field status
+// server (billUiStatus) — tanpa kalkulasi tanggal di browser. Baris adalah
+// anchor ke /bills/{id} (deep-link), bukan pembuka modal. Aksi lifecycle
+// pindah ke halaman detail (lihat bills-detail-page.test.ts); Kepatuhan
+// payload jaringan sesungguhnya diuji di bills-composable.test.ts.
 
 const authMock = vi.hoisted(() => ({
   user: {
@@ -46,26 +44,15 @@ const catMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useCategories', () => () => catMock.api)
 
-const walletsMock = vi.hoisted(() => ({ api: undefined as unknown }))
-
-mockNuxtImport('useWallets', () => () => walletsMock.api)
-
 interface MockBillsApi {
   items: Ref<BillItem[]>
-  filters: Ref<{ include_archived?: boolean }>
   pending: Ref<boolean>
   submitting: Ref<boolean>
   error: Ref<string | null>
   fieldErrors: Ref<Record<string, string>>
   load: ReturnType<typeof vi.fn>
   refresh: ReturnType<typeof vi.fn>
-  fetchOne: ReturnType<typeof vi.fn>
   create: ReturnType<typeof vi.fn>
-  update: ReturnType<typeof vi.fn>
-  remove: ReturnType<typeof vi.fn>
-  archive: ReturnType<typeof vi.fn>
-  pay: ReturnType<typeof vi.fn>
-  updateRecurrence: ReturnType<typeof vi.fn>
   clearError: ReturnType<typeof vi.fn>
 }
 
@@ -92,12 +79,12 @@ function billItem(overrides: Partial<BillItem> = {}): BillItem {
   }
 }
 
-function recurringBill(overrides: Partial<BillItem> = {}): BillItem {
+function overdueBill(overrides: Partial<BillItem> = {}): BillItem {
   return billItem({
-    id: '01J0BILL00000000000000010',
-    title: 'Iuran Keamanan',
-    recurrence: { id: 'r1', frequency: 'monthly', due_day: 25, is_active: true },
-    recurrence_period: '2026-10-25',
+    id: '01J0BILL00000000000000031',
+    title: 'Tagihan Internet',
+    due_date: '2026-10-01',
+    overdue: true,
     ...overrides
   })
 }
@@ -123,44 +110,6 @@ function archivedBill(overrides: Partial<BillItem> = {}): BillItem {
   })
 }
 
-function paymentFixture(): BillDetail['payments'][number] {
-  return {
-    id: 'p1',
-    amount: '150000.00',
-    occurred_on: '2026-10-25',
-    description: null,
-    wallet: { id: 'w1', name: 'Kas Tunai', type: 'cash', is_active: true },
-    created_at: '2026-10-25T00:00:00.000000Z'
-  }
-}
-
-function walletFixtures(): WalletItem[] {
-  return [
-    {
-      id: 'w1',
-      household_id: 'h1',
-      name: 'Kas Tunai',
-      type: 'cash',
-      opening_balance: '0.00',
-      is_active: true,
-      balance: '250000.00',
-      created_at: '2026-10-01T00:00:00.000000Z',
-      updated_at: '2026-10-01T00:00:00.000000Z'
-    },
-    {
-      id: 'w2',
-      household_id: 'h1',
-      name: 'Dompet Mati',
-      type: 'cash',
-      opening_balance: '0.00',
-      is_active: false,
-      balance: '10000.00',
-      created_at: '2026-10-01T00:00:00.000000Z',
-      updated_at: '2026-10-01T00:00:00.000000Z'
-    }
-  ]
-}
-
 function setupBillsState(
   overrides: {
     items?: BillItem[]
@@ -168,39 +117,15 @@ function setupBillsState(
     error?: string | null
   } = {}
 ): MockBillsApi {
-  const items = ref(overrides.items ?? [billItem()])
-
   const api: MockBillsApi = {
-    items,
-    filters: ref({}),
+    items: ref(overrides.items ?? [billItem()]),
     pending: ref(overrides.pending ?? false),
     submitting: ref(false),
     error: ref(overrides.error ?? null),
     fieldErrors: ref({}),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {}),
-    fetchOne: vi.fn(async (id: string) => ({
-      ...(items.value.find(bill => bill.id === id) ?? items.value[0] ?? billItem()),
-      payments: []
-    })),
     create: vi.fn(async () => billItem()),
-    update: vi.fn(async () => billItem()),
-    remove: vi.fn(async () => true),
-    archive: vi.fn(async () => billItem({ is_active: false, status: 'paid' })),
-    pay: vi.fn(async () => ({ payment: { id: 't1' }, bill: paidBill() })),
-    updateRecurrence: vi.fn(async (): Promise<BillRecurrence> => ({
-      id: 'r1',
-      household_id: 'h1',
-      title: 'Iuran Keamanan',
-      amount: '150000.00',
-      notes: null,
-      frequency: 'monthly',
-      due_day: 25,
-      is_active: true,
-      category: null,
-      created_at: '2026-10-01T00:00:00.000000Z',
-      updated_at: '2026-10-01T00:00:00.000000Z'
-    })),
     clearError: vi.fn()
   }
 
@@ -219,16 +144,6 @@ function setCategories(items: CategoryItem[] = [], error: string | null = null):
   }
 }
 
-function setWallets(items: WalletItem[] = walletFixtures()): void {
-  walletsMock.api = {
-    items: ref(items),
-    pending: ref(false),
-    error: ref(null),
-    load: vi.fn(async () => {}),
-    refresh: vi.fn(async () => {})
-  }
-}
-
 async function mountPage() {
   return mountSuspended(BillsPage, { route: '/bills' })
 }
@@ -239,12 +154,15 @@ async function flush(): Promise<void> {
   }
 }
 
+function tabButton(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
+  return wrapper.findAll('button').find(button => button.text() === label)
+}
+
 beforeEach(() => {
   authMock.logout.mockClear()
   authMock.isHouseholdOwner.value = true
   toastMock.add.mockClear()
   setCategories()
-  setWallets()
 })
 
 // UModal me-render via teleport yang tidak selalu ikut ter-unmount bersama
@@ -256,35 +174,8 @@ afterEach(() => {
 
 // UModal me-render via teleport ke document.body, sehingga tombol di dalam
 // modal dicari di body, bukan di dalam wrapper halaman.
-function bodyButton(label: string): DOMWrapper<Element> {
-  const element = Array.from(document.body.querySelectorAll('button'))
-    .find(button => (button.textContent ?? '').trim() === label)
-
-  if (!element) {
-    throw new Error(`Tombol "${label}" tidak ditemukan di modal`)
-  }
-
-  return new DOMWrapper(element)
-}
-
-function bodyButtonContaining(label: string): DOMWrapper<Element> {
-  const element = Array.from(document.body.querySelectorAll('button'))
-    .find(button => (button.textContent ?? '').includes(label))
-
-  if (!element) {
-    throw new Error(`Tombol berisi "${label}" tidak ditemukan di modal`)
-  }
-
-  return new DOMWrapper(element)
-}
-
 function bodyText(): string {
   return document.body.textContent ?? ''
-}
-
-function bodyLabels(): string[] {
-  return Array.from(document.body.querySelectorAll('button'))
-    .map(button => (button.textContent ?? '').trim())
 }
 
 describe('bills page', () => {
@@ -315,127 +206,114 @@ describe('bills page', () => {
     expect(state.refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('state kosong tab Berjalan menampilkan CTA tambah (owner)', async () => {
+  it('tab default adalah Akan Datang (tab status server, tanpa kalkulasi tanggal)', async () => {
+    setupBillsState({ items: [billItem(), overdueBill(), paidBill(), archivedBill()] })
+
+    const wrapper = await mountPage()
+
+    expect(tabButton(wrapper, 'Akan Datang')!.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.text()).toContain('Tagihan Listrik')
+    expect(wrapper.text()).not.toContain('Tagihan Internet')
+    expect(wrapper.text()).not.toContain('Tagihan PDAM')
+    expect(wrapper.text()).not.toContain('Tagihan Lama')
+  })
+
+  it('tab Terlambat menampilkan bill overdue dari field server (tanpa request baru)', async () => {
+    const state = setupBillsState({ items: [billItem(), overdueBill()] })
+
+    const wrapper = await mountPage()
+
+    // Initial load hanya sekali; pindah antar tab status tidak memicu
+    // request (tiga tab berbagi data aktif yang sama).
+    expect(state.load).toHaveBeenCalledTimes(1)
+
+    await tabButton(wrapper, 'Terlambat')!.trigger('click')
+    await flush()
+
+    const text = wrapper.text()
+
+    expect(text).toContain('Tagihan Internet')
+    expect(text).not.toContain('Tagihan Listrik')
+    expect(state.load).toHaveBeenCalledTimes(1)
+  })
+
+  it('tab Lunas menampilkan bill paid dari field server', async () => {
+    setupBillsState({ items: [billItem(), paidBill()] })
+
+    const wrapper = await mountPage()
+
+    await tabButton(wrapper, 'Lunas')!.trigger('click')
+    await flush()
+
+    const text = wrapper.text()
+
+    expect(text).toContain('Tagihan PDAM')
+    expect(text).toContain('Lunas')
+    expect(text).not.toContain('Tagihan Listrik')
+  })
+
+  it('baris adalah anchor ke /bills/{id} (deep-link), bukan tombol modal', async () => {
+    setupBillsState({ items: [billItem(), paidBill(), archivedBill()] })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.find('ul a[href="/bills/01J0BILL00000000000000001"]').exists()).toBe(true)
+    expect(wrapper.find('ul button').exists()).toBe(false)
+
+    // Setiap kelompok membuka detail berdasarkan ID yang sama.
+    await tabButton(wrapper, 'Lunas')!.trigger('click')
+    await flush()
+
+    expect(wrapper.find('ul a[href="/bills/01J0BILL00000000000000020"]').exists()).toBe(true)
+  })
+
+  it('bill tanpa due_date mengikuti status server (unpaid → tab Akan Datang)', async () => {
+    setupBillsState({ items: [billItem({ due_date: null })] })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Tagihan Listrik')
+    expect(wrapper.text()).toContain('Tanpa tanggal jatuh tempo')
+    expect(wrapper.text()).toContain('Belum dibayar')
+  })
+
+  it('state kosong tab Akan Datang menampilkan CTA tambah (owner)', async () => {
     setupBillsState({ items: [] })
 
     const wrapper = await mountPage()
     const text = wrapper.text()
 
-    expect(text).toContain('Belum ada tagihan berjalan.')
+    expect(text).toContain('Belum ada tagihan yang akan datang.')
     expect(text).toContain('Tambah Tagihan')
   })
 
-  it('baris menampilkan chip status dari field backend (unpaid + lunas)', async () => {
+  it('state kosong tab Terlambat menampilkan copy khusus tab tanpa CTA kosong ganda', async () => {
+    setupBillsState({ items: [] })
+
+    const wrapper = await mountPage()
+
+    await tabButton(wrapper, 'Terlambat')!.trigger('click')
+    await flush()
+
+    expect(wrapper.text()).toContain('Tidak ada tagihan terlambat.')
+    expect(wrapper.text()).not.toContain('Belum ada tagihan yang akan datang.')
+    // Hanya tombol header; empty-state tidak menambah CTA di tab ini.
+    expect(wrapper.findAll('button').filter(button => button.text().includes('Tambah Tagihan'))).toHaveLength(1)
+  })
+
+  it('baris menampilkan chip status dari field backend (unpaid + lunas per tab)', async () => {
     setupBillsState({ items: [billItem(), paidBill()] })
 
     const wrapper = await mountPage()
-    const text = wrapper.text()
 
-    expect(text).toContain('Tagihan Listrik')
-    expect(text).toContain('Belum dibayar')
-    expect(text).toContain('Tagihan PDAM')
-    expect(text).toContain('Lunas')
-  })
+    expect(wrapper.text()).toContain('Tagihan Listrik')
+    expect(wrapper.text()).toContain('Belum dibayar')
 
-  it('detail baris unpaid menawarkan Bayar/Ubah/Hapus tanpa Arsipkan', async () => {
-    setupBillsState()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
+    await tabButton(wrapper, 'Lunas')!.trigger('click')
     await flush()
 
-    const labels = bodyLabels()
-
-    expect(labels).toContain('Bayar')
-    expect(labels).toContain('Ubah')
-    expect(labels).toContain('Hapus')
-    expect(labels).not.toContain('Arsipkan')
-    expect(labels).not.toContain('Ubah jadwal')
-  })
-
-  it('detail baris lunas menawarkan Arsipkan + riwayat pembayaran; tanpa Bayar/Ubah/Hapus', async () => {
-    const state = setupBillsState({ items: [paidBill()] })
-
-    state.fetchOne.mockImplementation(async (id: string) => ({
-      ...paidBill({ id }),
-      payments: [paymentFixture()]
-    }))
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    const labels = bodyLabels()
-
-    expect(labels).toContain('Arsipkan')
-    expect(labels).not.toContain('Bayar')
-    expect(labels).not.toContain('Ubah')
-    expect(labels).not.toContain('Hapus')
-    expect(bodyText()).toContain('Riwayat pembayaran')
-    expect(bodyText()).toContain('Lunas')
-  })
-
-  it('hapus dua-langkah + peringatan skip permanen untuk baris recurrence', async () => {
-    const state = setupBillsState({ items: [recurringBill()] })
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyLabels()).toContain('Ubah jadwal')
-
-    await bodyButton('Hapus').trigger('click')
-
-    // Konfirmasi dua langkah; remove() belum dipanggil.
-    expect(state.remove).not.toHaveBeenCalled()
-    expect(bodyText()).toContain('dilewati secara PERMANEN')
-    expect(bodyText()).toContain('TIDAK menghentikan jadwal')
-    // Satu-satunya periode aktif seri → peringatan G-1 ikut tampil.
-    expect(bodyText()).toContain('periode AKTIF terakhir')
-
-    await bodyButton('Ya, hapus').trigger('click')
-
-    expect(state.remove).toHaveBeenCalledWith('01J0BILL00000000000000010')
-    expect(toastMock.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Tagihan dihapus' })
-    )
-  })
-
-  it('peringatan "periode aktif terakhir" tidak muncul bila seri masih punya periode lain', async () => {
-    setupBillsState({ items: [recurringBill(), recurringBill({ id: '01J0BILL00000000000000011' })] })
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-    await bodyButton('Hapus').trigger('click')
-
-    expect(bodyText()).toContain('dilewati secara PERMANEN')
-    expect(bodyText()).not.toContain('periode AKTIF terakhir')
-  })
-
-  it('arsip dua-langkah: copy permanen + memanggil archive()', async () => {
-    const state = setupBillsState({ items: [paidBill()] })
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    await bodyButton('Arsipkan').trigger('click')
-
-    expect(state.archive).not.toHaveBeenCalled()
-    expect(bodyText()).toContain('Arsip bersifat permanen')
-
-    await bodyButton('Ya, arsipkan').trigger('click')
-
-    expect(state.archive).toHaveBeenCalledWith('01J0BILL00000000000000020')
-    expect(toastMock.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Tagihan diarsipkan' })
-    )
+    expect(wrapper.text()).toContain('Tagihan PDAM')
+    expect(wrapper.text()).toContain('Lunas')
   })
 
   it('tab Arsip memuat include_archived=true dan menyaring baris is_active=false', async () => {
@@ -446,11 +324,7 @@ describe('bills page', () => {
     expect(wrapper.text()).toContain('Tagihan Listrik')
     expect(wrapper.text()).not.toContain('Tagihan Lama')
 
-    const archiveTab = wrapper.findAll('button').find(button => button.text().includes('Arsip'))
-
-    expect(archiveTab).toBeDefined()
-
-    await archiveTab!.trigger('click')
+    await tabButton(wrapper, 'Arsip')!.trigger('click')
     await flush()
 
     expect(state.load).toHaveBeenCalledWith({ include_archived: true }, true)
@@ -461,18 +335,29 @@ describe('bills page', () => {
     expect(text).not.toContain('Tagihan Listrik')
   })
 
+  it('pindah dari tab Arsip ke tab status memuat ulang data aktif', async () => {
+    const state = setupBillsState({ items: [archivedBill()] })
+
+    const wrapper = await mountPage()
+
+    await tabButton(wrapper, 'Arsip')!.trigger('click')
+    await flush()
+    await tabButton(wrapper, 'Akan Datang')!.trigger('click')
+    await flush()
+
+    expect(state.load).toHaveBeenLastCalledWith({ include_archived: false }, true)
+  })
+
   it('tab Arsip kosong menampilkan pesan kosong tab arsip', async () => {
     setupBillsState({ items: [] })
 
     const wrapper = await mountPage()
 
-    const archiveTab = wrapper.findAll('button').find(button => button.text().includes('Arsip'))
-
-    await archiveTab!.trigger('click')
+    await tabButton(wrapper, 'Arsip')!.trigger('click')
     await flush()
 
     expect(wrapper.text()).toContain('Belum ada tagihan diarsipkan.')
-    expect(wrapper.text()).not.toContain('Belum ada tagihan berjalan.')
+    expect(wrapper.text()).not.toContain('Belum ada tagihan yang akan datang.')
   })
 
   it('tombol Tambah membuka form dan submit memanggil create() dengan nilai form', async () => {
@@ -522,227 +407,14 @@ describe('bills page', () => {
     )
   })
 
-  it('modal bayar: tanpa input nominal, sisa tagihan read-only, wallet non-aktif tak ditawarkan', async () => {
-    const state = setupBillsState()
-    setWallets()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    await bodyButton('Bayar').trigger('click')
-    await flush()
-
-    // Read-only: tidak ada input nominal sama sekali di modal.
-    expect(document.body.querySelector('#pay-date')).not.toBeNull()
-    expect(document.body.querySelectorAll('[inputmode="decimal"]')).toHaveLength(0)
-    expect(bodyText()).toContain('Sisa tagihan')
-
-    // Wallet non-aktif tidak muncul di opsi.
-    await new DOMWrapper(document.body.querySelector('#pay-wallet') as Element).trigger('click')
-    await flush()
-
-    const optionLabels = Array.from(document.body.querySelectorAll('[role="option"]'))
-      .map(element => element.textContent?.trim())
-
-    expect(optionLabels.some(label => label?.includes('Kas Tunai'))).toBe(true)
-    expect(optionLabels.some(label => label?.includes('Dompet Mati'))).toBe(false)
-
-    const modal = wrapper.findComponent(BillPaymentModal)
-    const selects = modal.findAllComponents(USelect)
-
-    selects[0]!.vm.$emit('update:modelValue', 'w1')
-    await flush()
-
-    await bodyButton('Bayar sekarang').trigger('click')
-    await flush()
-
-    // Pemilihan dompet diteruskan apa adanya; payload amount/category_id
-    // dibentuk (dan divalidasi) di composable — lihat bills-composable.test.
-    expect(state.pay).toHaveBeenCalledWith('01J0BILL00000000000000001', {
-      wallet_id: 'w1',
-      occurred_on: ''
-    })
-    // Membuka modal bayar TIDAK memicu reload daftar bills (hanya load
-    // dompet yang dimuat saat dibutuhkan).
-    expect(state.load).toHaveBeenCalledTimes(1)
-  })
-
-  it('sukses bayar menampilkan toast, reload detail, dan refresh dompet', async () => {
-    const state = setupBillsState()
-    setWallets()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-    await bodyButton('Bayar').trigger('click')
-    await flush()
-
-    const modal = wrapper.findComponent(BillPaymentModal)
-    const selects = modal.findAllComponents(USelect)
-
-    selects[0]!.vm.$emit('update:modelValue', 'w1')
-    await flush()
-
-    await bodyButton('Bayar sekarang').trigger('click')
-    await flush()
-
-    expect(toastMock.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Tagihan dibayar' })
-    )
-    // fetchOne dipanggil lagi (detail segar) dan dompet disegarkan.
-    expect(state.fetchOne.mock.calls.length).toBeGreaterThanOrEqual(2)
-
-    const wallets = walletsMock.api as { refresh: ReturnType<typeof vi.fn> }
-
-    expect(wallets.refresh).toHaveBeenCalled()
-  })
-
-  it('INSUFFICIENT_FUNDS tampil sebagai alert di modal bayar', async () => {
-    const state = setupBillsState()
-    setWallets()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-    await bodyButton('Bayar').trigger('click')
-    await flush()
-
-    state.pay.mockImplementation(async () => {
-      state.error.value = 'Saldo dompet tidak cukup.'
-
-      return null
-    })
-
-    const modal = wrapper.findComponent(BillPaymentModal)
-    const selects = modal.findAllComponents(USelect)
-
-    selects[0]!.vm.$emit('update:modelValue', 'w1')
-    await flush()
-
-    await bodyButton('Bayar sekarang').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Pembayaran gagal.')
-    expect(bodyText()).toContain('Saldo dompet tidak cukup.')
-  })
-
-  it('BILL_ALREADY_PAID tampil sebagai alert; menutup modal memicu refresh (data disegarkan)', async () => {
-    const state = setupBillsState()
-    setWallets()
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-    await bodyButton('Bayar').trigger('click')
-    await flush()
-
-    state.pay.mockImplementation(async () => {
-      state.error.value = 'Tagihan ini sudah dibayar.'
-
-      return null
-    })
-
-    const modal = wrapper.findComponent(BillPaymentModal)
-    const selects = modal.findAllComponents(USelect)
-
-    selects[0]!.vm.$emit('update:modelValue', 'w1')
-    await flush()
-
-    await bodyButton('Bayar sekarang').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Tagihan ini sudah dibayar.')
-
-    // Tutup modal → error modal dibuang dan daftar+detail disegarkan.
-    wrapper.findComponent(BillPaymentModal).vm.$emit('update:open', false)
-    await flush()
-
-    expect(state.clearError).toHaveBeenCalled()
-    expect(state.refresh).toHaveBeenCalled()
-  })
-
-  it('pembuka "Ubah jadwal" dari detail membuka panel recurrence', async () => {
-    const state = setupBillsState({ items: [recurringBill()] })
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    await bodyButtonContaining('Ubah jadwal').trigger('click')
-    await flush()
-
-    expect(wrapper.findComponent(BillRecurrenceModal).props('open')).toBe(true)
-    expect(wrapper.findComponent(BillRecurrenceModal).props('bill')?.recurrence?.id).toBe('r1')
-    expect(state.updateRecurrence).not.toHaveBeenCalled()
-  })
-
-  it('non-owner: aksi tulis disembunyikan (render-only, bukan pengganti authz)', async () => {
+  it('non-owner: CTA tambah disembunyikan; baris tetap terbuka sebagai anchor (render-only)', async () => {
     setupBillsState()
     authMock.isHouseholdOwner.value = false
 
     const wrapper = await mountPage()
 
     expect(wrapper.text()).not.toContain('Tambah Tagihan')
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    const labels = bodyLabels()
-
-    expect(labels).not.toContain('Bayar')
-    expect(labels).not.toContain('Ubah')
-    expect(labels).not.toContain('Hapus')
-    expect(labels).not.toContain('Arsipkan')
-    expect(labels).not.toContain('Ubah jadwal')
-    expect(bodyText()).toContain('hanya dapat dilihat')
-  })
-
-  it('detail gagal memuat menampilkan alert + Coba lagi memanggil reload', async () => {
-    const state = setupBillsState()
-
-    state.fetchOne.mockRejectedValueOnce(new Error('fetch failed'))
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(bodyText()).toContain('Detail belum dapat dimuat.')
-
-    await bodyButton('Coba lagi').trigger('click')
-    await flush()
-
-    expect(state.fetchOne.mock.calls.length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('skeleton detail tampil selama fetchOne berjalan', async () => {
-    const state = setupBillsState()
-
-    let release!: (value: unknown) => void
-
-    const gate = new Promise((resolve) => {
-      release = resolve as (value: unknown) => void
-    })
-
-    state.fetchOne.mockReturnValueOnce(gate)
-
-    const wrapper = await mountPage()
-
-    await wrapper.find('ul button').trigger('click')
-    await flush()
-
-    expect(document.body.querySelector('[aria-label="Memuat detail tagihan"]')).not.toBeNull()
-
-    release({ ...billItem(), payments: [] })
-    await flush()
-
-    expect(bodyText()).toContain('Tagihan Listrik')
+    expect(wrapper.find('ul a[href="/bills/01J0BILL00000000000000001"]').exists()).toBe(true)
   })
 
   it('halaman tidak memanggil logout', async () => {
