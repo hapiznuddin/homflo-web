@@ -59,6 +59,14 @@ const vehiclesMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useVehicles', () => () => vehiclesMock.api)
 
+// Halaman detail kini juga memuat Service History. Test ini fokus pada
+// Informasi Kendaraan, jadi composable servis di-mock sebagai state kosong
+// yang tidak melakukan request nyata; perilakunya diuji terpisah di
+// vehicles-detail-service-history.test.ts.
+const vehicleMaintenanceMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useVehicleMaintenance', () => () => vehicleMaintenanceMock.api)
+
 function vehicleItem(overrides: Partial<VehicleItem> = {}): VehicleItem {
   return {
     id: VEHICLE_ID,
@@ -83,6 +91,23 @@ function setupVehiclesState(
     remove?: ReturnType<typeof vi.fn>
   } = {}
 ): MockVehiclesApi {
+  vehicleMaintenanceMock.api = {
+    items: ref([]),
+    pending: ref(false),
+    submitting: ref(false),
+    error: ref(null),
+    errorCode: ref(null),
+    fieldErrors: ref({}),
+    load: vi.fn(async () => {}),
+    refresh: vi.fn(async () => {}),
+    fetchOne: vi.fn(),
+    create: vi.fn(async () => null),
+    update: vi.fn(async () => null),
+    remove: vi.fn(async () => false),
+    complete: vi.fn(async () => null),
+    clearError: vi.fn()
+  }
+
   const api: MockVehiclesApi = {
     items: ref([vehicleItem()]),
     pending: ref(false),

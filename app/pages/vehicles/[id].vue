@@ -1,24 +1,51 @@
 <script setup lang="ts">
 import VehicleFormModal from '~/components/vehicles/VehicleFormModal.vue'
+import VehicleMaintenanceFormModal from '~/components/vehicles/VehicleMaintenanceFormModal.vue'
 import type { VehicleFormValues, VehicleItem } from '~/types/vehicles'
+import type {
+  VehicleMaintenanceFilter,
+  VehicleMaintenanceFormValues,
+  VehicleMaintenanceItem
+} from '~/types/vehicleMaintenance'
+import {
+  VEHICLE_MAINTENANCE_FILTER_OPTIONS,
+  groupVehicleMaintenance,
+  vehicleMaintenanceStatusChipClass,
+  vehicleMaintenanceStatusLabel
+} from '~/utils/vehicleMaintenance'
 import { formatYmd } from '~/utils/format'
 
 // Detail kendaraan deep-linkable (/vehicles/{id}), mandiri terhadap daftar.
-// Sumber data GET /api/vehicles/{id} lewat proxy Nuxt. Role ditentukan dari
+// Sumber data GET /api/vehicles/{id} dan
+// GET /api/vehicles/{id}/maintenance lewat proxy Nuxt. Role ditentukan dari
 // session (/api/auth/me → isHouseholdOwner): member hanya membaca.
-// Cross-household / ID asing dimasking backend sebagai 404 + VEHICLE_NOT_FOUND
-// — UI menampilkan state not-found, bukan empty state, dan tidak logout.
-// Service History / Vehicle Maintenance belum diimplementasikan; halaman ini
-// tidak menampilkannya sebagai fitur yang sudah berfungsi.
+// Cross-household / ID asing dimasking backend sebagai 404 — UI menampilkan
+// state not-found, bukan empty state, dan tidak logout.
+//
+// Riwayat servis memakai satu resource vehicle_maintenance. Status lifecycle
+// (scheduled/completed) SELALU dari backend; Complete hanya ditawarkan untuk
+// record scheduled dan status baru ditampilkan setelah server mengonfirmasi.
+// Filter status dilakukan client-side karena endpoint list tidak mendukung
+// query status. Data disimpan per vehicle ID agar perpindahan route tidak
+// mencampur catatan kendaraan lain.
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const route = useRoute()
 const toast = useToast()
 const auth = useAuth()
-const vehicles = useVehicles()
-const { submitting, error, errorCode, fieldErrors } = vehicles
 
 const vehicleId = computed(() => String(route.params.id ?? ''))
+
+const vehicles = useVehicles()
+const maintenance = useVehicleMaintenance(vehicleId)
+const { submitting, error, errorCode, fieldErrors } = vehicles
+const {
+  items: maintenanceItems,
+  pending: maintenancePending,
+  submitting: maintenanceSubmitting,
+  error: maintenanceError,
+  fieldErrors: maintenanceFieldErrors
+} = maintenance
 
 const detail = ref<VehicleItem | null>(null)
 const loading = ref(true)
@@ -27,11 +54,54 @@ const notFound = ref(false)
 const confirmDelete = ref(false)
 const formOpen = ref(false)
 
+const maintenanceFilter = ref<VehicleMaintenanceFilter>('all')
+const maintenanceFormOpen = ref(false)
+const editingMaintenance = ref<VehicleMaintenanceItem | null>(null)
+const confirmCompleteId = ref<string | null>(null)
+const confirmDeleteId = ref<string | null>(null)
+
 const isOwner = computed(() => auth.isHouseholdOwner.value)
 
 // Konflik domain: kendaraan masih memiliki riwayat servis (409). Ditangani
 // eksplisit — bukan sebagai kegagalan generik dan bukan sukses palsu.
 const deleteBlocked = computed(() => errorCode.value === 'VEHICLE_HAS_MAINTENANCE_HISTORY')
+
+interface MaintenanceSection {
+  key: 'scheduled' | 'completed'
+  title: string
+  emptyLabel: string
+  items: VehicleMaintenanceItem[]
+}
+
+// Dua kelompok dari data yang sama: setiap record hanya muncul di satu
+// kelompok menurut status backend (tidak diduplikasi). Filter status
+// menyembunyikan kelompok yang tidak dipilih tanpa mengubah data server.
+const maintenanceSections = computed<MaintenanceSection[]>(() => {
+  const groups = groupVehicleMaintenance(maintenanceItems.value)
+  const sections: MaintenanceSection[] = []
+
+  if (maintenanceFilter.value !== 'completed') {
+    sections.push({
+      key: 'scheduled',
+      title: 'Jadwal Servis',
+      emptyLabel: 'Belum ada jadwal servis.',
+      items: groups.scheduled
+    })
+  }
+
+  if (maintenanceFilter.value !== 'scheduled') {
+    sections.push({
+      key: 'completed',
+      title: 'Riwayat Servis Selesai',
+      emptyLabel: 'Belum ada riwayat servis selesai.',
+      items: groups.completed
+    })
+  }
+
+  return sections
+})
+
+const maintenanceEmpty = computed(() => maintenanceItems.value.length === 0)
 
 function isNotFound(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) {
@@ -65,11 +135,19 @@ function isNotFound(err: unknown): boolean {
   return false
 }
 
+function closeMaintenancePanels(): void {
+  maintenanceFormOpen.value = false
+  editingMaintenance.value = null
+  confirmCompleteId.value = null
+  confirmDeleteId.value = null
+}
+
 async function loadDetail(): Promise<void> {
   loading.value = true
   detailError.value = null
   notFound.value = false
   confirmDelete.value = false
+  closeMaintenancePanels()
   vehicles.clearError()
 
   try {
@@ -81,7 +159,19 @@ async function loadDetail(): Promise<void> {
   } finally {
     loading.value = false
   }
+
+  if (detail.value) {
+    // Riwayat servis punya state loading/error sendiri; kegagalannya tidak
+    // menghapus Informasi Kendaraan yang sudah tampil.
+    void maintenance.load(true)
+  }
 }
+
+// Route kendaraan berubah tanpa remount: muat ulang detail + servis. State
+// servis dikunci per vehicle ID sehingga data kendaraan lama tidak terbawa.
+watch(vehicleId, () => {
+  void loadDetail()
+})
 
 function openEdit(): void {
   if (!detail.value) {
@@ -138,6 +228,115 @@ async function onDeleteRequest(): Promise<void> {
 
 function cancelDelete(): void {
   confirmDelete.value = false
+}
+
+function maintenanceDateLine(item: VehicleMaintenanceItem): string {
+  if (item.status === 'completed' && item.completed_at) {
+    return `Selesai ${formatYmd(item.completed_at)}`
+  }
+
+  if (item.scheduled_date) {
+    return `Jadwal ${formatYmd(item.scheduled_date)}`
+  }
+
+  return 'Tanggal belum dicatat'
+}
+
+function maintenanceOdometer(item: VehicleMaintenanceItem): string | null {
+  return item.odometer != null ? `${item.odometer.toLocaleString('id-ID')} km` : null
+}
+
+function openCreateMaintenance(): void {
+  maintenance.clearError()
+  editingMaintenance.value = null
+  confirmCompleteId.value = null
+  confirmDeleteId.value = null
+  maintenanceFormOpen.value = true
+}
+
+function openEditMaintenance(item: VehicleMaintenanceItem): void {
+  maintenance.clearError()
+  editingMaintenance.value = item
+  confirmCompleteId.value = null
+  confirmDeleteId.value = null
+  maintenanceFormOpen.value = true
+}
+
+function onMaintenanceFormOpenChange(value: boolean): void {
+  maintenanceFormOpen.value = value
+
+  if (!value) {
+    editingMaintenance.value = null
+    maintenance.clearError()
+  }
+}
+
+async function onMaintenanceFormSubmit(values: VehicleMaintenanceFormValues): Promise<void> {
+  const editing = editingMaintenance.value
+  const saved = editing
+    ? await maintenance.update(editing.id, values)
+    : await maintenance.create(values)
+
+  if (saved) {
+    maintenanceFormOpen.value = false
+    editingMaintenance.value = null
+    toast.add({
+      title: editing ? 'Catatan servis diubah' : 'Catatan servis ditambah',
+      description: 'Data tersimpan.',
+      color: 'success'
+    })
+  }
+}
+
+function askComplete(item: VehicleMaintenanceItem): void {
+  maintenance.clearError()
+  confirmDeleteId.value = null
+  confirmCompleteId.value = item.id
+}
+
+// Complete satu arah: status hanya dianggap berubah setelah server
+// mengonfirmasi. Kegagalan (mis. 422 sudah selesai) tampil sebagai error dan
+// tidak pernah menjadi toast sukses.
+async function runComplete(item: VehicleMaintenanceItem): Promise<void> {
+  const result = await maintenance.complete(item.id)
+
+  confirmCompleteId.value = null
+
+  if (result) {
+    toast.add({
+      title: 'Servis selesai',
+      description: 'Catatan servis ditandai selesai.',
+      color: 'success'
+    })
+  }
+}
+
+// Hapus dua langkah: klik pertama hanya membuka konfirmasi. Hanya record
+// servis yang dihapus — kendaraan tidak pernah ikut terhapus.
+async function requestDelete(item: VehicleMaintenanceItem): Promise<void> {
+  if (confirmDeleteId.value !== item.id) {
+    maintenance.clearError()
+    confirmCompleteId.value = null
+    confirmDeleteId.value = item.id
+
+    return
+  }
+
+  const ok = await maintenance.remove(item.id)
+
+  confirmDeleteId.value = null
+
+  if (ok) {
+    toast.add({
+      title: 'Catatan servis dihapus',
+      description: 'Data terhapus.',
+      color: 'success'
+    })
+  }
+}
+
+function retryMaintenance(): void {
+  void maintenance.refresh()
 }
 
 await loadDetail()
@@ -268,6 +467,214 @@ await loadDetail()
           </UButton>
         </div>
       </section>
+
+      <section
+        class="flex flex-col gap-3 rounded-2xl border border-default bg-background p-4 sm:p-5"
+        aria-label="Riwayat servis"
+      >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="text-sm font-semibold tracking-wide text-muted uppercase">Riwayat Servis</h2>
+            <p class="mt-1 text-sm text-muted">Jadwal dan riwayat servis kendaraan ini.</p>
+          </div>
+          <UButton v-if="isOwner" icon="i-lucide-plus" size="sm" @click="openCreateMaintenance()">
+            Tambah Servis
+          </UButton>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5" aria-label="Filter status servis">
+          <UButton
+            v-for="option in VEHICLE_MAINTENANCE_FILTER_OPTIONS"
+            :key="option.value"
+            size="xs"
+            :color="maintenanceFilter === option.value ? 'primary' : 'neutral'"
+            :variant="maintenanceFilter === option.value ? 'solid' : 'outline'"
+            @click="maintenanceFilter = option.value"
+          >
+            {{ option.label }}
+          </UButton>
+        </div>
+
+        <div
+          v-if="maintenancePending && maintenanceItems.length === 0"
+          class="flex flex-col gap-2"
+          aria-label="Memuat riwayat servis"
+        >
+          <USkeleton v-for="index in 3" :key="index" class="h-14" />
+        </div>
+
+        <UAlert
+          v-else-if="maintenanceError && maintenanceItems.length === 0"
+          color="error"
+          variant="soft"
+          title="Riwayat servis belum dapat dimuat."
+          :description="maintenanceError"
+          :actions="[{ label: 'Coba lagi', onClick: retryMaintenance }]"
+        />
+
+        <template v-else>
+          <div v-if="maintenanceEmpty" class="py-6 text-center">
+            <p class="text-sm text-muted">Belum ada catatan servis untuk kendaraan ini.</p>
+            <UButton
+              v-if="isOwner"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="mt-3"
+              @click="openCreateMaintenance()"
+            >
+              Tambah Servis
+            </UButton>
+          </div>
+
+          <template v-else>
+            <div v-for="section in maintenanceSections" :key="section.key" class="flex flex-col gap-2">
+              <h3 class="text-xs font-semibold tracking-wide text-muted uppercase">{{ section.title }}</h3>
+
+              <p v-if="section.items.length === 0" class="py-2 text-sm text-muted">{{ section.emptyLabel }}</p>
+
+              <ul v-else class="flex flex-col divide-y divide-default rounded-xl border border-default px-3">
+                <li v-for="item in section.items" :key="item.id" class="py-3">
+                  <div class="flex items-start gap-3">
+                    <span
+                      class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-elevated"
+                      aria-hidden="true"
+                    >
+                      <UIcon
+                        :name="item.status === 'completed' ? 'i-lucide-circle-check' : 'i-lucide-wrench'"
+                        class="size-4 text-default"
+                      />
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="min-w-0">
+                          <p class="truncate text-sm font-medium text-highlighted">{{ item.title }}</p>
+                          <p v-if="item.description" class="mt-0.5 text-xs text-muted">{{ item.description }}</p>
+                          <p class="mt-0.5 text-xs text-muted">
+                            {{ maintenanceDateLine(item) }}
+                            <template v-if="maintenanceOdometer(item)"> · {{ maintenanceOdometer(item) }}</template>
+                          </p>
+                        </div>
+                        <span
+                          class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          :class="vehicleMaintenanceStatusChipClass(item.status)"
+                        >
+                          {{ vehicleMaintenanceStatusLabel(item.status) }}
+                        </span>
+                      </div>
+
+                      <div
+                        v-if="isOwner && confirmCompleteId !== item.id && confirmDeleteId !== item.id"
+                        class="mt-2 flex flex-wrap gap-2"
+                      >
+                        <UButton
+                          v-if="item.status === 'scheduled'"
+                          size="xs"
+                          icon="i-lucide-circle-check"
+                          @click="askComplete(item)"
+                        >
+                          Selesai
+                        </UButton>
+                        <UButton
+                          size="xs"
+                          color="neutral"
+                          variant="outline"
+                          icon="i-lucide-pencil"
+                          @click="openEditMaintenance(item)"
+                        >
+                          Ubah
+                        </UButton>
+                        <UButton
+                          size="xs"
+                          color="error"
+                          variant="outline"
+                          icon="i-lucide-trash-2"
+                          @click="requestDelete(item)"
+                        >
+                          Hapus
+                        </UButton>
+                      </div>
+
+                      <div
+                        v-if="confirmCompleteId === item.id"
+                        class="mt-2 flex flex-col gap-2 rounded-lg border border-default p-2"
+                      >
+                        <p class="text-xs text-muted">
+                          Tandai servis ini selesai? Tanggal selesai ditentukan server dan tidak dapat dibuka kembali.
+                        </p>
+                        <div class="flex gap-2">
+                          <UButton
+                            size="xs"
+                            color="neutral"
+                            variant="outline"
+                            block
+                            :disabled="maintenanceSubmitting"
+                            @click="confirmCompleteId = null"
+                          >
+                            Batal
+                          </UButton>
+                          <UButton
+                            size="xs"
+                            block
+                            :loading="maintenanceSubmitting"
+                            :disabled="maintenanceSubmitting"
+                            @click="runComplete(item)"
+                          >
+                            Ya, selesaikan
+                          </UButton>
+                        </div>
+                      </div>
+
+                      <div
+                        v-if="confirmDeleteId === item.id"
+                        class="mt-2 flex flex-col gap-2 rounded-lg border border-default p-2"
+                      >
+                        <p class="text-xs text-muted">
+                          Hapus catatan servis ini? Kendaraan tetap tersimpan; data yang dihapus tidak dapat dikembalikan.
+                        </p>
+                        <div class="flex gap-2">
+                          <UButton
+                            size="xs"
+                            color="neutral"
+                            variant="outline"
+                            block
+                            :disabled="maintenanceSubmitting"
+                            @click="confirmDeleteId = null"
+                          >
+                            Batal
+                          </UButton>
+                          <UButton
+                            size="xs"
+                            color="error"
+                            block
+                            :loading="maintenanceSubmitting"
+                            :disabled="maintenanceSubmitting"
+                            @click="requestDelete(item)"
+                          >
+                            Ya, hapus
+                          </UButton>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <UAlert
+              v-if="maintenanceError"
+              color="error"
+              variant="soft"
+              title="Aksi terakhir gagal."
+              :description="maintenanceError"
+            />
+          </template>
+        </template>
+
+        <p v-if="!isOwner" class="text-xs text-muted">
+          Anda anggota rumah tangga — riwayat servis hanya dapat dilihat. Pengelolaan dilakukan pemilik.
+        </p>
+      </section>
     </template>
 
     <VehicleFormModal
@@ -277,6 +684,16 @@ await loadDetail()
       :error="error"
       :field-errors="fieldErrors"
       @submit="onFormSubmit"
+    />
+
+    <VehicleMaintenanceFormModal
+      :open="maintenanceFormOpen"
+      :editing="editingMaintenance"
+      :submitting="maintenanceSubmitting"
+      :error="maintenanceError"
+      :field-errors="maintenanceFieldErrors"
+      @update:open="onMaintenanceFormOpenChange"
+      @submit="onMaintenanceFormSubmit"
     />
   </div>
 </template>

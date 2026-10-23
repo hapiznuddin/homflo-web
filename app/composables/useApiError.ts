@@ -32,6 +32,8 @@ const CODE_MESSAGES: Record<string, string> = {
   VEHICLE_PLATE_ALREADY_EXISTS: 'Plat nomor tersebut sudah dipakai kendaraan lain di rumah tangga ini.',
   VEHICLE_ODOMETER_BELOW_RECORDED: 'Odometer tidak boleh lebih rendah dari catatan servis terakhir.',
   VEHICLE_HAS_MAINTENANCE_HISTORY: 'Kendaraan tidak dapat dihapus karena masih memiliki riwayat servis.',
+  VEHICLE_MAINTENANCE_NOT_FOUND: 'Catatan servis kendaraan tidak ditemukan.',
+  VEHICLE_MAINTENANCE_ALREADY_COMPLETED: 'Servis kendaraan ini sudah ditandai selesai.',
   MAINTENANCE_NOT_FOUND: 'Catatan perawatan tidak ditemukan.',
   MAINTENANCE_ALREADY_COMPLETED: 'Perawatan ini sudah ditandai selesai.',
   MAINTENANCE_ALREADY_CANCELLED: 'Perawatan ini sudah dibatalkan.',
