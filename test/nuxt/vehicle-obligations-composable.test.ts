@@ -1,6 +1,6 @@
 import { clearNuxtState } from '#app'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { defineComponent } from 'vue'
+import { defineComponent, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   VehicleObligationFormValues,
@@ -43,6 +43,29 @@ async function mountObligations(
   vehicleId = '01J0VEHICLE000000000000001'
 ): Promise<ReturnType<typeof useVehicleObligations>> {
   await mountSuspended(ObligationsHarness, { props: { vehicleId }, route: false })
+
+  return latest!
+}
+
+const routeVehicleId = ref('')
+
+const RouteObligationsHarness = defineComponent({
+  name: 'RouteVehicleObligationsHarness',
+  setup() {
+    const api = useVehicleObligations(routeVehicleId)
+
+    latest = api
+
+    return api
+  },
+  render: () => null
+})
+
+async function mountRouteObligations(
+  vehicleId: string
+): Promise<ReturnType<typeof useVehicleObligations>> {
+  routeVehicleId.value = vehicleId
+  await mountSuspended(RouteObligationsHarness, { route: false })
 
   return latest!
 }
@@ -430,6 +453,50 @@ describe('useVehicleObligations', () => {
 
     expect(second.items.value[0]?.title).toBe('Kendaraan B')
     expect(first.items.value[0]?.title).toBe('Kendaraan A')
+  })
+
+  it('create() kendaraan A tidak meng-upsert ke state kendaraan B setelah route berubah', async () => {
+    const firstId = '01J0VEHICLE000000000000001'
+    const secondId = '01J0VEHICLE000000000000002'
+    const obligations = await mountRouteObligations(firstId)
+
+    await obligations.load()
+
+    let releaseCreate!: (value: unknown) => void
+
+    fetchMock.mockReset()
+    fetchMock.mockReturnValueOnce(new Promise((resolve) => {
+      releaseCreate = resolve as (value: unknown) => void
+    }))
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: [obligationItem({ id: 'B-1', vehicle_id: secondId, title: 'Kewajiban B' })]
+    })
+    fetchMock.mockRejectedValue({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const creating = obligations.create(formValues({ title: 'Kewajiban A baru' }))
+
+    routeVehicleId.value = secondId
+    await obligations.load()
+
+    expect(obligations.items.value.map(item => item.id)).toEqual(['B-1'])
+
+    releaseCreate({
+      success: true,
+      data: obligationItem({
+        id: 'A-NEW',
+        vehicle_id: firstId,
+        title: 'Kewajiban A baru'
+      })
+    })
+    await creating
+
+    // State kendaraan B tidak boleh menerima record milik kendaraan A.
+    expect(obligations.items.value.map(item => item.id)).toEqual(['B-1'])
+
+    routeVehicleId.value = firstId
+
+    expect(obligations.items.value.map(item => item.id)).toContain('A-NEW')
   })
 
   it('refresh() memaksa request baru; respons lama tidak menimpa hasil terbaru', async () => {

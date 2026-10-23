@@ -640,6 +640,23 @@ describe('kewajiban section — jenis kewajiban', () => {
     expect(document.body.textContent).toContain('Asuransi')
   })
 
+  it('konfirmasi hapus jenis tidak merender form rename bersamaan', async () => {
+    const { wrapper } = await mountSection({ items: [] })
+
+    await sectionButton(wrapper, 'Kelola Jenis')!.trigger('click')
+    await flush()
+
+    const customSection = document.body.querySelector('[aria-label="Jenis custom"]')!
+    const deleteButton = Array.from(customSection.querySelectorAll('button'))
+      .find(button => button.textContent?.trim() === 'Hapus')!
+
+    deleteButton.click()
+    await flush()
+
+    expect(bodyText()).toContain('Hapus jenis "Asuransi"?')
+    expect(document.body.querySelector(`#obligation-type-rename-${CUSTOM_ID}`)).toBeNull()
+  })
+
   it('tipe sistem tidak pernah memanggil update/delete dari UI', async () => {
     const { wrapper, types } = await mountSection({ items: [] })
 

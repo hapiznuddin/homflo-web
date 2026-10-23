@@ -11,7 +11,23 @@ import { readError, readErrorCode, readFieldErrors } from '~/composables/useApiE
 // selalu berasal dari list yang sama.
 // ---------------------------------------------------------------------------
 
+// Urutan yang sama dengan backend: tipe sistem dulu, lalu nama dan id.
+function sortObligationTypes(records: ObligationTypeItem[]): ObligationTypeItem[] {
+  return [...records].sort((left, right) => {
+    if (left.is_system !== right.is_system) {
+      return left.is_system ? -1 : 1
+    }
+
+    if (left.name !== right.name) {
+      return left.name < right.name ? -1 : 1
+    }
+
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0
+  })
+}
+
 export function useObligationTypes() {
+  const auth = useAuth()
   const items = useState<ObligationTypeItem[]>('obligation-types-items', () => [])
   const pending = useState<boolean>('obligation-types-pending', () => false)
   const submitting = useState<boolean>('obligation-types-submitting', () => false)
@@ -20,6 +36,29 @@ export function useObligationTypes() {
   const fieldErrors = useState<Record<string, string>>('obligation-types-field-errors', () => ({}))
   const inflight = useState<boolean>('obligation-types-inflight', () => false)
   const requestSeq = useState<number>('obligation-types-request-seq', () => 0)
+  const scope = useState<string>('obligation-types-scope', () => '')
+  const scopeEpoch = useState<number>('obligation-types-scope-epoch', () => 0)
+  const currentScope = computed(() => auth.household.value?.id ?? '')
+
+  // Katalog custom terikat household. Tipe sistem memang global, tetapi cache
+  // gabungan tetap harus dibuang saat household berganti agar tipe custom
+  // rumah tangga sebelumnya tidak pernah tampil ke sesi berikutnya.
+  watch(currentScope, (nextScope) => {
+    if (scope.value === nextScope) {
+      return
+    }
+
+    scope.value = nextScope
+    scopeEpoch.value += 1
+    items.value = []
+    pending.value = false
+    submitting.value = false
+    error.value = null
+    errorCode.value = null
+    fieldErrors.value = {}
+    inflight.value = false
+    requestSeq.value += 1
+  }, { immediate: true, flush: 'sync' })
 
   function requestHeaders(): Record<string, string> {
     // Server-side rendering has no browser cookies of its own: forward
@@ -98,10 +137,25 @@ export function useObligationTypes() {
     await load(true)
   }
 
+  // Server sudah mengonfirmasi create/update: terapkan hasilnya lebih dulu
+  // agar katalog tetap benar bila refresh lanjutan gagal.
+  function upsert(record: ObligationTypeItem): void {
+    const next = items.value.filter(item => item.id !== record.id)
+
+    next.push(record)
+    items.value = sortObligationTypes(next)
+  }
+
+  function removeItem(id: string): void {
+    items.value = items.value.filter(item => item.id !== id)
+  }
+
   async function create(name: string): Promise<ObligationTypeItem | null> {
     if (submitting.value) {
       return null
     }
+
+    const mutationEpoch = scopeEpoch.value
 
     submitting.value = true
     error.value = null
@@ -119,7 +173,10 @@ export function useObligationTypes() {
         }
       )
 
-      await refresh()
+      if (mutationEpoch === scopeEpoch.value) {
+        upsert(envelope.data)
+        await refresh()
+      }
 
       return envelope.data
     } catch (err) {
@@ -138,6 +195,8 @@ export function useObligationTypes() {
       return null
     }
 
+    const mutationEpoch = scopeEpoch.value
+
     submitting.value = true
     error.value = null
     errorCode.value = null
@@ -154,7 +213,10 @@ export function useObligationTypes() {
         }
       )
 
-      await refresh()
+      if (mutationEpoch === scopeEpoch.value) {
+        upsert(envelope.data)
+        await refresh()
+      }
 
       return envelope.data
     } catch (err) {
@@ -175,6 +237,8 @@ export function useObligationTypes() {
       return false
     }
 
+    const mutationEpoch = scopeEpoch.value
+
     submitting.value = true
     error.value = null
     errorCode.value = null
@@ -187,7 +251,12 @@ export function useObligationTypes() {
         headers: requestHeaders()
       })
 
-      await refresh()
+      // Hanya setelah server mengonfirmasi tipe hilang dari katalog; respons
+      // refresh yang gagal tidak menghidupkan kembali tipe tersebut.
+      if (mutationEpoch === scopeEpoch.value) {
+        removeItem(typeId)
+        await refresh()
+      }
 
       return true
     } catch (err) {

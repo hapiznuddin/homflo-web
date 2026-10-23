@@ -54,6 +54,7 @@ const detailError = ref<string | null>(null)
 const notFound = ref(false)
 const confirmDelete = ref(false)
 const formOpen = ref(false)
+const detailRequestSeq = ref(0)
 
 const maintenanceFilter = ref<VehicleMaintenanceFilter>('all')
 const maintenanceFormOpen = ref(false)
@@ -144,21 +145,43 @@ function closeMaintenancePanels(): void {
 }
 
 async function loadDetail(): Promise<void> {
+  detailRequestSeq.value += 1
+
+  const request = detailRequestSeq.value
+  const requestedId = vehicleId.value
+
   loading.value = true
   detailError.value = null
   notFound.value = false
   confirmDelete.value = false
+  formOpen.value = false
   closeMaintenancePanels()
   vehicles.clearError()
 
   try {
-    detail.value = await vehicles.fetchOne(vehicleId.value)
+    const fetched = await vehicles.fetchOne(requestedId)
+
+    if (request !== detailRequestSeq.value) {
+      return
+    }
+
+    detail.value = fetched
   } catch (err) {
+    if (request !== detailRequestSeq.value) {
+      return
+    }
+
     detail.value = null
     notFound.value = isNotFound(err)
     detailError.value = readError(err, 'Detail belum dapat dimuat.')
   } finally {
-    loading.value = false
+    if (request === detailRequestSeq.value) {
+      loading.value = false
+    }
+  }
+
+  if (request !== detailRequestSeq.value) {
+    return
   }
 
   if (detail.value) {

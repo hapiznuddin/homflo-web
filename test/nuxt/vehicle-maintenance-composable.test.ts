@@ -391,6 +391,63 @@ describe('useVehicleMaintenance', () => {
     expect(maintenance.items.value.map(item => item.id)).toEqual(['01J0MAINT0000000000000002'])
   })
 
+  it('refresh() memaksa request baru; respons lama tidak menimpa hasil terbaru', async () => {
+    const maintenance = await mountMaintenance()
+
+    let releaseFirst!: (value: unknown) => void
+
+    fetchMock.mockReturnValueOnce(new Promise((resolve) => {
+      releaseFirst = resolve as (value: unknown) => void
+    }))
+
+    const firstLoad = maintenance.load()
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: [maintenanceItem({ title: 'Data terbaru' })]
+    })
+
+    await maintenance.refresh()
+
+    releaseFirst({ success: true, data: [maintenanceItem({ title: 'Data lama' })] })
+    await firstLoad
+
+    expect(maintenance.items.value[0]?.title).toBe('Data terbaru')
+    expect(maintenance.pending.value).toBe(false)
+  })
+
+  it('create() tetap menampilkan record walau refresh lanjutan gagal', async () => {
+    const maintenance = await mountMaintenance()
+    const created = maintenanceItem({ id: '01J0MAINT0000000000000010', title: 'Cek rem' })
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({ success: true, data: created })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await maintenance.create(formValues({ title: 'Cek rem' }))
+
+    expect(saved?.id).toBe(created.id)
+    expect(maintenance.items.value.map(item => item.id)).toContain(created.id)
+  })
+
+  it('update() tetap menampilkan record terbaru walau refresh lanjutan gagal', async () => {
+    const maintenance = await mountMaintenance()
+
+    await maintenance.load()
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: maintenanceItem({ title: 'Servis diperbarui' })
+    })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await maintenance.update(MAINTENANCE_ID, formValues({ title: 'Servis diperbarui' }))
+
+    expect(saved?.title).toBe('Servis diperbarui')
+    expect(maintenance.items.value[0]?.title).toBe('Servis diperbarui')
+  })
+
   it('double submit dicegah saat request berjalan', async () => {
     const maintenance = await mountMaintenance()
 

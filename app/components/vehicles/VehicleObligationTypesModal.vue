@@ -212,7 +212,7 @@ function retry(): void {
                   </UButton>
                 </div>
 
-                <div v-else class="flex flex-col gap-2">
+                <div v-else-if="renamingId === type.id" class="flex flex-col gap-2">
                   <label :for="`obligation-type-rename-${type.id}`" class="text-xs font-medium text-muted">
                     Nama baru
                   </label>

@@ -41,6 +41,27 @@ function emptyState(): VehicleMaintenanceState {
   }
 }
 
+// Urutan backend: scheduled_date ascending (null terakhir), lalu id.
+function sortVehicleMaintenanceItems(
+  records: VehicleMaintenanceItem[]
+): VehicleMaintenanceItem[] {
+  return [...records].sort((left, right) => {
+    if (left.scheduled_date !== right.scheduled_date) {
+      if (left.scheduled_date === null) {
+        return 1
+      }
+
+      if (right.scheduled_date === null) {
+        return -1
+      }
+
+      return left.scheduled_date < right.scheduled_date ? -1 : 1
+    }
+
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0
+  })
+}
+
 export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
   const currentId = computed(() => String(toValue(vehicleId) ?? ''))
   const store = useState<Record<string, VehicleMaintenanceState>>('vehicle-maintenance-store', () => ({}))
@@ -148,7 +169,16 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
     const state = ensureState()
 
     if (state.inflight) {
-      return
+      // Non-force loads deduplicate. A forced load (e.g. after a confirmed
+      // mutation) supersedes the older request so its late response cannot
+      // overwrite newer data.
+      if (!force) {
+        return
+      }
+
+      state.requestSeq += 1
+      state.inflight = false
+      state.pending = false
     }
 
     // Already have fresh data.
@@ -208,11 +238,21 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
     return envelope.data
   }
 
+  // Server sudah mengonfirmasi create/update: terapkan record ke state
+  // kendaraan yang sedang dimutasi, bukan ke route yang mungkin sudah berubah.
+  function upsert(state: VehicleMaintenanceState, record: VehicleMaintenanceItem): void {
+    const next = state.items.filter(item => item.id !== record.id)
+
+    next.push(record)
+    state.items = sortVehicleMaintenanceItems(next)
+  }
+
   async function create(values: VehicleMaintenanceFormValues): Promise<VehicleMaintenanceItem | null> {
     if (submitting.value || currentId.value === EMPTY) {
       return null
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -234,7 +274,11 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
         headers: requestHeaders()
       })
 
-      await load(true)
+      upsert(state, envelope.data)
+
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return envelope.data
     } catch (err) {
@@ -256,6 +300,7 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
       return null
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -280,7 +325,11 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
         }
       )
 
-      await load(true)
+      upsert(state, envelope.data)
+
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return envelope.data
     } catch (err) {
@@ -299,6 +348,7 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
       return false
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -317,7 +367,9 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
       // lalu sinkronkan ulang dengan server.
       state.items = state.items.filter(item => item.id !== maintenanceId)
 
-      await load(true)
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return true
     } catch (err) {
@@ -341,6 +393,7 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
       return null
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -367,7 +420,9 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
         state.items[index] = envelope.data
       }
 
-      await load(true)
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return envelope.data
     } catch (err) {

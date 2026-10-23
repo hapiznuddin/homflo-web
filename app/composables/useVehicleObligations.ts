@@ -224,8 +224,10 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
     await load(true)
   }
 
-  function upsert(record: VehicleObligationItem): void {
-    const state = ensureState()
+  // Terapkan hasil mutation ke state kendaraan yang memulai request. Route
+  // bisa berubah saat request berjalan; upsert tidak boleh masuk ke state
+  // kendaraan yang baru dibuka.
+  function upsert(state: VehicleObligationState, record: VehicleObligationItem): void {
     const next = state.items.filter(item => item.id !== record.id)
 
     next.push(record)
@@ -237,6 +239,7 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
       return null
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -260,8 +263,11 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
 
       // Server sudah mengonfirmasi: tampilkan record segera, lalu sinkronkan
       // ulang. Kegagalan refresh tidak membatalkan fakta server.
-      upsert(envelope.data)
-      await load(true)
+      upsert(state, envelope.data)
+
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return envelope.data
     } catch (err) {
@@ -283,6 +289,7 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
       return null
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -307,8 +314,11 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
         }
       )
 
-      upsert(envelope.data)
-      await load(true)
+      upsert(state, envelope.data)
+
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return envelope.data
     } catch (err) {
@@ -327,6 +337,7 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
       return false
     }
 
+    const vehicleAtStart = currentId.value
     const state = ensureState()
 
     state.submitting = true
@@ -344,7 +355,9 @@ export function useVehicleObligations(vehicleId: MaybeRefOrGetter<string>) {
       // Hanya setelah server mengonfirmasi record hilang dari daftar.
       state.items = state.items.filter(item => item.id !== obligationId)
 
-      await load(true)
+      if (currentId.value === vehicleAtStart) {
+        await load(true)
+      }
 
       return true
     } catch (err) {

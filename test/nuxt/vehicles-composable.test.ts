@@ -3,6 +3,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VehicleFormValues, VehicleItem } from '~/types/vehicles'
+import { useAuth } from '~/composables/useAuth'
 import { useVehicles } from '~/composables/useVehicles'
 
 // $fetch auto-import Nuxt berasal dari #build/fetch.mjs (bukan global),
@@ -19,6 +20,7 @@ vi.mock('#build/fetch.mjs', async (importOriginal) => {
 // useState hanya valid di dalam konteks app Nuxt, jadi komposable dijalankan
 // lewat harness yang di-mount suspended.
 let latest: ReturnType<typeof useVehicles> | undefined
+let latestAuth: ReturnType<typeof useAuth> | undefined
 
 const VehiclesHarness = defineComponent({
   name: 'VehiclesHarness',
@@ -26,6 +28,7 @@ const VehiclesHarness = defineComponent({
     const api = useVehicles()
 
     latest = api
+    latestAuth = useAuth()
 
     return api
   },
@@ -76,7 +79,9 @@ const STATE_KEYS = [
   'vehicles-error-code',
   'vehicles-field-errors',
   'vehicles-inflight',
-  'vehicles-request-seq'
+  'vehicles-request-seq',
+  'vehicles-scope',
+  'vehicles-scope-epoch'
 ]
 
 beforeEach(() => {
@@ -359,6 +364,98 @@ describe('useVehicles', () => {
     expect(vehicles.items.value).toHaveLength(1)
     // Tidak ada refresh setelah penolakan (hanya DELETE yang dikirim).
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('cache dibuang saat household berganti, lalu memuat katalog household baru', async () => {
+    const vehicles = await mountVehicles()
+
+    latestAuth!.household.value = { id: 'h1', name: 'Rumah A', role: 'owner' }
+    await vehicles.load()
+
+    expect(vehicles.items.value).toHaveLength(1)
+
+    latestAuth!.household.value = { id: 'h2', name: 'Rumah B', role: 'owner' }
+
+    expect(vehicles.items.value).toEqual([])
+    expect(vehicles.pending.value).toBe(false)
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: [vehicleItem({ id: '01J0VEHICLE000000000000099', household_id: 'h2', name: 'Mobil B' })]
+    })
+
+    await vehicles.load()
+
+    expect(vehicles.items.value.map(item => item.name)).toEqual(['Mobil B'])
+  })
+
+  it('refresh() memaksa request baru; respons lama tidak menimpa hasil terbaru', async () => {
+    const vehicles = await mountVehicles()
+
+    let releaseFirst!: (value: unknown) => void
+
+    fetchMock.mockReturnValueOnce(new Promise((resolve) => {
+      releaseFirst = resolve as (value: unknown) => void
+    }))
+
+    const firstLoad = vehicles.load()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: [vehicleItem({ name: 'Data terbaru' })] })
+
+    await vehicles.refresh()
+
+    releaseFirst({ success: true, data: [vehicleItem({ name: 'Data lama' })] })
+    await firstLoad
+
+    expect(vehicles.items.value[0]?.name).toBe('Data terbaru')
+    expect(vehicles.pending.value).toBe(false)
+  })
+
+  it('create() tetap menampilkan record walau refresh lanjutan gagal', async () => {
+    const vehicles = await mountVehicles()
+    const created = vehicleItem({ id: '01J0VEHICLE000000000000010', name: 'Motor Baru' })
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({ success: true, data: created })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await vehicles.create(formValues({ name: 'Motor Baru' }))
+
+    expect(saved?.id).toBe(created.id)
+    expect(vehicles.items.value.map(item => item.id)).toContain(created.id)
+  })
+
+  it('update() tetap menampilkan record terbaru walau refresh lanjutan gagal', async () => {
+    const vehicles = await mountVehicles()
+
+    await vehicles.load()
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: vehicleItem({ name: 'Motor diperbarui' })
+    })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await vehicles.update(vehicleItem().id, formValues({ name: 'Motor diperbarui' }))
+
+    expect(saved?.name).toBe('Motor diperbarui')
+    expect(vehicles.items.value[0]?.name).toBe('Motor diperbarui')
+  })
+
+  it('remove() tetap membuang record walau refresh lanjutan gagal', async () => {
+    const vehicles = await mountVehicles()
+
+    await vehicles.load()
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: vehicleItem().id } })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const ok = await vehicles.remove(vehicleItem().id)
+
+    expect(ok).toBe(true)
+    expect(vehicles.items.value).toEqual([])
   })
 
   it('double submit dicegah saat request berjalan', async () => {

@@ -12,7 +12,20 @@ import { readError, readErrorCode, readFieldErrors } from '~/composables/useApiE
 
 const EMPTY = ''
 
+// Urutan yang sama dengan backend (name lalu id) untuk rekonsiliasi lokal
+// setelah create/update, termasuk saat refresh lanjutan gagal.
+function sortVehicleItems(records: VehicleItem[]): VehicleItem[] {
+  return [...records].sort((left, right) => {
+    if (left.name !== right.name) {
+      return left.name < right.name ? -1 : 1
+    }
+
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0
+  })
+}
+
 export function useVehicles() {
+  const auth = useAuth()
   const items = useState<VehicleItem[]>('vehicles-items', () => [])
   const pending = useState<boolean>('vehicles-pending', () => false)
   const submitting = useState<boolean>('vehicles-submitting', () => false)
@@ -21,6 +34,29 @@ export function useVehicles() {
   const fieldErrors = useState<Record<string, string>>('vehicles-field-errors', () => ({}))
   const inflight = useState<boolean>('vehicles-inflight', () => false)
   const requestSeq = useState<number>('vehicles-request-seq', () => 0)
+  const scope = useState<string>('vehicles-scope', () => '')
+  const scopeEpoch = useState<number>('vehicles-scope-epoch', () => 0)
+  const currentScope = computed(() => auth.household.value?.id ?? '')
+
+  // Katalog kendaraan terikat pada household. Saat sesi/household berganti,
+  // buang cache lama dan naikkan request sequence agar respons lama tidak
+  // bisa masuk ke sesi baru.
+  watch(currentScope, (nextScope) => {
+    if (scope.value === nextScope) {
+      return
+    }
+
+    scope.value = nextScope
+    scopeEpoch.value += 1
+    items.value = []
+    pending.value = false
+    submitting.value = false
+    error.value = null
+    errorCode.value = null
+    fieldErrors.value = {}
+    inflight.value = false
+    requestSeq.value += 1
+  }, { immediate: true, flush: 'sync' })
 
   function requestHeaders(): Record<string, string> {
     // Server-side rendering has no browser cookies of its own: forward
@@ -41,7 +77,16 @@ export function useVehicles() {
 
   async function load(force = false): Promise<void> {
     if (inflight.value) {
-      return
+      // Non-force loads deduplicate. A forced load (e.g. after a confirmed
+      // mutation) supersedes the older request so its late response cannot
+      // overwrite newer data.
+      if (!force) {
+        return
+      }
+
+      requestSeq.value += 1
+      inflight.value = false
+      pending.value = false
     }
 
     // Already have fresh data.
@@ -98,6 +143,19 @@ export function useVehicles() {
     )
 
     return envelope.data
+  }
+
+  // Server sudah mengonfirmasi create/update: terapkan hasilnya ke daftar
+  // sebelum refresh agar UI tetap benar bila refresh berikutnya gagal.
+  function upsert(record: VehicleItem): void {
+    const next = items.value.filter(item => item.id !== record.id)
+
+    next.push(record)
+    items.value = sortVehicleItems(next)
+  }
+
+  function removeItem(id: string): void {
+    items.value = items.value.filter(item => item.id !== id)
   }
 
   /** Parsing integer form: '' -> null, tidak valid -> 'invalid'. */
@@ -165,6 +223,8 @@ export function useVehicles() {
       return null
     }
 
+    const mutationEpoch = scopeEpoch.value
+
     submitting.value = true
     error.value = null
     errorCode.value = null
@@ -184,7 +244,10 @@ export function useVehicles() {
         headers: requestHeaders()
       })
 
-      await refresh()
+      if (mutationEpoch === scopeEpoch.value) {
+        upsert(envelope.data)
+        await refresh()
+      }
 
       return envelope.data
     } catch (err) {
@@ -202,6 +265,8 @@ export function useVehicles() {
     if (submitting.value) {
       return null
     }
+
+    const mutationEpoch = scopeEpoch.value
 
     submitting.value = true
     error.value = null
@@ -225,7 +290,10 @@ export function useVehicles() {
         }
       )
 
-      await refresh()
+      if (mutationEpoch === scopeEpoch.value) {
+        upsert(envelope.data)
+        await refresh()
+      }
 
       return envelope.data
     } catch (err) {
@@ -244,6 +312,8 @@ export function useVehicles() {
       return false
     }
 
+    const mutationEpoch = scopeEpoch.value
+
     submitting.value = true
     error.value = null
     errorCode.value = null
@@ -256,8 +326,12 @@ export function useVehicles() {
         headers: requestHeaders()
       })
 
-      // Sinkronisasi ulang hanya setelah backend mengonfirmasi.
-      await refresh()
+      // Sinkronisasi ulang hanya setelah backend mengonfirmasi. Record juga
+      // langsung dibuang agar daftar tetap benar walau refresh gagal.
+      if (mutationEpoch === scopeEpoch.value) {
+        removeItem(id)
+        await refresh()
+      }
 
       return true
     } catch (err) {

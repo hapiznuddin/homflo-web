@@ -3,6 +3,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ObligationTypeItem } from '~/types/vehicleObligations'
+import { useAuth } from '~/composables/useAuth'
 import { useObligationTypes } from '~/composables/useObligationTypes'
 
 const fetchMock = vi.hoisted(() => vi.fn())
@@ -14,6 +15,7 @@ vi.mock('#build/fetch.mjs', async (importOriginal) => {
 })
 
 let latest: ReturnType<typeof useObligationTypes> | undefined
+let latestAuth: ReturnType<typeof useAuth> | undefined
 
 const TypesHarness = defineComponent({
   name: 'ObligationTypesHarness',
@@ -21,6 +23,7 @@ const TypesHarness = defineComponent({
     const api = useObligationTypes()
 
     latest = api
+    latestAuth = useAuth()
 
     return api
   },
@@ -68,7 +71,9 @@ const STATE_KEYS = [
   'obligation-types-error-code',
   'obligation-types-field-errors',
   'obligation-types-inflight',
-  'obligation-types-request-seq'
+  'obligation-types-request-seq',
+  'obligation-types-scope',
+  'obligation-types-scope-epoch'
 ]
 
 beforeEach(() => {
@@ -217,6 +222,75 @@ describe('useObligationTypes', () => {
     expect(types.errorCode.value).toBe('OBLIGATION_TYPE_IN_USE')
     expect(types.error.value).toBe('Jenis ini masih dipakai kewajiban sehingga tidak dapat dihapus.')
     expect(types.items.value).toHaveLength(2)
+  })
+
+  it('cache dibuang saat household berganti, termasuk tipe custom lama', async () => {
+    const types = await mountTypes()
+
+    latestAuth!.household.value = { id: 'h1', name: 'Rumah A', role: 'owner' }
+    await types.load()
+
+    expect(types.items.value.map(item => item.name)).toEqual(['Pajak Kendaraan', 'Asuransi'])
+
+    latestAuth!.household.value = { id: 'h2', name: 'Rumah B', role: 'owner' }
+
+    expect(types.items.value).toEqual([])
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: [typeItem(), customType({ id: '01J0TYPE0000000000000099', household_id: 'h2', name: 'Asuransi B' })]
+    })
+
+    await types.load()
+
+    expect(types.items.value.map(item => item.name)).toEqual(['Pajak Kendaraan', 'Asuransi B'])
+  })
+
+  it('create() tetap menampilkan tipe baru walau refresh lanjutan gagal', async () => {
+    const types = await mountTypes()
+    const created = customType({ id: '01J0TYPE0000000000000010', name: 'KIR' })
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({ success: true, data: created })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await types.create('KIR')
+
+    expect(saved?.id).toBe(created.id)
+    expect(types.items.value.map(item => item.id)).toContain(created.id)
+  })
+
+  it('update() tetap menampilkan nama baru walau refresh lanjutan gagal', async () => {
+    const types = await mountTypes()
+
+    await types.load()
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: customType({ name: 'Asuransi kendaraan' })
+    })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const saved = await types.update(CUSTOM_ID, 'Asuransi kendaraan')
+
+    expect(saved?.name).toBe('Asuransi kendaraan')
+    expect(types.items.value.find(item => item.id === CUSTOM_ID)?.name).toBe('Asuransi kendaraan')
+  })
+
+  it('remove() tetap membuang tipe walau refresh lanjutan gagal', async () => {
+    const types = await mountTypes()
+
+    await types.load()
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: CUSTOM_ID } })
+    fetchMock.mockRejectedValueOnce({ statusCode: 500, data: { message: 'Server error.' } })
+
+    const removed = await types.remove(CUSTOM_ID)
+
+    expect(removed).toBe(true)
+    expect(types.items.value.map(item => item.id)).not.toContain(CUSTOM_ID)
   })
 
   it('double submit create dicegah saat request berjalan', async () => {
