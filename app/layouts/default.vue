@@ -57,7 +57,7 @@ const items: NavigationMenuItem[][] = [
     {
       label: 'Kendaraan',
       icon: 'i-lucide-car',
-      disabled: true
+      to: '/vehicles'
     }
   ],
   [

@@ -524,7 +524,7 @@ describe('DashboardQuickActions', () => {
     }
   })
 
-  it('"Tambah Transaksi" → /transactions dan "Tambah Aset" → /assets; aksi lain tetap disabled jujur (Phase 16.2)', async () => {
+  it('"Tambah Transaksi" → /transactions, "Tambah Aset" → /assets, "Tambah Kendaraan" → /vehicles; aksi lain tetap disabled jujur', async () => {
     const wrapper = await mountSuspended(DashboardQuickActions, { route: false })
 
     const link = wrapper.find('a[href="/transactions"]')
@@ -540,10 +540,17 @@ describe('DashboardQuickActions', () => {
     expect(assetLink.text()).toContain('Tambah Aset')
     expect(assetLink.attributes('aria-disabled')).not.toBe('true')
 
+    // Phase 16.4.2 mengaktifkan "Tambah Kendaraan" → /vehicles.
+    const vehicleLink = wrapper.find('a[href="/vehicles"]')
+
+    expect(vehicleLink.exists()).toBe(true)
+    expect(vehicleLink.text()).toContain('Tambah Kendaraan')
+    expect(vehicleLink.attributes('aria-disabled')).not.toBe('true')
+
     // Aksi tanpa rute tetap disabled + label jujur (tidak memalsukan navigasi).
     const buttons = wrapper.findAll('button')
 
-    expect(buttons).toHaveLength(2)
+    expect(buttons).toHaveLength(1)
 
     for (const button of buttons) {
       expect(button.attributes('aria-disabled')).toBe('true')

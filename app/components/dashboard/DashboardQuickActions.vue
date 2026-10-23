@@ -7,15 +7,15 @@ interface QuickAction {
   to?: string
 }
 
-// "Tambah Transaksi" mengarah ke /transactions (Phase 15.3.1) dan
-// "Tambah Aset" ke /assets (Phase 16.2), memakai alur create yang sudah
-// ada di halaman tersebut; aksi lain menunggu rutenya dan tetap
-// disabled dengan label jujur.
+// "Tambah Transaksi" mengarah ke /transactions (Phase 15.3.1),
+// "Tambah Aset" ke /assets (Phase 16.2), dan "Tambah Kendaraan" ke
+// /vehicles (Phase 16.4.2), memakai alur create yang sudah ada di halaman
+// tersebut; aksi lain menunggu rutenya dan tetap disabled dengan label jujur.
 const actions: QuickAction[] = [
   { label: 'Tambah Transaksi', icon: 'i-lucide-plus', primary: true, to: '/transactions' },
   { label: 'Tambah Tagihan', icon: 'i-lucide-receipt' },
   { label: 'Tambah Aset', icon: 'i-lucide-wallet', to: '/assets' },
-  { label: 'Tambah Kendaraan', icon: 'i-lucide-car' }
+  { label: 'Tambah Kendaraan', icon: 'i-lucide-car', to: '/vehicles' }
 ]
 </script>
 

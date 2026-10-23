@@ -28,6 +28,10 @@ const CODE_MESSAGES: Record<string, string> = {
   BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.',
   BILL_NOT_FOUND: 'Tagihan tidak ditemukan.',
   ASSET_NOT_FOUND: 'Aset tidak ditemukan.',
+  VEHICLE_NOT_FOUND: 'Kendaraan tidak ditemukan.',
+  VEHICLE_PLATE_ALREADY_EXISTS: 'Plat nomor tersebut sudah dipakai kendaraan lain di rumah tangga ini.',
+  VEHICLE_ODOMETER_BELOW_RECORDED: 'Odometer tidak boleh lebih rendah dari catatan servis terakhir.',
+  VEHICLE_HAS_MAINTENANCE_HISTORY: 'Kendaraan tidak dapat dihapus karena masih memiliki riwayat servis.',
   MAINTENANCE_NOT_FOUND: 'Catatan perawatan tidak ditemukan.',
   MAINTENANCE_ALREADY_COMPLETED: 'Perawatan ini sudah ditandai selesai.',
   MAINTENANCE_ALREADY_CANCELLED: 'Perawatan ini sudah dibatalkan.',
@@ -84,6 +88,11 @@ const FIELD_LABELS: Record<string, string> = {
   acquired_on: 'tanggal perolehan',
   acquisition_cost: 'biaya perolehan',
   asset_id: 'aset',
+  brand: 'merek',
+  model: 'model',
+  plate_number: 'plat nomor',
+  license_plate: 'plat nomor',
+  odometer: 'odometer',
   scheduled_date: 'tanggal jadwal',
   priority: 'prioritas'
 }
@@ -143,6 +152,21 @@ function extractMessage(body: ApiErrorBody | null | undefined): string | undefin
   const raw = firstFieldError ?? body.error?.message ?? body.message
 
   return raw ? translateMessage(raw) : undefined
+}
+
+// Error code dari envelope Laravel (mis. VEHICLE_HAS_MAINTENANCE_HISTORY),
+// menelusuri bentuk bersarang yang sama seperti readError. Dipakai UI untuk
+// menangani konflik domain secara eksplisit tanpa mencocokkan teks pesan.
+export function readErrorCode(error: unknown): string | null {
+  for (const body of errorBodies(error)) {
+    const code = (body as ApiErrorBody).error?.code
+
+    if (typeof code === 'string' && code !== '') {
+      return code
+    }
+  }
+
+  return null
 }
 
 // Field errors Laravel (satu pesan pertama per field, diterjemahkan)

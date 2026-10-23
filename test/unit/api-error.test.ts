@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readError, translateMessage } from '../../app/composables/useApiError'
+import { readError, readErrorCode, translateMessage } from '../../app/composables/useApiError'
 
 // Mengunci perilaku existing sekaligus pola baru untuk form transaksi.
 // Seluruh penambahan di useApiError bersifat aditif.
@@ -107,5 +107,45 @@ describe('readError kode transaksi', () => {
     }
 
     expect(readError(err, 'fallback')).toBe('Kolom nominal harus berupa angka.')
+  })
+})
+
+describe('readError/readErrorCode kode kendaraan (Phase 16.4.2)', () => {
+  it('memetakan kode domain kendaraan ke pesan Indonesia', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'VEHICLE_NOT_FOUND' } } } }, 'x')
+    ).toBe('Kendaraan tidak ditemukan.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'VEHICLE_PLATE_ALREADY_EXISTS' } } } }, 'x')
+    ).toBe('Plat nomor tersebut sudah dipakai kendaraan lain di rumah tangga ini.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'VEHICLE_ODOMETER_BELOW_RECORDED' } } } }, 'x')
+    ).toBe('Odometer tidak boleh lebih rendah dari catatan servis terakhir.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'VEHICLE_HAS_MAINTENANCE_HISTORY' } } } }, 'x')
+    ).toBe('Kendaraan tidak dapat dihapus karena masih memiliki riwayat servis.')
+  })
+
+  it('readErrorCode membaca kode dari envelope bersarang Nitro', () => {
+    expect(
+      readErrorCode({ data: { data: { success: false, error: { code: 'VEHICLE_HAS_MAINTENANCE_HISTORY' } } } })
+    ).toBe('VEHICLE_HAS_MAINTENANCE_HISTORY')
+    expect(readErrorCode({ statusCode: 500, data: { message: 'Server error.' } })).toBeNull()
+    expect(readErrorCode(null)).toBeNull()
+  })
+
+  it('memetakan label field kendaraan', () => {
+    expect(translateMessage('The plate_number must not be greater than 32 characters.')).toBe(
+      'Kolom plat nomor maksimal 32 karakter.'
+    )
+    expect(translateMessage('The odometer must be an integer.')).toBe(
+      'Kolom odometer harus berupa bilangan bulat.'
+    )
+    expect(translateMessage('The brand must not be greater than 255 characters.')).toBe(
+      'Kolom merek maksimal 255 karakter.'
+    )
+    expect(translateMessage('The model must not be greater than 255 characters.')).toBe(
+      'Kolom model maksimal 255 karakter.'
+    )
   })
 })

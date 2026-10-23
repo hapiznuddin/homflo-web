@@ -104,9 +104,11 @@ describe('navigasi Assets', () => {
     expect(aset.text()).toContain('Tambah Aset')
     expect(aset.attributes('aria-disabled')).not.toBe('true')
 
+    // Phase 16.4.2 mengaktifkan "Tambah Kendaraan" → /vehicles, sehingga
+    // hanya "Tambah Tagihan" yang masih tanpa rute dan tetap disabled.
     const buttons = wrapper.findAll('button')
 
-    expect(buttons).toHaveLength(2)
+    expect(buttons).toHaveLength(1)
 
     for (const button of buttons) {
       expect(button.attributes('aria-disabled')).toBe('true')
