@@ -45,6 +45,11 @@ const items: NavigationMenuItem[][] = [
       to: '/assets'
     },
     {
+      label: 'Perawatan',
+      icon: 'i-lucide-wrench',
+      to: '/maintenance'
+    },
+    {
       label: 'Beranda',
       icon: 'i-lucide-house',
       disabled: true

@@ -28,6 +28,9 @@ const CODE_MESSAGES: Record<string, string> = {
   BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.',
   BILL_NOT_FOUND: 'Tagihan tidak ditemukan.',
   ASSET_NOT_FOUND: 'Aset tidak ditemukan.',
+  MAINTENANCE_NOT_FOUND: 'Catatan perawatan tidak ditemukan.',
+  MAINTENANCE_ALREADY_COMPLETED: 'Perawatan ini sudah ditandai selesai.',
+  MAINTENANCE_ALREADY_CANCELLED: 'Perawatan ini sudah dibatalkan.',
   BILL_ALREADY_PAID: 'Tagihan ini sudah dibayar.',
   BILL_NOT_PAID: 'Hanya tagihan lunas yang bisa diarsipkan.',
   BILL_ARCHIVED: 'Tagihan sudah diarsipkan.',
@@ -79,11 +82,16 @@ const FIELD_LABELS: Record<string, string> = {
   recurrence: 'pengulangan',
   location: 'lokasi',
   acquired_on: 'tanggal perolehan',
-  acquisition_cost: 'biaya perolehan'
+  acquisition_cost: 'biaya perolehan',
+  asset_id: 'aset',
+  scheduled_date: 'tanggal jadwal',
+  priority: 'prioritas'
 }
 
 function fieldLabel(field: string): string {
-  return FIELD_LABELS[field] ?? field.replace(/_/g, ' ')
+  // Laravel menyusun pesan dengan ":attribute" yang bisa berupa nama field
+  // apa adanya (asset_id) maupun versi spasi (asset id); dukung keduanya.
+  return FIELD_LABELS[field] ?? FIELD_LABELS[field.replace(/ /g, '_')] ?? field.replace(/_/g, ' ')
 }
 
 // Laravel validation message templates mapped to Indonesian.
