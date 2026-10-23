@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import VehicleFormModal from '~/components/vehicles/VehicleFormModal.vue'
 import VehicleMaintenanceFormModal from '~/components/vehicles/VehicleMaintenanceFormModal.vue'
+import VehicleObligationsSection from '~/components/vehicles/VehicleObligationsSection.vue'
 import type { VehicleFormValues, VehicleItem } from '~/types/vehicles'
 import type {
   VehicleMaintenanceFilter,
@@ -675,6 +676,14 @@ await loadDetail()
           Anda anggota rumah tangga — riwayat servis hanya dapat dilihat. Pengelolaan dilakukan pemilik.
         </p>
       </section>
+
+      <!-- Kewajiban adalah resource terpisah dari Riwayat Servis dan Bills.
+           Komponen memuat state-nya sendiri agar kegagalan salah satu bagian
+           tidak menghapus bagian lain. -->
+      <VehicleObligationsSection
+        :vehicle-id="vehicleId"
+        :is-owner="isOwner"
+      />
     </template>
 
     <VehicleFormModal

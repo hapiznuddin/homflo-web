@@ -67,6 +67,16 @@ const vehicleMaintenanceMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useVehicleMaintenance', () => () => vehicleMaintenanceMock.api)
 
+// Section Kewajiban dimuat oleh halaman detail; test ini fokus pada Vehicle
+// Information sehingga state Kewajiban di-mock kosong tanpa request nyata.
+const vehicleObligationsMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useVehicleObligations', () => () => vehicleObligationsMock.api)
+
+const obligationTypesMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useObligationTypes', () => () => obligationTypesMock.api)
+
 function vehicleItem(overrides: Partial<VehicleItem> = {}): VehicleItem {
   return {
     id: VEHICLE_ID,
@@ -121,6 +131,36 @@ function setupVehiclesState(
     create: vi.fn(async () => vehicleItem()),
     update: overrides.update ?? vi.fn(async () => vehicleItem()),
     remove: overrides.remove ?? vi.fn(async () => true),
+    clearError: vi.fn()
+  }
+
+  vehicleObligationsMock.api = {
+    items: ref([]),
+    pending: ref(false),
+    submitting: ref(false),
+    error: ref(null),
+    errorCode: ref(null),
+    fieldErrors: ref({}),
+    load: vi.fn(async () => {}),
+    refresh: vi.fn(async () => {}),
+    create: vi.fn(async () => null),
+    update: vi.fn(async () => null),
+    remove: vi.fn(async () => false),
+    clearError: vi.fn()
+  }
+
+  obligationTypesMock.api = {
+    items: ref([]),
+    pending: ref(false),
+    submitting: ref(false),
+    error: ref(null),
+    errorCode: ref(null),
+    fieldErrors: ref({}),
+    load: vi.fn(async () => {}),
+    refresh: vi.fn(async () => {}),
+    create: vi.fn(async () => null),
+    update: vi.fn(async () => null),
+    remove: vi.fn(async () => false),
     clearError: vi.fn()
   }
 
