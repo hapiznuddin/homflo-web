@@ -36,6 +36,13 @@ const vehiclesMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useVehicles', () => () => vehiclesMock.api)
 
+// The overview now loads alongside the vehicle list. This file checks
+// navigation, not overview aggregation, so provide a quiet empty state with no
+// real requests.
+const overviewMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useVehicleOverview', () => () => overviewMock.api)
+
 // Catatan: tidak ada pembersihan document.body di sini — drawer/sidebar
 // reka-ui merender sebagian node di body; menghapusnya saat komponen masih
 // hidup memicu race patch Vue (insertBefore null).
@@ -123,6 +130,25 @@ describe('navigasi Vehicles', () => {
       update: vi.fn(async () => item),
       remove: vi.fn(async () => true),
       clearError: vi.fn()
+    }
+
+    overviewMock.api = {
+      vehicleCount: ref(1),
+      scannedVehicleCount: ref(1),
+      overviewTruncated: ref(false),
+      serviceSchedules: ref([]),
+      servicesPending: ref(false),
+      servicesStarted: ref(true),
+      servicesError: ref(null),
+      servicesFailedVehicleIds: ref([]),
+      activeObligations: ref([]),
+      obligationsPending: ref(false),
+      obligationsStarted: ref(true),
+      obligationsError: ref(null),
+      obligationsFailedVehicleIds: ref([]),
+      refresh: vi.fn(async () => {}),
+      retryServices: vi.fn(async () => {}),
+      retryObligations: vi.fn(async () => {})
     }
 
     const list = await mountSuspended(VehiclesPage, { route: '/vehicles' })

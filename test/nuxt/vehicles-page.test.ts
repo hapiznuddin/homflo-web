@@ -2,6 +2,12 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { DOMWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
+import type { VehicleMaintenanceItem } from '~/types/vehicleMaintenance'
+import type { VehicleObligationItem } from '~/types/vehicleObligations'
+import type {
+  VehicleActiveObligationItem,
+  VehicleServiceScheduleItem
+} from '~/types/vehicleOverview'
 import type { VehicleItem } from '~/types/vehicles'
 import VehiclesPage from '~/pages/vehicles/index.vue'
 
@@ -48,6 +54,29 @@ const vehiclesMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useVehicles', () => () => vehiclesMock.api)
 
+interface MockOverviewState {
+  vehicleCount: Ref<number>
+  scannedVehicleCount: Ref<number>
+  overviewTruncated: Ref<boolean>
+  serviceSchedules: Ref<VehicleServiceScheduleItem[]>
+  servicesPending: Ref<boolean>
+  servicesStarted: Ref<boolean>
+  servicesError: Ref<string | null>
+  servicesFailedVehicleIds: Ref<string[]>
+  activeObligations: Ref<VehicleActiveObligationItem[]>
+  obligationsPending: Ref<boolean>
+  obligationsStarted: Ref<boolean>
+  obligationsError: Ref<string | null>
+  obligationsFailedVehicleIds: Ref<string[]>
+  refresh: ReturnType<typeof vi.fn>
+  retryServices: ReturnType<typeof vi.fn>
+  retryObligations: ReturnType<typeof vi.fn>
+}
+
+const overviewMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useVehicleOverview', () => () => overviewMock.api)
+
 function sampleItem(overrides: Partial<VehicleItem> = {}): VehicleItem {
   return {
     id: '01J0VEHICLE000000000000001',
@@ -63,6 +92,101 @@ function sampleItem(overrides: Partial<VehicleItem> = {}): VehicleItem {
     updated_at: '2026-01-15T00:00:00.000000Z',
     ...overrides
   }
+}
+
+function sampleService(
+  overrides: Partial<VehicleServiceScheduleItem['maintenance']> = {},
+  vehicleOverrides: Partial<VehicleItem> = {}
+): VehicleServiceScheduleItem {
+  const maintenance: VehicleMaintenanceItem = {
+    id: '01J0MAINTENANCE000000000001',
+    vehicle_id: '01J0VEHICLE000000000000001',
+    title: 'Servis rutin',
+    description: null,
+    scheduled_date: '2026-11-05',
+    completed_at: null,
+    odometer: 25000,
+    status: 'scheduled',
+    created_at: '2026-10-01T00:00:00.000000Z',
+    updated_at: '2026-10-01T00:00:00.000000Z',
+    ...overrides
+  }
+
+  return {
+    vehicle: sampleItem({ id: maintenance.vehicle_id, ...vehicleOverrides }),
+    maintenance
+  }
+}
+
+function sampleObligation(
+  overrides: Partial<VehicleObligationItem> = {},
+  vehicleOverrides: Partial<VehicleItem> = {}
+): VehicleActiveObligationItem {
+  const obligation: VehicleObligationItem = {
+    id: '01J0OBLIGATION000000000001',
+    vehicle_id: '01J0VEHICLE000000000000001',
+    obligation_type: {
+      id: '01J0TYPE0000000000000001',
+      code: 'tax',
+      name: 'Pajak Kendaraan',
+      is_system: true
+    },
+    title: 'Pajak tahunan',
+    description: null,
+    issued_date: '2026-10-01',
+    due_date: '2026-12-31',
+    amount: '250000.00',
+    status: 'active',
+    created_at: '2026-10-01T00:00:00.000000Z',
+    updated_at: '2026-10-01T00:00:00.000000Z',
+    ...overrides
+  }
+
+  return {
+    vehicle: sampleItem({ id: obligation.vehicle_id, ...vehicleOverrides }),
+    obligation
+  }
+}
+
+function setupOverviewState(
+  overrides: Partial<{
+    vehicleCount: number
+    scannedVehicleCount: number
+    overviewTruncated: boolean
+    serviceSchedules: VehicleServiceScheduleItem[]
+    servicesPending: boolean
+    servicesStarted: boolean
+    servicesError: string | null
+    servicesFailedVehicleIds: string[]
+    activeObligations: VehicleActiveObligationItem[]
+    obligationsPending: boolean
+    obligationsStarted: boolean
+    obligationsError: string | null
+    obligationsFailedVehicleIds: string[]
+  }> = {}
+): MockOverviewState {
+  const state: MockOverviewState = {
+    vehicleCount: ref(overrides.vehicleCount ?? 1),
+    scannedVehicleCount: ref(overrides.scannedVehicleCount ?? 1),
+    overviewTruncated: ref(overrides.overviewTruncated ?? false),
+    serviceSchedules: ref(overrides.serviceSchedules ?? []),
+    servicesPending: ref(overrides.servicesPending ?? false),
+    servicesStarted: ref(overrides.servicesStarted ?? true),
+    servicesError: ref(overrides.servicesError ?? null),
+    servicesFailedVehicleIds: ref(overrides.servicesFailedVehicleIds ?? []),
+    activeObligations: ref(overrides.activeObligations ?? []),
+    obligationsPending: ref(overrides.obligationsPending ?? false),
+    obligationsStarted: ref(overrides.obligationsStarted ?? true),
+    obligationsError: ref(overrides.obligationsError ?? null),
+    obligationsFailedVehicleIds: ref(overrides.obligationsFailedVehicleIds ?? []),
+    refresh: vi.fn(async () => {}),
+    retryServices: vi.fn(async () => {}),
+    retryObligations: vi.fn(async () => {})
+  }
+
+  overviewMock.api = state
+
+  return state
 }
 
 function setupVehiclesState(
@@ -90,6 +214,14 @@ function setupVehiclesState(
 
   vehiclesMock.api = state
 
+  // Keep the overview count aligned with the actual list used by each test.
+  // Tests that need populated/error overview sections replace this state
+  // explicitly after calling setupVehiclesState().
+  setupOverviewState({
+    vehicleCount: state.items.value.length,
+    scannedVehicleCount: state.items.value.length
+  })
+
   return state
 }
 
@@ -116,6 +248,19 @@ function bodyButton(label: string): DOMWrapper<Element> {
   }
 
   return new DOMWrapper(element)
+}
+
+function section(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
+  return wrapper.find(`[aria-label="${label}"]`)
+}
+
+function sectionButton(
+  wrapper: Awaited<ReturnType<typeof mountPage>>,
+  label: string,
+  buttonLabel: string
+) {
+  return section(wrapper, label).findAll('button')
+    .find(button => button.text() === buttonLabel)
 }
 
 describe('vehicles list page', () => {
@@ -307,5 +452,216 @@ describe('vehicles list page', () => {
 
     expect(authMock.logout).not.toHaveBeenCalled()
     expect(authMock.bootstrap.mock.calls.length).toBeLessThanOrEqual(1)
+  })
+
+  it('menampilkan jumlah kendaraan dari data yang benar-benar termuat', async () => {
+    setupVehiclesState({
+      items: [sampleItem(), sampleItem({ id: '01J0VEHICLE000000000000002', name: 'Mobil Avanza' })]
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('2 kendaraan tercatat')
+    expect(text).toContain('Motor Beat')
+    expect(text).toContain('Mobil Avanza')
+  })
+
+  it('menampilkan jadwal servis mendatang dengan identitas kendaraan, tanggal, dan odometer', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      serviceSchedules: [sampleService()],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+    const serviceSection = section(wrapper, 'Jadwal servis mendatang')
+    const text = serviceSection.text()
+
+    expect(text).toContain('Motor Beat')
+    expect(text).toContain('B 1234 XYZ')
+    expect(text).toContain('Servis rutin')
+    expect(text).toMatch(/Jadwal .*2026/)
+    expect(text).toContain('25.000 km')
+    expect(serviceSection.findAll('a').map(link => link.attributes('href'))).toContain(
+      '/vehicles/01J0VEHICLE000000000000001'
+    )
+  })
+
+  it('menampilkan kewajiban aktif, nominal opsional, dan konteks tanggal lewat tanpa status baru', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      activeObligations: [sampleObligation({ due_date: '2020-01-01' })],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+    const obligationSection = section(wrapper, 'Kewajiban aktif')
+    const text = obligationSection.text()
+
+    expect(text).toContain('Pajak Kendaraan')
+    expect(text).toContain('Pajak tahunan')
+    expect(text).toContain('Motor Beat')
+    expect(text).toContain('250.000')
+    expect(text).toContain('Tanggal sudah lewat')
+    expect(text).not.toContain('Terlambat')
+    expect(text).not.toContain('Overdue')
+    expect(obligationSection.findAll('a').map(link => link.attributes('href'))).toContain(
+      '/vehicles/01J0VEHICLE000000000000001'
+    )
+  })
+
+  it('menampilkan empty state terpisah untuk servis dan kewajiban', async () => {
+    setupVehiclesState({ items: [] })
+
+    const wrapper = await mountPage()
+
+    expect(section(wrapper, 'Jadwal servis mendatang').text()).toContain(
+      'Belum ada jadwal servis mendatang.'
+    )
+    expect(section(wrapper, 'Kewajiban aktif').text()).toContain('Belum ada kewajiban aktif.')
+    expect(wrapper.text()).toContain('Belum ada kendaraan tercatat.')
+  })
+
+  it('loading servis tidak menyembunyikan kewajiban yang sudah termuat', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      servicesPending: true,
+      servicesStarted: false,
+      activeObligations: [sampleObligation()],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+
+    expect(section(wrapper, 'Jadwal servis mendatang').find(
+      '[aria-label="Memuat jadwal servis mendatang"]'
+    ).exists()).toBe(true)
+    expect(section(wrapper, 'Kewajiban aktif').text()).toContain('Pajak tahunan')
+  })
+
+  it('error servis dapat di-retry tanpa memicu retry kewajiban', async () => {
+    setupVehiclesState()
+    const overview = setupOverviewState({
+      servicesError: 'Jadwal gagal dimuat.',
+      servicesFailedVehicleIds: ['01J0VEHICLE000000000000001'],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+    const retry = sectionButton(wrapper, 'Jadwal servis mendatang', 'Coba lagi')
+
+    expect(section(wrapper, 'Jadwal servis mendatang').text()).toContain(
+      'Jadwal servis mendatang belum dapat dimuat.'
+    )
+    expect(retry).toBeDefined()
+
+    await retry!.trigger('click')
+
+    expect(overview.retryServices).toHaveBeenCalledTimes(1)
+    expect(overview.retryObligations).not.toHaveBeenCalled()
+    expect(authMock.logout).not.toHaveBeenCalled()
+  })
+
+  it('error kewajiban dapat di-retry tanpa memicu retry servis', async () => {
+    setupVehiclesState()
+    const overview = setupOverviewState({
+      obligationsError: 'Kewajiban gagal dimuat.',
+      obligationsFailedVehicleIds: ['01J0VEHICLE000000000000001'],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+    const retry = sectionButton(wrapper, 'Kewajiban aktif', 'Coba lagi')
+
+    expect(section(wrapper, 'Kewajiban aktif').text()).toContain(
+      'Kewajiban aktif belum dapat dimuat.'
+    )
+    expect(retry).toBeDefined()
+
+    await retry!.trigger('click')
+
+    expect(overview.retryObligations).toHaveBeenCalledTimes(1)
+    expect(overview.retryServices).not.toHaveBeenCalled()
+  })
+
+  it('tidak menampilkan odometer atau nominal yang tidak dicatat', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      serviceSchedules: [sampleService({ odometer: null })],
+      activeObligations: [sampleObligation({ amount: null })],
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+
+    expect(section(wrapper, 'Jadwal servis mendatang').text()).not.toContain('km')
+    expect(section(wrapper, 'Kewajiban aktif').text()).not.toContain('Rp')
+  })
+
+  it('partial failure mempertahankan jadwal yang berhasil dan menjelaskan cakupan', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      serviceSchedules: [sampleService()],
+      servicesError: 'Kendaraan tidak ditemukan.',
+      servicesFailedVehicleIds: ['01J0VEHICLE000000000000002'],
+      scannedVehicleCount: 2
+    })
+
+    const wrapper = await mountPage()
+    const serviceSection = section(wrapper, 'Jadwal servis mendatang')
+
+    expect(serviceSection.text()).toContain('Servis rutin')
+    expect(serviceSection.text()).toContain('Sebagian jadwal servis belum dapat dimuat.')
+    expect(serviceSection.text()).toContain('1 dari 2 kendaraan gagal dimuat.')
+  })
+
+  it('menjelaskan bila ringkasan hanya memindai sebagian daftar kendaraan', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      vehicleCount: 25,
+      scannedVehicleCount: 20,
+      overviewTruncated: true
+    })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Ringkasan mencakup sebagian kendaraan.')
+    expect(wrapper.text()).toContain('20 kendaraan pertama dari 25 kendaraan')
+  })
+
+  it('membatasi pratinjau servis menjadi lima item dan menyebutkan sisanya', async () => {
+    setupVehiclesState()
+    setupOverviewState({
+      serviceSchedules: Array.from({ length: 6 }, (_, index) => sampleService({
+        id: `01J0MAINTENANCE00000000000${index}`,
+        title: `Servis ${index + 1}`,
+        scheduled_date: `2026-11-0${index + 1}`
+      })),
+      scannedVehicleCount: 1
+    })
+
+    const wrapper = await mountPage()
+    const serviceSection = section(wrapper, 'Jadwal servis mendatang')
+
+    expect(serviceSection.findAll('li')).toHaveLength(5)
+    expect(serviceSection.text()).toContain('Menampilkan 5 dari 6 jadwal terdekat.')
+  })
+
+  it('create kendaraan menyegarkan ringkasan setelah server mengonfirmasi', async () => {
+    setupVehiclesState()
+    const overview = setupOverviewState()
+
+    const wrapper = await mountPage()
+    overview.refresh.mockClear()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Tambah Kendaraan'))!.trigger('click')
+    await flush()
+
+    await new DOMWrapper(document.body.querySelector('#vehicle-name') as Element).setValue('Mobil Avanza')
+    await bodyButton('Tambah').trigger('click')
+    await flush()
+
+    expect(overview.refresh).toHaveBeenCalledTimes(1)
   })
 })
