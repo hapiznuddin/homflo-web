@@ -15,7 +15,7 @@ interface QuickAction {
 const quickActions: QuickAction[] = [
   { label: 'Tagihan', detail: 'Listrik, WiFi, & PDAM', caption: 'Jatuh Tempo', icon: 'i-lucide-zap', iconClass: 'text-amber-600', to: '/bills' },
   { label: 'Daftar Belanja', detail: 'Bahan dapur & harian', caption: 'Belanja', icon: 'i-lucide-shopping-bag', iconClass: 'text-rose-600' },
-  { label: 'Aset Rumah', detail: 'Elektronik & mebel', caption: 'Garansi', icon: 'i-lucide-house', iconClass: 'text-blue-600' },
+  { label: 'Aset Rumah', detail: 'Elektronik & mebel', caption: 'Garansi', icon: 'i-lucide-house', iconClass: 'text-blue-600', to: '/assets' },
   { label: 'Maintenance', detail: 'Cuci AC, filter & servis', caption: 'Jadwal', icon: 'i-lucide-puzzle', iconClass: 'text-emerald-700' },
   { label: 'Kendaraan & BBM', detail: 'Servis motor, oli, mesin, & bensin Shell/Pertamina', caption: 'Log Odo', icon: 'i-lucide-car-front', iconClass: 'text-violet-600', wide: true }
 ]

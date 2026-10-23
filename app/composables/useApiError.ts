@@ -27,6 +27,7 @@ const CODE_MESSAGES: Record<string, string> = {
   BUDGET_NOT_FOUND: 'Anggaran tidak ditemukan.',
   BUDGET_ALREADY_EXISTS: 'Anggaran untuk kategori dan periode tersebut sudah ada.',
   BILL_NOT_FOUND: 'Tagihan tidak ditemukan.',
+  ASSET_NOT_FOUND: 'Aset tidak ditemukan.',
   BILL_ALREADY_PAID: 'Tagihan ini sudah dibayar.',
   BILL_NOT_PAID: 'Hanya tagihan lunas yang bisa diarsipkan.',
   BILL_ARCHIVED: 'Tagihan sudah diarsipkan.',
@@ -75,7 +76,10 @@ const FIELD_LABELS: Record<string, string> = {
   due_date: 'tanggal jatuh tempo',
   due_day: 'tanggal jatuh tempo',
   frequency: 'frekuensi',
-  recurrence: 'pengulangan'
+  recurrence: 'pengulangan',
+  location: 'lokasi',
+  acquired_on: 'tanggal perolehan',
+  acquisition_cost: 'biaya perolehan'
 }
 
 function fieldLabel(field: string): string {

@@ -72,6 +72,21 @@ describe('readError kode transaksi', () => {
     )
   })
 
+  it('memetakan ASSET_NOT_FOUND dan label field aset', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'ASSET_NOT_FOUND' } } } }, 'x')
+    ).toBe('Aset tidak ditemukan.')
+    expect(translateMessage('The acquired_on does not match the format Y-m-d.')).toBe(
+      'Kolom tanggal perolehan harus berformat Y-m-d.'
+    )
+    expect(translateMessage('The acquisition_cost must be a number.')).toBe(
+      'Kolom biaya perolehan harus berupa angka.'
+    )
+    expect(translateMessage('The location must not be greater than 255 characters.')).toBe(
+      'Kolom lokasi maksimal 255 karakter.'
+    )
+  })
+
   it('memetakan BUDGET_NOT_FOUND dan BUDGET_ALREADY_EXISTS', () => {
     expect(
       readError({ data: { data: { success: false, error: { code: 'BUDGET_NOT_FOUND' } } } }, 'x')

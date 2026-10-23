@@ -40,6 +40,11 @@ const items: NavigationMenuItem[][] = [
   ],
   [
     {
+      label: 'Aset',
+      icon: 'i-lucide-package',
+      to: '/assets'
+    },
+    {
       label: 'Beranda',
       icon: 'i-lucide-house',
       disabled: true
