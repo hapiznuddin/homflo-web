@@ -58,6 +58,11 @@ const items: NavigationMenuItem[][] = [
       label: 'Kendaraan',
       icon: 'i-lucide-car',
       to: '/vehicles'
+    },
+    {
+      label: 'Properti',
+      icon: 'i-lucide-folder',
+      to: '/properties'
     }
   ],
   [
