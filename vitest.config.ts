@@ -46,6 +46,9 @@ export default defineConfig({
           name: 'e2e',
           environment: 'node',
           include: ['test/e2e/**/*.test.ts'],
+          // Authenticated E2E files share the dedicated database and fixed
+          // server ports, so serialize files within this project.
+          fileParallelism: false,
           testTimeout: 60000,
           hookTimeout: 60000
         }
