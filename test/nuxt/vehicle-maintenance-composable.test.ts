@@ -211,6 +211,28 @@ describe('useVehicleMaintenance', () => {
     expect(maintenance.items.value).toEqual([])
   })
 
+  it('create() 422 odometer di atas odometer kendaraan tampil pada field odometer', async () => {
+    const maintenance = await mountMaintenance()
+
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 422,
+      data: {
+        message: 'The service odometer must not be greater than the vehicle odometer.',
+        errors: {
+          odometer: ['The service odometer must not be greater than the vehicle odometer.']
+        }
+      }
+    })
+
+    const saved = await maintenance.create(formValues({ odometer: '9000' }))
+
+    expect(saved).toBeNull()
+    expect(maintenance.fieldErrors.value.odometer).toBe(
+      'Odometer servis tidak boleh melebihi odometer kendaraan saat ini.'
+    )
+    expect(maintenance.items.value).toEqual([])
+  })
+
   it('EMAIL_NOT_VERIFIED tampil sebagai pesan yang jelas', async () => {
     const maintenance = await mountMaintenance()
 

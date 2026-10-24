@@ -59,7 +59,9 @@ const MESSAGE_MAP: Record<string, string> = {
   'Unauthenticated.': 'Sesi berakhir. Silakan login kembali.',
   'CSRF token mismatch.': 'Sesi kedaluwarsa. Muat ulang halaman lalu coba lagi.',
   'This password reset token is invalid.': 'Tautan tidak valid atau sudah kedaluwarsa.',
-  'Please verify your email address before continuing.': 'Silakan verifikasi email Anda terlebih dahulu.'
+  'Please verify your email address before continuing.': 'Silakan verifikasi email Anda terlebih dahulu.',
+  'The service odometer must not be greater than the vehicle odometer.':
+    'Odometer servis tidak boleh melebihi odometer kendaraan saat ini.'
 }
 
 const FIELD_LABELS: Record<string, string> = {

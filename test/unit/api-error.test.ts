@@ -147,5 +147,8 @@ describe('readError/readErrorCode kode kendaraan (Phase 16.4.2)', () => {
     expect(translateMessage('The model must not be greater than 255 characters.')).toBe(
       'Kolom model maksimal 255 karakter.'
     )
+    expect(
+      translateMessage('The service odometer must not be greater than the vehicle odometer.')
+    ).toBe('Odometer servis tidak boleh melebihi odometer kendaraan saat ini.')
   })
 })
