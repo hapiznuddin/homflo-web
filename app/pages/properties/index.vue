@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { useToast } from '~/composables/useToast'
 import { useAuth } from '~/composables/useAuth'
 import { useProperties } from '~/composables/useProperties'
-import { formatYmd } from '~/utils/format'
 import UButton from '~/components/ui/button/index.vue'
 import UIcon from '~/components/ui/icon/index.vue'
 import USkeleton from '~/components/ui/skeleton/index.vue'
@@ -16,21 +15,21 @@ definePageMeta({ middleware: ['auth', 'verified'] })
 const route = useRoute()
 const toast = useToast()
 const auth = useAuth()
-const properties = useProperties()
-const { items, pending, submitting, error, fieldErrors } = properties
+const { items, pending, submitting, error, fieldErrors, load, clearError, create, refresh } = useProperties()
 const includeArchived = computed(() => route.query.include_archived === 'true')
 
-// Watch for route query changes to reload properties
 watch(
   () => route.query.include_archived,
-  async (newValue) => {
-    await properties.load()
+  async () => {
+    await load()
   },
   { deep: true }
 )
 
-async function onFormSubmit(values: any): Promise<void> {
-  const saved = await properties.create(values)
+const formOpen = ref(false)
+
+async function onFormSubmit(values: { name: string; type: string; address: string; ownership_status: string; description?: string; notes?: string }): Promise<void> {
+  const saved = await create(values)
 
   if (saved) {
     formOpen.value = false
@@ -39,22 +38,20 @@ async function onFormSubmit(values: any): Promise<void> {
       description: 'Data tersimpan.',
       color: 'success'
     })
-    await properties.refresh()
+    await refresh()
   }
 }
 
 function openCreate(): void {
-  properties.clearError()
+  clearError()
   formOpen.value = true
 }
 
-// Format status kepemilikan
 function ownershipStatusLabel(status: string | null): string {
   if (!status) return '—'
   return status === 'owned' ? 'Milik sendiri' : 'Disewa'
 }
 
-// Format tipe property
 function typeLabel(type: string | null): string {
   if (!type) return '—'
   const labels: Record<string, string> = {
@@ -70,7 +67,6 @@ function typeLabel(type: string | null): string {
 
 <template>
   <div class="flex w-full flex-col gap-4 sm:gap-5">
-    <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start justify-between gap-4">
       <div>
         <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Properti</h1>
@@ -88,14 +84,13 @@ function typeLabel(type: string | null): string {
       </div>
     </div>
 
-    <!-- Filter toggle -->
     <div v-if="auth.isHouseholdOwner.value" class="mt-3 flex items-center gap-2">
       <UButton
         v-if="!includeArchived"
         size="xs"
         color="neutral"
         variant="outline"
-        @click="route.query.include_archived = 'true'"
+        @click="route.query.include_archived = !includeArchived"
       >
         Tampilkan arsip
       </UButton>
@@ -104,13 +99,12 @@ function typeLabel(type: string | null): string {
         size="xs"
         color="neutral"
         variant="outline"
-        @click="route.query.include_archived = undefined"
+        @click="route.query.include_archived = ''"
       >
         Tampilkan aktif saja
       </UButton>
     </div>
 
-    <!-- Loading & Empty & Error -->
     <div v-if="pending && items.value.length === 0" class="flex flex-col gap-3" aria-label="Memuat properti">
       <USkeleton v-for="index in 3" :key="index" class="h-16" />
     </div>
@@ -121,12 +115,12 @@ function typeLabel(type: string | null): string {
       variant="soft"
       title="Data properti belum dapat dimuat."
       :description="error"
-      :actions="[{ label: 'Coba lagi', onClick: () => void properties.refresh() }]"
+      :actions="[{ label: 'Coba lagi', onClick: () => void refresh() }]"
     />
 
     <template v-else>
       <template v-if="items.value.length === 0">
-        <p class="text-sm text-muted center">Belum ada properti tercatat.</p>
+        <p class="text-sm text-muted text-center">Belum ada properti tercatat.</p>
         <UButton
           v-if="auth.isHouseholdOwner.value"
           color="neutral"
@@ -137,40 +131,25 @@ function typeLabel(type: string | null): string {
         >
           Tambah Property
         </UButton>
-      </template>
-
-      <template v-else>
-        <ul class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4">
+      </template>        <ul class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4">
           <li v-for="item in items" :key="item.id" class="flex w-full items-center gap-3 py-3 first:pt-3 last:pb-3">
-            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
-              <UIcon :name="item.archived_at ? 'i-lucide-archive' : 'i-lucide-folder'" class="size-4.5 text-default" />
-            </span>
-            <span class="min-w-0 flex-1 truncate">
-              <span class="block truncate text-sm font-medium text-highlighted">{{ item.name }}</span>
-              <span class="block text-xs text-muted">
-                Tipe: {{ typeLabel(item.type) }} · Kepemilikan: {{ ownershipStatusLabel(item.ownership_status) }}
-              </span>
-            </span>
-            <span v-if="item.archived_at" class="shrink-0 text-sm font-medium text-highlighted">Arsip</span>
-            <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-muted" aria-hidden="true" />
-
-            <NuxtLink
-              :to="`/properties/${item.id}`"
-              class="flex w-full items-center gap-3 py-3 text-left"
-            >
+            <NuxtLink :to="`/properties/${item.id}`" class="flex w-full items-center gap-3 text-left">
               <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
-                <UIcon name="i-lucide-folder" class="size-4.5 text-default" />
+                <UIcon :name="item.archived_at ? 'i-lucide-archive' : 'i-lucide-folder'" class="size-4.5 text-default" />
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-medium text-highlighted">{{ item.name }}</span>
                 <span class="block text-xs text-muted">
                   Alamat: {{ item.address }}
+                  <span v-if="item.archived_at" class="mx-1">·</span>
+                  <span v-if="item.archived_at" class="text-amber-600">Arsip</span>
                 </span>
               </span>
               <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-muted" aria-hidden="true" />
             </NuxtLink>
           </li>
         </ul>
+
 
         <UAlert
           v-if="error && items.value.length > 0"
@@ -180,7 +159,6 @@ function typeLabel(type: string | null): string {
           :description="error"
         />
       </template>
-    </template>
 
     <PropertyFormModal
       v-model:open="formOpen"
@@ -192,3 +170,4 @@ function typeLabel(type: string | null): string {
     />
   </div>
 </template>
+

@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useToast } from '~/composables/useToast'
 import { useAuth } from '~/composables/useAuth'
 import { useProperties } from '~/composables/useProperties'
-import { useRoute } from 'vue-router'
+import { readError } from '~/composables/useApiError'
 import { formatYmd } from '~/utils/format'
 import UButton from '~/components/ui/button/index.vue'
 import UIcon from '~/components/ui/icon/index.vue'
@@ -11,6 +11,7 @@ import USkeleton from '~/components/ui/skeleton/index.vue'
 import UAlert from '~/components/ui/alert/index.vue'
 import NuxtLink from 'nuxt/jsx'
 import PropertyFormModal from '~/components/properties/PropertyFormModal.vue'
+import type { PropertyItem } from '~/types/properties'
 
 definePageMeta({ middleware: ['auth', 'verified'] })
 
@@ -18,14 +19,14 @@ const route = useRoute()
 const toast = useToast()
 const auth = useAuth()
 const propertyId = computed(() => String(route.params.id ?? ''))
-const properties = useProperties()
-const { items, pending, submitting, error, fieldErrors, fetchOne } = properties
-const detail = ref<any>(null)
+const { submitting, error, fieldErrors, fetchOne, refresh, clearError } = useProperties()
+const detail = ref<PropertyItem | null>(null)
 const loading = ref(true)
 const notFound = ref(false)
 const confirmArchive = ref(false)
 const confirmRestore = ref(false)
 const detailRequestSeq = ref(0)
+const formOpen = ref(false)
 
 // Load property detail
 async function loadDetail(): Promise<void> {
@@ -39,7 +40,7 @@ async function loadDetail(): Promise<void> {
   confirmArchive.value = false
   confirmRestore.value = false
   formOpen.value = false
-  properties.clearError()
+  clearError()
 
   try {
     const fetched = await fetchOne(requestedId)
@@ -73,7 +74,7 @@ async function loadDetail(): Promise<void> {
 
   if (detail.value) {
     // Refresh list to update archived status
-    void properties.refresh()
+    void refresh()
   }
 }
 
@@ -113,6 +114,7 @@ function openArchiveConfirm(): void {
 async function handleArchive(): Promise<void> {
   if (!detail.value) return
   confirmArchive.value = false
+  clearError()
 
   const archived = await properties.archive(detail.value.id)
 
@@ -123,6 +125,10 @@ async function handleArchive(): Promise<void> {
       color: 'success'
     })
     await loadDetail()
+  } else {
+    if (error.value === 'Property belum dapat diarsipkan.') {
+      formOpen.value = true
+    }
   }
 }
 
@@ -135,6 +141,7 @@ function openRestoreConfirm(): void {
 async function handleRestore(): Promise<void> {
   if (!detail.value) return
   confirmRestore.value = false
+  clearError()
 
   const restored = await properties.restore(detail.value.id)
 
@@ -145,6 +152,10 @@ async function handleRestore(): Promise<void> {
       color: 'success'
     })
     await loadDetail()
+  } else {
+    if (error.value.includes('belum dapat dikembalikan') || error.value.includes('belum dapat di').length > 0) {
+      formOpen.value = true
+    }
   }
 }
 </script>
@@ -182,10 +193,8 @@ async function handleRestore(): Promise<void> {
         <UButton color="neutral" variant="outline" to="/properties">Kembali ke daftar</UButton>
         <UButton block @click="loadDetail()">Coba lagi</UButton>
       </div>
-    </div>
-
-    <!-- Detail content -->
-    <template v-else-if="detail">
+    </div>    <!-- Detail content -->
+    <template v-if="detail">
       <section class="flex flex-col gap-3 rounded-2xl border border-default bg-background p-4 sm:p-5">
         <div class="flex items-center gap-3">
           <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-elevated" aria-hidden="true">
@@ -206,8 +215,7 @@ async function handleRestore(): Promise<void> {
           </div>
           <div class="flex justify-between gap-3">
             <dt class="text-muted">Status Kepemilikan</dt>
-            <dd class="text-right font-medium {{ detail.ownership_status === 'owned' ? 'text-highlighted' : 'text-muted' }}">
-
+            <dd class="text-right font-medium" :class="[detail.ownership_status === 'owned' ? 'text-highlighted' : 'text-muted']">
               {{ ownershipStatusLabel(detail.ownership_status) }}
             </dd>
           </div>
@@ -272,9 +280,9 @@ async function handleRestore(): Promise<void> {
         </template>
 
         <!-- Non-owner: just view -->
-        <template v-else-if="!auth.isHouseholdOwner.value" class="text-xs text-muted">
+        <p v-else-if="!auth.isHouseholdOwner.value" class="text-xs text-muted">
           Anda anggota rumah tangga — properti hanya dapat dilihat. Pengelolaan dilakukan pemilik.
-        </template>
+        </p>
       </div>
 
       <!-- Archive/Restore confirmation modals -->
