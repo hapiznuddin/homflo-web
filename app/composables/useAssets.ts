@@ -1,5 +1,6 @@
 import type { AssetFormValues, AssetItem } from '~/types/assets'
 import { readError, readFieldErrors } from '~/composables/useApiError'
+import { ASSET_NO_PROPERTY } from '~/utils/assets'
 import { normalizeAmountInput } from '~/utils/transactions'
 
 // ---------------------------------------------------------------------------
@@ -100,8 +101,8 @@ export function useAssets() {
   /**
    * Payload create/update: hanya field yang didukung FormRequest backend.
    * Nullable field kosong dikirim sebagai null (bukan string kosong) dan
-   * biaya dinormalisasi ke dot-form. household_id/id/timestamp tidak
-   * pernah disertakan.
+   * biaya dinormalisasi ke dot-form. household_id/id/timestamp serta nested
+   * `property` tidak pernah disertakan.
    */
   function toPayload(values: AssetFormValues): Record<string, unknown> | null {
     const costInput = values.acquisition_cost.trim()
@@ -115,12 +116,17 @@ export function useAssets() {
       return null
     }
 
+    const propertyId = values.property_id?.trim() ?? EMPTY
+
     return {
       name: values.name.trim(),
       description: values.description.trim() === EMPTY ? null : values.description.trim(),
       location: values.location.trim() === EMPTY ? null : values.location.trim(),
       acquired_on: values.acquired_on === EMPTY ? null : values.acquired_on,
-      acquisition_cost: cost
+      acquisition_cost: cost,
+      // Selalu eksplisit: sentinel/kosong = detach, ID = relasi (termasuk
+      // ID archived yang sama pada edit sehingga backend menganggap unchanged).
+      property_id: propertyId === EMPTY || propertyId === ASSET_NO_PROPERTY ? null : propertyId
     }
   }
 

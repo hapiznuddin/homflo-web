@@ -98,6 +98,8 @@ function assetItem(overrides: Partial<AssetItem> = {}): AssetItem {
     acquisition_cost: '4500000.00',
     created_at: '2026-01-15T00:00:00.000000Z',
     updated_at: '2026-01-15T00:00:00.000000Z',
+    property_id: null,
+    property: null,
     ...overrides
   }
 }

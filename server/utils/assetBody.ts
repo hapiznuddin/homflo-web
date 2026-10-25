@@ -7,14 +7,16 @@ export const ASSET_ALLOWED_KEYS = [
   'description',
   'location',
   'acquired_on',
-  'acquisition_cost'
+  'acquisition_cost',
+  'property_id'
 ] as const
 
 const NULLABLE_KEYS = new Set<string>([
   'description',
   'location',
   'acquired_on',
-  'acquisition_cost'
+  'acquisition_cost',
+  'property_id'
 ])
 
 // Filter murni (tanpa dependensi Nitro) agar kontrak whitelist dapat

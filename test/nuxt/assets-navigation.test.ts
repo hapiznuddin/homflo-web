@@ -36,6 +36,10 @@ const assetsMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useAssets', () => () => assetsMock.api)
 
+const propertiesMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useProperties', () => () => propertiesMock.api)
+
 // Catatan: tidak ada pembersihan document.body di sini — drawer/sidebar
 // reka-ui merender sebagian node di body; menghapusnya saat komponen masih
 // hidup memicu race patch Vue (insertBefore null).
@@ -57,6 +61,8 @@ function assetItem(overrides: Partial<AssetItem> = {}): AssetItem {
     acquisition_cost: '4500000.00',
     created_at: '2026-01-15T00:00:00.000000Z',
     updated_at: '2026-01-15T00:00:00.000000Z',
+    property_id: null,
+    property: null,
     ...overrides
   }
 }
@@ -135,6 +141,14 @@ describe('navigasi Assets', () => {
       create: vi.fn(async () => item),
       update: vi.fn(async () => item),
       remove: vi.fn(async () => true),
+      clearError: vi.fn()
+    }
+
+    propertiesMock.api = {
+      items: ref([]),
+      pending: ref(false),
+      error: ref(null),
+      load: vi.fn(async () => {}),
       clearError: vi.fn()
     }
 

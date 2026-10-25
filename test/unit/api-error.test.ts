@@ -174,5 +174,8 @@ describe('readError/readErrorCode kode property (Phase 16.5.4.1)', () => {
     expect(translateMessage('The ownership_status field is required.')).toBe(
       'Kolom status kepemilikan wajib diisi.'
     )
+    expect(translateMessage('The property_id must be a valid ULID.')).toBe(
+      'Kolom properti harus berupa ID yang valid.'
+    )
   })
 })

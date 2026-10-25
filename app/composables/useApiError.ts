@@ -103,6 +103,7 @@ const FIELD_LABELS: Record<string, string> = {
   location: 'lokasi',
   acquired_on: 'tanggal perolehan',
   acquisition_cost: 'biaya perolehan',
+  property_id: 'properti',
   asset_id: 'aset',
   brand: 'merek',
   model: 'model',

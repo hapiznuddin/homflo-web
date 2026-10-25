@@ -1,8 +1,11 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import USelect from '@nuxt/ui/components/Select.vue'
 import { DOMWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
+import AssetFormModal from '~/components/assets/AssetFormModal.vue'
 import type { AssetItem } from '~/types/assets'
+import type { PropertyItem } from '~/types/properties'
 import DetailPage from '~/pages/assets/[id].vue'
 
 // Halaman detail /assets/[id]: deep-linkable lewat GET /api/assets/{id},
@@ -57,6 +60,50 @@ const assetsMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useAssets', () => () => assetsMock.api)
 
+const propertiesMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useProperties', () => () => propertiesMock.api)
+
+const PROPERTY_ID = '01J0PROPERTY00000000000001'
+const ARCHIVED_PROPERTY_ID = '01J0PROPERTY00000000000002'
+
+function propertyItem(overrides: Partial<PropertyItem> = {}): PropertyItem {
+  return {
+    id: PROPERTY_ID,
+    household_id: 'h1',
+    name: 'Rumah utama',
+    type: 'house',
+    address: 'Jl. Mawar 1',
+    description: null,
+    ownership_status: 'owned',
+    notes: null,
+    archived_at: null,
+    created_at: '2026-10-01T00:00:00.000000Z',
+    updated_at: '2026-10-01T00:00:00.000000Z',
+    ...overrides
+  }
+}
+
+function setupPropertiesState(
+  overrides: {
+    items?: PropertyItem[]
+    pending?: boolean
+    error?: string | null
+  } = {}
+): { items: Ref<PropertyItem[]>, pending: Ref<boolean>, error: Ref<string | null>, load: ReturnType<typeof vi.fn>, clearError: ReturnType<typeof vi.fn> } {
+  const state = {
+    items: ref(overrides.items ?? [propertyItem()]),
+    pending: ref(overrides.pending ?? false),
+    error: ref(overrides.error ?? null),
+    load: vi.fn(async () => {}),
+    clearError: vi.fn()
+  }
+
+  propertiesMock.api = state
+
+  return state
+}
+
 function assetItem(overrides: Partial<AssetItem> = {}): AssetItem {
   return {
     id: ASSET_ID,
@@ -68,6 +115,8 @@ function assetItem(overrides: Partial<AssetItem> = {}): AssetItem {
     acquisition_cost: '4500000.00',
     created_at: '2026-01-15T00:00:00.000000Z',
     updated_at: '2026-01-15T00:00:00.000000Z',
+    property_id: null,
+    property: null,
     ...overrides
   }
 }
@@ -79,6 +128,8 @@ function setupAssetsState(
     remove?: ReturnType<typeof vi.fn>
   } = {}
 ): MockAssetsApi {
+  setupPropertiesState()
+
   const api: MockAssetsApi = {
     items: ref([assetItem()]),
     pending: ref(false),
@@ -158,6 +209,49 @@ describe('asset detail page', () => {
     expect(text).toContain('4.500.000')
     expect(wrapper.find('a[href="/assets"]').exists()).toBe(true)
     expect(authMock.logout).not.toHaveBeenCalled()
+  })
+
+  it('menampilkan nama Property aktif sebagai tautan detail Property', async () => {
+    setupAssetsState({
+      fetchOne: vi.fn(async () => assetItem({
+        property_id: PROPERTY_ID,
+        property: { id: PROPERTY_ID, name: 'Rumah utama', archived_at: null }
+      }))
+    })
+
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('Rumah utama')
+    expect(wrapper.find(`a[href="/properties/${PROPERTY_ID}"]`).exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Diarsipkan')
+  })
+
+  it('relasi Property archived tetap tampil dengan nama dan badge Diarsipkan', async () => {
+    setupAssetsState({
+      fetchOne: vi.fn(async () => assetItem({
+        property_id: ARCHIVED_PROPERTY_ID,
+        property: {
+          id: ARCHIVED_PROPERTY_ID,
+          name: 'Rumah lama',
+          archived_at: '2026-10-01T00:00:00Z'
+        }
+      }))
+    })
+
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('Rumah lama')
+    expect(wrapper.text()).toContain('Diarsipkan')
+    expect(wrapper.find(`a[href="/properties/${ARCHIVED_PROPERTY_ID}"]`).exists()).toBe(true)
+  })
+
+  it('Asset tanpa Property menampilkan label Tanpa properti', async () => {
+    setupAssetsState()
+
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('Tanpa properti')
+    expect(wrapper.text()).not.toContain('Diarsipkan')
   })
 
   it('ASSET_NOT_FOUND / 404 menampilkan state not-found jujur tanpa retry', async () => {
@@ -265,13 +359,77 @@ describe('asset detail page', () => {
       description: 'Dua pintu',
       location: 'Dapur',
       acquired_on: '2026-01-15',
-      acquisition_cost: '4500000.00'
+      acquisition_cost: '4500000.00',
+      property_id: 'none'
     })
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Aset diubah' })
     )
     // Detail dimuat ulang setelah simpan.
     expect(state.fetchOne.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('edit memuat Property aktif eksplisit dan mempertahankan relasi archived saat disimpan', async () => {
+    const state = setupAssetsState({
+      fetchOne: vi.fn(async () => assetItem({
+        property_id: ARCHIVED_PROPERTY_ID,
+        property: {
+          id: ARCHIVED_PROPERTY_ID,
+          name: 'Rumah lama',
+          archived_at: '2026-10-01T00:00:00Z'
+        }
+      }))
+    })
+    const properties = setupPropertiesState()
+
+    const wrapper = await mountDetail()
+
+    await actionButton(wrapper, 'Ubah')!.trigger('click')
+    await flush()
+
+    expect(properties.load).toHaveBeenCalledWith({ include_archived: false }, true)
+
+    const modal = wrapper.findComponent(AssetFormModal)
+    const select = modal.findAllComponents(USelect)[0] as unknown as {
+      props: (name: string) => unknown
+    }
+
+    expect(select.props('modelValue')).toBe(ARCHIVED_PROPERTY_ID)
+    expect(select.props('items')).toContainEqual({
+      label: 'Rumah lama (diarsipkan)',
+      value: ARCHIVED_PROPERTY_ID
+    })
+
+    await new DOMWrapper(document.body.querySelector('#asset-name') as Element).setValue('Kulkas baru')
+    await bodyButton('Simpan').trigger('click')
+    await flush()
+
+    expect(state.update).toHaveBeenCalledWith(ASSET_ID, expect.objectContaining({
+      name: 'Kulkas baru',
+      property_id: ARCHIVED_PROPERTY_ID
+    }))
+  })
+
+  it('409 PROPERTY_ARCHIVED saat edit menjaga form tetap terbuka', async () => {
+    const state = setupAssetsState()
+
+    state.update.mockImplementation(async () => {
+      state.error.value = 'Properti sudah diarsipkan. Pulihkan terlebih dahulu sebelum mengubahnya.'
+
+      return null
+    })
+
+    const wrapper = await mountDetail()
+
+    await actionButton(wrapper, 'Ubah')!.trigger('click')
+    await flush()
+    await bodyButton('Simpan').trigger('click')
+    await flush()
+
+    expect(bodyText()).toContain('Data belum dapat disimpan.')
+    expect(bodyText()).toContain('Properti sudah diarsipkan.')
+    expect(bodyText()).toContain('Ubah aset')
+    expect(toastMock.add).not.toHaveBeenCalled()
   })
 
   it('error update tampil di modal tanpa toast sukses palsu', async () => {

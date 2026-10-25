@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import AssetFormModal from '~/components/assets/AssetFormModal.vue'
 import type { AssetFormValues, AssetItem } from '~/types/assets'
+import {
+  assetPropertyLabel,
+  isAssetPropertyArchived
+} from '~/utils/assets'
 import { formatRupiah, formatYmd } from '~/utils/format'
 
 // Detail aset deep-linkable (/assets/{id}), mandiri terhadap daftar.
@@ -14,7 +18,13 @@ const route = useRoute()
 const toast = useToast()
 const auth = useAuth()
 const assets = useAssets()
+const properties = useProperties()
 const { submitting, error, fieldErrors } = assets
+const {
+  items: propertyItems,
+  pending: propertiesPending,
+  error: propertiesError
+} = properties
 
 const assetId = computed(() => String(route.params.id ?? ''))
 
@@ -77,13 +87,25 @@ async function loadDetail(): Promise<void> {
   }
 }
 
+// Selalu minta daftar aktif secara eksplisit; jangan mewarisi filter arsip
+// dari state global halaman Property.
+function loadActiveProperties(force = false): void {
+  properties.clearError()
+  void properties.load({ include_archived: false }, force)
+}
+
 function openEdit(): void {
   if (!detail.value) {
     return
   }
 
   assets.clearError()
+  loadActiveProperties(true)
   formOpen.value = true
+}
+
+function retryProperties(): void {
+  loadActiveProperties(true)
 }
 
 async function onFormSubmit(values: AssetFormValues): Promise<void> {
@@ -187,6 +209,26 @@ await loadDetail()
         </div>
 
         <dl class="flex flex-col gap-2 text-sm">
+          <div class="flex items-start justify-between gap-3">
+            <dt class="shrink-0 text-muted">Properti</dt>
+            <dd class="min-w-0 text-right font-medium">
+              <span v-if="detail.property" class="inline-flex flex-wrap items-center justify-end gap-1.5">
+                <NuxtLink
+                  :to="`/properties/${detail.property.id}`"
+                  class="min-w-0 break-words underline-offset-4 hover:underline"
+                >
+                  {{ detail.property.name }}
+                </NuxtLink>
+                <span
+                  v-if="isAssetPropertyArchived(detail.property)"
+                  class="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"
+                >
+                  Diarsipkan
+                </span>
+              </span>
+              <span v-else class="text-muted">{{ assetPropertyLabel(detail.property) }}</span>
+            </dd>
+          </div>
           <div class="flex justify-between gap-3">
             <dt class="text-muted">Lokasi</dt>
             <dd class="text-right font-medium">{{ detail.location ?? 'Tidak dicatat' }}</dd>
@@ -242,7 +284,11 @@ await loadDetail()
       :submitting="submitting"
       :error="error"
       :field-errors="fieldErrors"
+      :properties="propertyItems"
+      :properties-pending="propertiesPending"
+      :properties-error="propertiesError"
       @submit="onFormSubmit"
+      @retry-properties="retryProperties"
     />
   </div>
 </template>

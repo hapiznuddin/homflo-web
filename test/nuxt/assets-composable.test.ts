@@ -49,6 +49,8 @@ function assetItem(overrides: Partial<AssetItem> = {}): AssetItem {
     acquisition_cost: '4500000.00',
     created_at: '2026-01-15T00:00:00.000000Z',
     updated_at: '2026-01-15T00:00:00.000000Z',
+    property_id: null,
+    property: null,
     ...overrides
   }
 }
@@ -60,6 +62,7 @@ function formValues(overrides: Partial<AssetFormValues> = {}): AssetFormValues {
     location: 'Dapur',
     acquired_on: '2026-01-15',
     acquisition_cost: '4500000',
+    property_id: 'none',
     ...overrides
   }
 }
@@ -91,6 +94,28 @@ describe('useAssets', () => {
     expect(assets.items.value).toEqual([assetItem()])
     expect(assets.pending.value).toBe(false)
     expect(assets.error.value).toBeNull()
+  })
+
+  it('load() mempertahankan property_id dan nested summary archived dari response', async () => {
+    const assets = await mountAssets()
+    const propertyId = '01J0PROPERTY00000000000001'
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: [assetItem({
+        property_id: propertyId,
+        property: { id: propertyId, name: 'Rumah lama', archived_at: '2026-10-01T00:00:00Z' }
+      })]
+    })
+
+    await assets.load()
+
+    expect(assets.items.value[0]?.property_id).toBe(propertyId)
+    expect(assets.items.value[0]?.property).toEqual({
+      id: propertyId,
+      name: 'Rumah lama',
+      archived_at: '2026-10-01T00:00:00Z'
+    })
   })
 
   it('load() ulang tanpa force memakai data segar (dedup)', async () => {
@@ -135,7 +160,8 @@ describe('useAssets', () => {
     const saved = await assets.create({
       ...formValues(),
       household_id: 'h-evil',
-      id: 'evil'
+      id: 'evil',
+      property: { id: '01J0PROPERTY00000000000001', name: 'Rumah utama', archived_at: null }
     } as unknown as AssetFormValues)
 
     expect(saved?.name).toBe('Kulkas dapur')
@@ -149,9 +175,11 @@ describe('useAssets', () => {
       description: 'Dua pintu',
       location: 'Dapur',
       acquired_on: '2026-01-15',
-      acquisition_cost: '4500000'
+      acquisition_cost: '4500000',
+      property_id: null
     })
     expect(options.body).not.toHaveProperty('household_id')
+    expect(options.body).not.toHaveProperty('property')
     expect(options.body).not.toHaveProperty('id')
     expect(options.body).not.toHaveProperty('created_at')
     // POST + refresh GET.
@@ -179,8 +207,127 @@ describe('useAssets', () => {
       description: null,
       location: null,
       acquired_on: null,
-      acquisition_cost: '4500000.50'
+      acquisition_cost: '4500000.50',
+      property_id: null
     })
+  })
+
+  it('create() mengirim property_id aktif yang dipilih', async () => {
+    const assets = await mountAssets()
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: assetItem({ property_id: '01J0PROPERTY00000000000001', property: {
+        id: '01J0PROPERTY00000000000001',
+        name: 'Rumah utama',
+        archived_at: null
+      } })
+    })
+    fetchMock.mockResolvedValue({ success: true, data: [] })
+
+    await assets.create(formValues({ property_id: '01J0PROPERTY00000000000001' }))
+
+    const options = fetchMock.mock.calls[0]?.[1] as { body: Record<string, unknown> }
+
+    expect(options.body.property_id).toBe('01J0PROPERTY00000000000001')
+  })
+
+  it('update() "Tanpa properti" mengirim null untuk detach', async () => {
+    const assets = await mountAssets()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: assetItem() })
+    fetchMock.mockResolvedValue({ success: true, data: [] })
+
+    await assets.update('01J0ASSET0000000000000001', formValues({ property_id: 'none' }))
+
+    const options = fetchMock.mock.calls[0]?.[1] as { body: Record<string, unknown> }
+
+    expect(options.body.property_id).toBeNull()
+  })
+
+  it('update() relasi archived yang sama mempertahankan property_id tanpa detach', async () => {
+    const assets = await mountAssets()
+    const propertyId = '01J0PROPERTY00000000000001'
+
+    fetchMock.mockResolvedValueOnce({
+      success: true,
+      data: assetItem({
+        property_id: propertyId,
+        property: { id: propertyId, name: 'Rumah lama', archived_at: '2026-10-01T00:00:00Z' }
+      })
+    })
+    fetchMock.mockResolvedValue({ success: true, data: [] })
+
+    await assets.update('01J0ASSET0000000000000001', formValues({ property_id: propertyId }))
+
+    const options = fetchMock.mock.calls[0]?.[1] as { body: Record<string, unknown> }
+
+    expect(options.body.property_id).toBe(propertyId)
+  })
+
+  it('update() 409 PROPERTY_ARCHIVED menampilkan arahan restore tanpa mengubah list', async () => {
+    const assets = await mountAssets()
+
+    await assets.load()
+    fetchMock.mockReset()
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 409,
+      data: {
+        data: {
+          success: false,
+          error: { code: 'PROPERTY_ARCHIVED', message: 'Property is archived.' }
+        }
+      }
+    })
+
+    const saved = await assets.update(
+      '01J0ASSET0000000000000001',
+      formValues({ property_id: '01J0PROPERTY00000000000002' })
+    )
+
+    expect(saved).toBeNull()
+    expect(assets.error.value).toBe(
+      'Properti sudah diarsipkan. Pulihkan terlebih dahulu sebelum mengubahnya.'
+    )
+    expect(assets.items.value).toHaveLength(1)
+  })
+
+  it('create() 404 PROPERTY_NOT_FOUND tampil jelas tanpa menyentuh auth state', async () => {
+    const assets = await mountAssets()
+
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 404,
+      data: {
+        data: {
+          success: false,
+          error: { code: 'PROPERTY_NOT_FOUND', message: 'Property not found.' }
+        }
+      }
+    })
+
+    const saved = await assets.create(formValues({ property_id: '01J0PROPERTY00000000000009' }))
+
+    expect(saved).toBeNull()
+    expect(assets.error.value).toBe('Properti tidak ditemukan.')
+    expect(assets.items.value).toEqual([])
+  })
+
+  it('create() 422 property_id memetakan field error ke label properti', async () => {
+    const assets = await mountAssets()
+
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 422,
+      data: {
+        message: 'The property id must be a valid ULID.',
+        errors: { property_id: ['The property_id must be a valid ULID.'] }
+      }
+    })
+
+    const saved = await assets.create(formValues({ property_id: 'bukan-ulid' }))
+
+    expect(saved).toBeNull()
+    expect(assets.fieldErrors.value.property_id).toBe('Kolom properti harus berupa ID yang valid.')
+    expect(assets.error.value).toBe('Kolom properti harus berupa ID yang valid.')
   })
 
   it('create() menolak biaya tidak valid tanpa mengirim request', async () => {
@@ -250,7 +397,8 @@ describe('useAssets', () => {
       description: 'Dua pintu',
       location: 'Dapur',
       acquired_on: '2026-01-15',
-      acquisition_cost: '4500000'
+      acquisition_cost: '4500000',
+      property_id: null
     })
     expect(options.body).not.toHaveProperty('household_id')
   })

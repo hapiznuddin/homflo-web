@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import AssetFormModal from '~/components/assets/AssetFormModal.vue'
 import type { AssetFormValues, AssetItem } from '~/types/assets'
+import {
+  assetPropertyLabel,
+  isAssetPropertyArchived
+} from '~/utils/assets'
 import { formatRupiah, formatYmd } from '~/utils/format'
 
 // Daftar aset rumah tangga: semua member boleh membaca; create hanya
@@ -13,14 +17,32 @@ definePageMeta({ middleware: ['auth', 'onboarding'] })
 const toast = useToast()
 const auth = useAuth()
 const assets = useAssets()
+const properties = useProperties()
 const { items, pending, submitting, error, fieldErrors } = assets
+const {
+  items: propertyItems,
+  pending: propertiesPending,
+  error: propertiesError
+} = properties
 
 const formOpen = ref(false)
 const isOwner = computed(() => auth.isHouseholdOwner.value)
 
+// Selector hanya boleh menampilkan Property aktif. Jangan memakai load()
+// tanpa argumen karena filter arsip dari halaman Property dapat terwarisi.
+function loadActiveProperties(force = false): void {
+  properties.clearError()
+  void properties.load({ include_archived: false }, force)
+}
+
 function openCreate(): void {
   assets.clearError()
+  loadActiveProperties(true)
   formOpen.value = true
+}
+
+function retryProperties(): void {
+  loadActiveProperties(true)
 }
 
 async function onFormSubmit(values: AssetFormValues): Promise<void> {
@@ -113,6 +135,16 @@ await assets.load()
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-medium text-highlighted">{{ item.name }}</span>
               <span class="block truncate text-xs text-muted">{{ detailLine(item) }}</span>
+              <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
+                <UIcon name="i-lucide-folder" class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+                <span class="truncate text-muted">{{ assetPropertyLabel(item.property) }}</span>
+                <span
+                  v-if="isAssetPropertyArchived(item.property)"
+                  class="shrink-0 rounded-full bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+                >
+                  Diarsipkan
+                </span>
+              </span>
             </span>
             <span v-if="costLabel(item)" class="shrink-0 text-sm font-medium text-highlighted">
               {{ costLabel(item) }}
@@ -137,7 +169,11 @@ await assets.load()
       :submitting="submitting"
       :error="error"
       :field-errors="fieldErrors"
+      :properties="propertyItems"
+      :properties-pending="propertiesPending"
+      :properties-error="propertiesError"
       @submit="onFormSubmit"
+      @retry-properties="retryProperties"
     />
   </div>
 </template>
