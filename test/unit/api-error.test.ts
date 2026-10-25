@@ -152,3 +152,27 @@ describe('readError/readErrorCode kode kendaraan (Phase 16.4.2)', () => {
     ).toBe('Odometer servis tidak boleh melebihi odometer kendaraan saat ini.')
   })
 })
+
+describe('readError/readErrorCode kode property (Phase 16.5.4.1)', () => {
+  it('memetakan PROPERTY_NOT_FOUND dan PROPERTY_ARCHIVED', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'PROPERTY_NOT_FOUND' } } } }, 'x')
+    ).toBe('Properti tidak ditemukan.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'PROPERTY_ARCHIVED' } } } }, 'x')
+    ).toBe('Properti sudah diarsipkan. Pulihkan terlebih dahulu sebelum mengubahnya.')
+  })
+
+  it('readErrorCode membaca kode PROPERTY_ARCHIVED dari envelope 409 Nitro', () => {
+    expect(
+      readErrorCode({ statusCode: 409, data: { data: { success: false, error: { code: 'PROPERTY_ARCHIVED' } } } })
+    ).toBe('PROPERTY_ARCHIVED')
+  })
+
+  it('memetakan label field property', () => {
+    expect(translateMessage('The address field is required.')).toBe('Kolom alamat wajib diisi.')
+    expect(translateMessage('The ownership_status field is required.')).toBe(
+      'Kolom status kepemilikan wajib diisi.'
+    )
+  })
+})

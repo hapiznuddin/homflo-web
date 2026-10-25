@@ -1,30 +1,34 @@
-import type { PropertyItem, PropertyFormValues } from '~/types/properties'
+import type { PropertyFilters, PropertyFormValues, PropertyItem } from '~/types/properties'
 import { readError, readErrorCode, readFieldErrors } from '~/composables/useApiError'
 
 // ---------------------------------------------------------------------------
 // Katalog Property: Browser -> Nuxt /api/properties -> Laravel -> PostgreSQL.
-// List default hanya menampilkan Property aktif (tanpa include_archived).
-// include_archived=true menampilkan Property aktif + arsip.
-// household_id TIDAK PERNAH dibentuk di sini: ownership backend berasal dari
-// konteks session, dan proxy hanya meneruskan field yang diizinkan.
+// List default hanya Property aktif; include_archived=true mengembalikan
+// aktif + arsip (bukan hanya arsip). household_id TIDAK PERNAH dibentuk di
+// sini: ownership berasal dari konteks session, dan proxy hanya meneruskan
+// field yang diizinkan. Tidak ada endpoint DELETE permanen.
 // ---------------------------------------------------------------------------
+
+const VALID_TYPES = ['house', 'apartment', 'land', 'shophouse', 'other'] as const
+const VALID_OWNERSHIP = ['owned', 'rented'] as const
 
 export function useProperties() {
   const auth = useAuth()
   const items = useState<PropertyItem[]>('properties-items', () => [])
+  const filters = useState<PropertyFilters>('properties-filters', () => ({}))
   const pending = useState<boolean>('properties-pending', () => false)
   const submitting = useState<boolean>('properties-submitting', () => false)
   const error = useState<string | null>('properties-error', () => null)
   const errorCode = useState<string | null>('properties-error-code', () => null)
   const fieldErrors = useState<Record<string, string>>('properties-field-errors', () => ({}))
-  const inflight = useState<boolean>('properties-inflight', () => false)
+  const inflightKey = useState<string | null>('properties-inflight', () => null)
   const requestSeq = useState<number>('properties-request-seq', () => 0)
   const scope = useState<string>('properties-scope', () => '')
   const scopeEpoch = useState<number>('properties-scope-epoch', () => 0)
   const currentScope = computed(() => auth.household.value?.id ?? '')
 
   // Bind ke household saat sesi berganti — buang cache lama dan naikkan
-  // request sequence agar respons lama tidak bisa masuk ke sesi baru.
+  // epoch agar respons lama tidak bisa masuk ke sesi baru.
   watch(currentScope, (nextScope) => {
     if (scope.value === nextScope) {
       return
@@ -33,19 +37,19 @@ export function useProperties() {
     scope.value = nextScope
     scopeEpoch.value += 1
     items.value = []
+    filters.value = {}
     pending.value = false
     submitting.value = false
     error.value = null
     errorCode.value = null
     fieldErrors.value = {}
-    inflight.value = false
+    inflightKey.value = null
     requestSeq.value += 1
   }, { immediate: true, flush: 'sync' })
 
   function requestHeaders(): Record<string, string> {
-    // Server-side rendering has no browser cookies of its own: forward
-    // them explicitly so SSR resolves the real session instead of always
-    // looking like a guest (same pattern as useAssets).
+    // Server-side rendering tidak membawa cookie browser secara otomatis:
+    // teruskan eksplisit agar SSR melihat session yang sebenarnya.
     const headers: Record<string, string> = { Accept: 'application/json' }
 
     if (import.meta.server) {
@@ -59,26 +63,25 @@ export function useProperties() {
     return headers
   }
 
-  async function load(force = false): Promise<void> {
-    if (inflight.value) {
-      // Non-force loads deduplicate. A forced load (e.g. after a confirmed
-      // mutation) supersedes the older request so its late response cannot
-      // overwrite newer data.
-      if (!force) {
-        return
-      }
+  function filtersKey(active: PropertyFilters): string {
+    return active.include_archived ? 'archived' : 'active'
+  }
 
-      requestSeq.value += 1
-      inflight.value = false
-      pending.value = false
-    }
+  async function load(next?: PropertyFilters, force = false): Promise<void> {
+    const active: PropertyFilters = { ...(next ?? filters.value) }
+    const key = filtersKey(active)
 
-    // Already have fresh data.
-    if (!force && items.value.length > 0 && !error.value) {
+    if (inflightKey.value === key) {
       return
     }
 
-    inflight.value = true
+    // Data untuk filter yang sama sudah segar.
+    if (!force && items.value.length > 0 && filtersKey(filters.value) === key && !error.value) {
+      return
+    }
+
+    filters.value = active
+    inflightKey.value = key
     pending.value = true
     error.value = null
     errorCode.value = null
@@ -90,9 +93,9 @@ export function useProperties() {
     try {
       const params: Record<string, string> = {}
 
-      // Kontrak backend: include_archived=true mengembalikan property aktif +
-      // terarsip (bukan hanya arsip); tanpa param = hanya aktif.
-      if ($route.query.include_archived) {
+      // Kontrak backend: include_archived=true mengembalikan Property aktif +
+      // terarsip; tanpa param = hanya aktif.
+      if (active.include_archived) {
         params.include_archived = 'true'
       }
 
@@ -107,7 +110,7 @@ export function useProperties() {
       }
 
       // Server route meneruskan envelope Laravel apa adanya; unwrap di sini.
-      // Daftar property TANPA pagination (kontrak backend: array flat).
+      // Daftar Property TANPA pagination (kontrak backend: array flat).
       items.value = envelope.data
     } catch (err) {
       if (current !== requestSeq.value) {
@@ -115,16 +118,17 @@ export function useProperties() {
       }
 
       error.value = readError(err, 'Data property belum dapat dimuat.')
+      errorCode.value = readErrorCode(err)
     } finally {
       if (current === requestSeq.value) {
         pending.value = false
-        inflight.value = false
+        inflightKey.value = null
       }
     }
   }
 
   async function refresh(): Promise<void> {
-    await load(true)
+    await load(filters.value, true)
   }
 
   async function fetchOne(id: string): Promise<PropertyItem> {
@@ -139,13 +143,12 @@ export function useProperties() {
     return envelope.data
   }
 
-  // Server sudah mengonfirmasi create/update: terapkan hasilnya ke daftar
-  // sebelum refresh agar UI tetap benar bila refresh berikutnya gagal.
+  // Terapkan hasil create/update/archive/restore sebelum refresh agar UI
+  // tetap benar bila refresh berikutnya gagal.
   function upsert(record: PropertyItem): void {
     const next = items.value.filter(item => item.id !== record.id)
     next.push(record)
-    // Sort by name ASC like backend
-    items.value = [...next].sort((left, right) => (left.name ?? '').localeCompare(right.name ?? ''))
+    items.value = next.sort((left, right) => left.name.localeCompare(right.name))
   }
 
   function clearError(): void {
@@ -155,45 +158,41 @@ export function useProperties() {
   }
 
   /** Payload create/update: hanya field yang didukung FormRequest backend.
-   * household_id/id/timestamp/archived_at tidak pernah disertikan.
+   * household_id/id/timestamp/archived_at tidak pernah disertakan.
    */
   function toPayload(values: PropertyFormValues): Record<string, unknown> | null {
     const localErrors: Record<string, string> = {}
+    const name = values.name?.trim() ?? ''
+    const address = values.address?.trim() ?? ''
+    const description = values.description?.trim() ?? ''
+    const notes = values.notes?.trim() ?? ''
 
-    // Validate name
-    if (!values.name?.trim()) {
-      localErrors.name = 'Nama property wajib diisi.'
-    } else if (values.name.trim().length > 255) {
-      localErrors.name = 'Nama property maksimal 255 karakter.'
+    if (name === '') {
+      localErrors.name = 'Nama properti wajib diisi.'
+    } else if (name.length > 255) {
+      localErrors.name = 'Nama properti maksimal 255 karakter.'
     }
 
-    // Validate type (closed enum)
-    const validTypes = ['house', 'apartment', 'land', 'shophouse', 'other']
-    if (!values.type || !validTypes.includes(values.type)) {
-      localErrors.type = 'Tipe property wajib salah satu: house, apartment, land, shophouse, other.'
+    if (!VALID_TYPES.includes(values.type as typeof VALID_TYPES[number])) {
+      localErrors.type = 'Tipe properti wajib dipilih.'
     }
 
-    // Validate address
-    if (!values.address?.trim()) {
+    if (address === '') {
       localErrors.address = 'Alamat wajib diisi.'
-    } else if (values.address.trim().length > 500) {
+    } else if (address.length > 500) {
       localErrors.address = 'Alamat maksimal 500 karakter.'
     }
 
-    // Validate ownership_status (closed enum)
-    const validStatuses = ['owned', 'rented']
-    if (!values.ownership_status || !validStatuses.includes(values.ownership_status)) {
-      localErrors.ownership_status = 'Status kepemilikan wajib salah satu: owned, rented.'
+    if (!VALID_OWNERSHIP.includes(values.ownership_status as typeof VALID_OWNERSHIP[number])) {
+      localErrors.ownership_status = 'Status kepemilikan wajib dipilih.'
     }
 
-    // Validate description (optional, max 5000)
-    if (values.description !== undefined && values.description.trim().length > 5000) {
-      localErrors.description = 'Deskripsi maksimal 5000 karakter.'
+    if (description.length > 5000) {
+      localErrors.description = 'Deskripsi properti maksimal 5000 karakter.'
     }
 
-    // Validate notes (optional, max 5000)
-    if (values.notes !== undefined && values.notes.trim().length > 5000) {
-      localErrors.notes = 'Catatan maksimal 5000 karakter.'
+    if (notes.length > 5000) {
+      localErrors.notes = 'Catatan properti maksimal 5000 karakter.'
     }
 
     if (Object.keys(localErrors).length > 0) {
@@ -202,12 +201,12 @@ export function useProperties() {
     }
 
     return {
-      name: values.name.trim(),
+      name,
       type: values.type,
-      address: values.address.trim(),
+      address,
       ownership_status: values.ownership_status,
-      description: values.description?.trim() ?? null,
-      notes: values.notes?.trim() ?? null
+      description: description === '' ? null : description,
+      notes: notes === '' ? null : notes
     }
   }
 
@@ -244,7 +243,7 @@ export function useProperties() {
 
       return envelope.data
     } catch (err) {
-      error.value = readError(err, 'Property belum dapat disimpan.')
+      error.value = readError(err, 'Properti belum dapat disimpan.')
       errorCode.value = readErrorCode(err)
       fieldErrors.value = readFieldErrors(err)
 
@@ -323,18 +322,13 @@ export function useProperties() {
       )
 
       if (mutationEpoch === scopeEpoch.value) {
-        // Remove from active list if present, or mark as archived
-        const index = items.value.findIndex(item => item.id === id)
-        if (index !== -1) {
-          items.value.splice(index, 1)
-        }
-        // Refresh to get updated list
+        upsert(envelope.data)
         await refresh()
       }
 
       return envelope.data
     } catch (err) {
-      error.value = readError(err, 'Property belum dapat diarsipkan.')
+      error.value = readError(err, 'Properti belum dapat diarsipkan.')
       errorCode.value = readErrorCode(err)
       fieldErrors.value = readFieldErrors(err)
 
@@ -367,13 +361,13 @@ export function useProperties() {
       )
 
       if (mutationEpoch === scopeEpoch.value) {
-        // Add back to list and refresh
+        upsert(envelope.data)
         await refresh()
       }
 
       return envelope.data
     } catch (err) {
-      error.value = readError(err, 'Property belum dapat dikembalikan.')
+      error.value = readError(err, 'Properti belum dapat dikembalikan.')
       errorCode.value = readErrorCode(err)
       fieldErrors.value = readFieldErrors(err)
 
@@ -385,6 +379,7 @@ export function useProperties() {
 
   return {
     items,
+    filters,
     pending,
     submitting,
     error,
