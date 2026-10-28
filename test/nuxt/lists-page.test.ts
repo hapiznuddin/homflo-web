@@ -138,10 +138,6 @@ afterEach(() => {
 // UModal me-render via teleport yang tidak selalu ikut ter-unmount bersama
 // wrapper; bersihkan sisa modal antar test agar query document.body tidak
 // mengenai modal basi dari test sebelumnya.
-function bodyText(): string {
-  return document.body.textContent ?? ''
-}
-
 async function flush(): Promise<void> {
   for (let index = 0; index < 5; index++) {
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -215,8 +211,7 @@ async function flush(): Promise<void> {
     await new DOMWrapper(document.body.querySelector('#list-type') as Element).trigger('click')
     await flush()
 
-    const optionLabels = Array.from(document.body.querySelectorAll('[data-test="option"]')
-      .map(element => element.textContent?.trim())
+    const optionLabels = Array.from(document.body.querySelectorAll('[data-test="option"]'))
 
     expect(optionLabels).toContain('Shopping')
     expect(optionLabels).toContain('Tanpa tipe')

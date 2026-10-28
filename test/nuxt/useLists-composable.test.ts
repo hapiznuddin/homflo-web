@@ -76,7 +76,11 @@ const STATE_KEYS = [
   'lists-submitting',
   'lists-field-errors',
   'lists-inflight',
-  'lists-request-seq'
+  'lists-request-seq',
+  'lists-default',
+  'lists-items-detail',
+  'lists-selected',
+  'lists-item-selected'
 ]
 
 beforeEach(() => {

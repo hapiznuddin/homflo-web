@@ -124,6 +124,7 @@ export function useLists() {
 
       if (envelope.data && envelope.data.code === 'DEFAULT_LIST_REQUIRED') {
         defaultList.value = null
+        error.value = 'List ini diarsipkan; aksi tidak diperbolehkan.'
         return null
       }
 
@@ -132,6 +133,7 @@ export function useLists() {
     } catch (err: any) {
       if (err.statusCode === 409 && err.data?.error?.code === 'DEFAULT_LIST_REQUIRED') {
         defaultList.value = null
+        error.value = 'List ini diarsipkan; aksi tidak diperbolehkan.'
         return null
       }
 
@@ -557,6 +559,7 @@ export function useLists() {
     LIST_ERROR_CODES,
     defaultList,
     items,
+    filters,
   }
 }
 
