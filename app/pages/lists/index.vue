@@ -148,14 +148,12 @@ function formatCount(n: number): string {
           </span>
           <span class="min-w-0 flex-1 truncate">
             <span class="font-medium text-highlighted">{{ list.name }}</span>
-            <template v-if="list.type === 'custom'">
-              <span class="text-xs text-muted">(custom)</template>
-            </span>
+            <span v-if="list.type === 'custom'" class="text-xs text-muted">(custom)</span>
             <span v-if="list.is_default" class="text-[11px] rounded-full bg-elevated px-2 py-0.5 text-[11px] font-medium">Default</span>
           </span>
           <span class="flex shrink-0 flex-col items-end gap-1">
-            <span class="text-sm font-semibold text-highlighted">{{ formatCount(list.counts.active) }} aktif</span>
-            <span class="text-xs text-muted">{{ formatCount(list.counts.completed) }} completed</span>
+            {{ list.counts.active }} aktif
+            {{ list.counts.completed }} completed
           </span>
         </span>
 
