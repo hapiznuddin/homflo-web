@@ -152,7 +152,7 @@ const quickActions: QuickAction[] = [
         Catatan
       </NuxtLink>
       <NuxtLink
-        to="/account"
+        to="/settings"
         class="relative z-2001 flex min-h-16 flex-col items-center justify-center gap-1 text-xs"
       >
         <UIcon name="i-lucide-ellipsis" class="size-5" aria-hidden="true" />

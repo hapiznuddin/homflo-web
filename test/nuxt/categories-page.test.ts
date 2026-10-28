@@ -16,6 +16,7 @@ const authMock = vi.hoisted(() => ({
     }
   },
   household: { value: { id: 'h1', name: 'Rumah Budi', role: 'owner' } },
+  isHouseholdOwner: { value: true },
   onboarding: { value: { required: false } },
   bootstrap: vi.fn(async () => 'authenticated'),
   logout: vi.fn()
@@ -90,6 +91,7 @@ describe('categories page', () => {
     authMock.bootstrap.mockClear()
     authMock.logout.mockClear()
     toastMock.add.mockClear()
+    authMock.isHouseholdOwner.value = true
   })
 
   // UModal me-render via teleport yang tidak selalu ikut ter-unmount
@@ -138,6 +140,18 @@ describe('categories page', () => {
 
     expect(text).toContain('Belum ada kategori tercatat.')
     expect(text).toContain('Tambah Kategori')
+  })
+
+  it('member dapat membaca kategori tetapi tidak melihat kontrol mutasi owner', async () => {
+    authMock.isHouseholdOwner.value = false
+    setupCategoriesState()
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Dapur')
+    expect(wrapper.find('button[aria-label="Ubah kategori"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Hapus kategori"]').exists()).toBe(false)
+    expect(wrapper.findAll('button').some(button => button.text().includes('Tambah'))).toBe(false)
   })
 
   it('state error saat list kosong menampilkan alert + retry tanpa logout', async () => {

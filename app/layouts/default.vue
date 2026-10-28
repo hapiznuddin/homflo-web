@@ -69,7 +69,7 @@ const items: NavigationMenuItem[][] = [
     {
       label: 'Pengaturan',
       icon: 'i-lucide-settings',
-      disabled: true
+      to: '/settings'
     },
     {
       label: 'Akun',

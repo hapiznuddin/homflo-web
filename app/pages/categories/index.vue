@@ -6,7 +6,9 @@ definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const toast = useToast()
 const cat = useCategories()
+const auth = useAuth()
 const { items, pending, submitting, error, fieldErrors } = cat
+const canManage = computed(() => auth.isHouseholdOwner.value)
 
 const formOpen = ref(false)
 const editing = ref<CategoryItem | null>(null)
@@ -80,7 +82,7 @@ await cat.load()
       </div>
       <div class="flex shrink-0 gap-2">
         <UButton icon="i-lucide-wallet" color="neutral" variant="outline" to="/budgets">Kelola anggaran</UButton>
-        <UButton icon="i-lucide-plus" @click="openCreate()">Tambah</UButton>
+        <UButton v-if="canManage" icon="i-lucide-plus" @click="openCreate()">Tambah</UButton>
       </div>
     </div>
 
@@ -100,7 +102,7 @@ await cat.load()
     <template v-else>
       <div v-if="items.length === 0" class="py-10 text-center">
         <p class="text-sm text-muted">Belum ada kategori tercatat.</p>
-        <UButton color="neutral" variant="outline" size="sm" class="mt-3" @click="openCreate()">
+        <UButton v-if="canManage" color="neutral" variant="outline" size="sm" class="mt-3" @click="openCreate()">
           Tambah Kategori
         </UButton>
       </div>
@@ -111,7 +113,7 @@ await cat.load()
             <UIcon :name="item.icon ?? 'i-lucide-tag'" class="size-4.5 text-default" />
           </span>
           <span class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ item.name }}</span>
-          <template v-if="confirmDeleteId !== item.id">
+          <template v-if="canManage && confirmDeleteId !== item.id">
             <UButton
               color="neutral"
               variant="ghost"
@@ -131,7 +133,7 @@ await cat.load()
               @click="onDeleteRequest(item)"
             />
           </template>
-          <template v-else>
+          <template v-else-if="canManage">
             <span class="min-w-0 flex-1 truncate text-xs text-muted">Hapus kategori ini?</span>
             <UButton color="neutral" variant="outline" size="sm" @click="cancelDelete()">Batal</UButton>
             <UButton color="error" size="sm" :loading="submitting" :disabled="submitting" @click="onDeleteRequest(item)">
