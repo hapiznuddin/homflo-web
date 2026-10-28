@@ -1,94 +1,107 @@
 <script setup lang="ts">
-import { ref, computed, type Ref } from 'vue'
-import { useToast } from '~/composables/useToast'
-import { useAuth } from '~/composables/useAuth'
-import { useLists } from '~/composables/useLists'
-import type { ListSummary, ListErrorCode } from '~/types/lists'
-import { LIST_ERROR_CODES } from '~/types/lists'
-import UButton from '~/components/ui/UButton.vue'
-import USkeleton from '~/components/ui/USkeleton.vue'
-import UAlert from '~/components/ui/UAlert.vue'
-import { useRouter } from 'nuxt'
+import type { ListSummary } from '~/types/lists'
 
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
-const router = useRouter()
 const toast = useToast()
 const auth = useAuth()
-const { loadLists, loadDefaultList, isOwner, mapErrorCode, LIST_ERROR_CODES } = useLists()
+const listsApi = useLists()
+const { lists, pending, submitting, error } = listsApi
 
-// State
-const lists = ref<ListSummary[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const load = listsApi.load ?? listsApi.loadLists
+const refresh = listsApi.refresh ?? listsApi.refreshLists
+const create = listsApi.create ?? listsApi.createList
+
+const isOwner = computed(() => auth.isHouseholdOwner?.value ?? false)
+
 const tab = ref<'active' | 'archived'>('active')
-const defaultList = ref<ListSummary | null>(null)
+const formOpen = ref(false)
+const formName = ref('')
+const formType = ref<'shopping' | 'custom'>('shopping')
+const typeDropdownOpen = ref(false)
 
-// Load data
-async function loadData(archived = false): Promise<void> {
-  loading.value = true
-  error.value = null
-  try {
-    const result = await loadLists(archived)
-    lists.value = result.data
-    // Set default list if available
-    const def = await loadDefaultList()
-    defaultList.value = def
-  } catch (err: any) {
-    error.value = err.message || 'Gagal memuat daftar list'
+const EMPTY_COPY: Record<'active' | 'archived', string> = {
+  active: 'Belum ada list yang akan datang.',
+  archived: 'Belum ada list yang diarsipkan.'
+}
+
+const visibleLists = computed(() => {
+  if (tab.value === 'archived') {
+    return lists.value.filter((l) => Boolean(l.archived_at))
+  }
+  return lists.value.filter((l) => !l.archived_at)
+})
+
+async function switchTab(next: 'active' | 'archived'): Promise<void> {
+  if (tab.value === next) return
+  tab.value = next
+  if (next === 'archived') {
+    await load({ include_archived: true }, true)
+  } else {
+    await load({ include_archived: false }, true)
+  }
+}
+
+function openCreate(): void {
+  formName.value = ''
+  formType.value = 'shopping'
+  typeDropdownOpen.value = false
+  formOpen.value = true
+}
+
+function closeCreate(): void {
+  formOpen.value = false
+}
+
+async function onFormSubmit(): Promise<void> {
+  if (!formName.value.trim()) return
+
+  const saved = await create({
+    name: formName.value.trim(),
+    type: formType.value
+  })
+
+  if (saved) {
+    formOpen.value = false
     toast.add({
-      title: 'Error',
-      description: error.value,
-      color: 'error',
+      title: 'List ditambah',
+      description: 'Data tersimpan.',
+      color: 'success'
     })
-  } finally {
-    loading.value = false
   }
 }
 
-// Initial load
-await loadData()
-
-// Tab switch
-function switchTab(key: 'active' | 'archived'): void {
-  tab.value = key
-  loadData(key === 'archived')
+function retry(): void {
+  void refresh()
 }
 
-// Confirm archive
-async function confirmArchiveList(listId: string): Promise<void> {
-  const ok = confirm('Anda yakin ingin mengarsip list ini? Aksi ini permanen dan tidak dapat dibatalkan melalui UI.')
-  if (ok) {
-    await archiveList(listId)
-    loadData(tab.value === 'archived')
-  }
-}
-
-// Format helper
-function formatCount(n: number): string {
-  return n === 0 ? '0 item' : n === 1 ? '1 item' : `${n} item`
-}
+await load()
 </script>
 
 <template>
   <div class="flex flex-col gap-4 sm:gap-5 w-full">
-    <div class="flex items-start justify-between gap-3">
-      <div>
-        <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Daftar Belanja</h1>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">
+          Daftar Belanja
+        </h1>
         <p class="mt-0.5 text-sm text-muted">Beberapa list belanja untuk rumah tangga Anda.</p>
       </div>
 
-      <template v-if="isOwner">
-        <UButton icon="i-lucide-plus" @click="openCreate()">
-          <span>Tambah List</span>
-        </UButton>
-      </template>
+      <UButton v-if="isOwner" icon="i-lucide-plus" @click="openCreate()">
+        Tambah List
+      </UButton>
     </div>
 
     <!-- Status tabs -->
-    <div v-if="isOwner" class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter list">
+    <div
+      v-if="isOwner"
+      class="flex flex-wrap items-center gap-2"
+      role="tablist"
+      aria-label="Filter list"
+    >
       <UButton
-        v-for="item in ['active', 'archived']"
+        v-for="item in (['active', 'archived'] as const)"
         :key="item"
         size="sm"
         :color="tab === item ? 'primary' : 'neutral'"
@@ -102,35 +115,35 @@ function formatCount(n: number): string {
     </div>
 
     <div v-else class="flex flex-col gap-2">
-      <p class="text-sm text-muted">Anda anggota rumah tangga — pengelolaan list dilakukan pemilik.</p>
+      <p class="text-sm text-muted">
+        Anda anggota rumah tangga — pengelolaan list dilakukan pemilik.
+      </p>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="flex flex-col gap-3" aria-label="Memuat daftar list">
+    <!-- Loading skeleton -->
+    <div v-if="pending && visibleLists.length === 0" class="flex flex-col gap-3" aria-label="Memuat daftar list">
       <USkeleton v-for="index in 3" :key="index" class="h-16" />
     </div>
 
-    <!-- Error -->
+    <!-- Error on empty list -->
     <UAlert
-      v-if="error"
+      v-else-if="error && visibleLists.length === 0"
       color="error"
       variant="soft"
-      title="Daftar list tidak dapat dimuat."
+      title="Data daftar list belum dapat dimuat."
       :description="error"
-      :actions="[{ label: 'Coba lagi', onClick: () => loadData(tab.value === 'archived') }]"
+      :actions="[{ label: 'Coba lagi', onClick: retry }]"
     />
 
-    <!-- Empty & list items -->
+    <!-- Empty or List items -->
     <template v-else>
-      <div v-if="lists.length === 0" class="py-10 text-center">
+      <div v-if="visibleLists.length === 0" class="py-10 text-center">
         <p class="text-sm text-muted">
-          {{ tab === 'active'
-            ? 'Belum ada list belanja. Klik "Tambah List" untuk membuat yang pertama.'
-            : 'Belum ada list yang diarsipkan.' }}
+          {{ EMPTY_COPY[tab] }}
         </p>
 
         <UButton
-          v-if="tab === 'active' && isOwner"
+          v-if="isOwner"
           color="neutral"
           variant="outline"
           size="sm"
@@ -141,34 +154,118 @@ function formatCount(n: number): string {
         </UButton>
       </div>
 
-      <ul v-else class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4">
-        <li v-for="list in lists" :key="list.id" class="flex w-full items-center gap-3 py-3 text-left first:pt-3 last:pb-3">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated" aria-hidden="true">
-            <i-lucide class="size-4.5 text-default" :name="list.type === 'shopping' ? 'shopping-cart' : 'folder'"></i-lucide>
-          </span>
-          <span class="min-w-0 flex-1 truncate">
-            <span class="font-medium text-highlighted">{{ list.name }}</span>
-            <span v-if="list.type === 'custom'" class="text-xs text-muted">(custom)</span>
-            <span v-if="list.is_default" class="text-[11px] rounded-full bg-elevated px-2 py-0.5 text-[11px] font-medium">Default</span>
-          </span>
-          <span class="flex shrink-0 flex-col items-end gap-1">
-            {{ list.counts.active }} aktif
-            {{ list.counts.completed }} completed
-          </span>
-        </span>
-
-        <NuxtLink
-          :to="`/lists/${list.id}`"
-          class="flex w-full items-center gap-3 py-3"
+      <ul
+        v-else
+        class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-4"
+      >
+        <li
+          v-for="list in visibleLists"
+          :key="list.id"
+          class="flex w-full items-center gap-3 py-3 text-left first:pt-3 last:pb-3"
         >
-          <span class="text-sm text-muted truncate" style="max-width: 200px;">View</span>
-        </NuxtLink>
+          <NuxtLink :to="`/lists/${list.id}`" class="flex w-full items-center gap-3">
+            <span
+              class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated"
+              aria-hidden="true"
+            >
+              <UIcon
+                :name="list.type === 'shopping' ? 'i-lucide-shopping-cart' : 'i-lucide-folder'"
+                class="size-4.5 text-default"
+              />
+            </span>
+            <span class="min-w-0 flex-1 truncate">
+              <span class="font-medium text-highlighted">{{ list.name }}</span>
+              <span v-if="list.type === 'custom'" class="ml-1 text-xs text-muted">(custom)</span>
+              <span
+                v-if="list.is_default"
+                class="ml-1 rounded-full bg-elevated px-2 py-0.5 text-[11px] font-medium"
+              >Default</span>
+            </span>
+            <span class="flex shrink-0 flex-col items-end gap-1 text-xs text-muted">
+              <span>{{ list.counts.active }} aktif</span>
+              <span>{{ list.counts.completed }} completed</span>
+            </span>
+          </NuxtLink>
+        </li>
       </ul>
+
+      <UAlert
+        v-if="error && visibleLists.length > 0"
+        color="error"
+        variant="soft"
+        title="Aksi terakhir gagal."
+        :description="error"
+      />
     </template>
+
+    <!-- Modal Form Create List -->
+    <UModal v-model:open="formOpen" title="Tambah List">
+      <template #body>
+        <form class="flex flex-col gap-4" @submit.prevent="onFormSubmit">
+          <div>
+            <label for="list-name" class="mb-1 block text-sm font-medium">Nama</label>
+            <input
+              id="list-name"
+              v-model="formName"
+              type="text"
+              placeholder="cth. Belanja Mingguan"
+              maxlength="255"
+              autocomplete="off"
+              class="w-full rounded-md border border-default bg-background p-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label for="list-type" class="mb-1 block text-sm font-medium">Tipe</label>
+            <div class="relative">
+              <button
+                id="list-type"
+                type="button"
+                class="flex w-full items-center justify-between rounded-md border border-default bg-background p-2 text-left text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                @click="typeDropdownOpen = !typeDropdownOpen"
+              >
+                <span>{{ formType === 'shopping' ? 'Shopping' : 'Tanpa tipe' }}</span>
+                <UIcon name="i-lucide-chevron-down" class="size-4 text-muted" />
+              </button>
+
+              <div
+                v-if="typeDropdownOpen"
+                class="absolute z-50 mt-1 flex w-full flex-col rounded-md border border-default bg-elevated p-1 shadow-lg"
+              >
+                <button
+                  type="button"
+                  data-test="option"
+                  class="rounded px-2 py-1.5 text-left text-sm hover:bg-muted/10"
+                  @click="formType = 'shopping'; typeDropdownOpen = false"
+                >
+                  Shopping
+                </button>
+                <button
+                  type="button"
+                  data-test="option"
+                  class="rounded px-2 py-1.5 text-left text-sm hover:bg-muted/10"
+                  @click="formType = 'custom'; typeDropdownOpen = false"
+                >
+                  Tanpa tipe
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <UButton type="button" color="neutral" variant="outline" @click="closeCreate()">
+              Batal
+            </UButton>
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
+              :disabled="submitting"
+            >
+              Simpan
+            </button>
+          </div>
+        </form>
+      </template>
+    </UModal>
   </div>
 </template>
-
-<!-- Composables -->
-<script lang="ts">
-await loadData()
-</script>

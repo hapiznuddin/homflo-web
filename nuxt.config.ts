@@ -119,7 +119,7 @@ export default defineNuxtConfig({
       // a cached /api response and never cache session cookies.
       runtimeCaching: [
         {
-          urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+          urlPattern: /^\/api\/.*/,
           handler: 'NetworkOnly'
         }
       ]

@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { defineEmits, type EmitsOptions, type PropType, ref, computed } from 'vue'
-import { useToast } from '~/composables/useToast'
-import { useLists } from '~/composables/useLists'
-import { useRoute } from 'nuxt'
-import { useStore } from 'vuex'
-
 const props = defineProps<{
   modelValue: boolean
   listId: string
-}>const emit = defineEmits<[ 'update:modelValue' ]>const router = useRouter()
-const store = useStore()
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+}>()
+const router = useRouter()
 const toast = useToast()
-const { createListItem, mapErrorCode, LIST_ERROR_CODES } = useLists()
+const { createListItem, mapErrorCode } = useLists()
 
 const title = ref('')
 const quantity = ref(null as string | null)

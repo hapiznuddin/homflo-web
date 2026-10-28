@@ -17,6 +17,7 @@ const authMock = vi.hoisted(() => ({
   },
   household: { value: { id: 'h1', name: 'Rumah Budi', role: 'owner' } },
   onboarding: { value: { required: false } },
+  isHouseholdOwner: { value: true },
   bootstrap: vi.fn(async () => 'authenticated'),
   logout: vi.fn()
 }))
@@ -59,28 +60,6 @@ const listsState: MockListsState = {
   restore: vi.fn(async () => true)
 }
 
-function setupListsState(
-  overrides: {
-    lists?: ListSummary[]
-    pending?: boolean
-    error?: string | null
-  } = {}
-): void {
-  listsMock.api = {
-    lists: ref(overrides.lists ?? [listSummary()]),
-    pending: ref(overrides.pending ?? false),
-    submitting: ref(false),
-    error: ref(overrides.error ?? null),
-    fieldErrors: ref({}),
-    load: vi.fn(async () => {}),
-    refresh: vi.fn(async () => {}),
-    create: vi.fn(async () => listSummary()),
-    update: vi.fn(async () => listSummary()),
-    archive: vi.fn(async () => true),
-    restore: vi.fn(async () => true)
-  }
-}
-
 function sampleList(overrides: Partial<ListSummary> = {}): ListSummary {
   return {
     id: '01J0LIST00000000000000001',
@@ -103,11 +82,41 @@ function sampleList(overrides: Partial<ListSummary> = {}): ListSummary {
   }
 }
 
-function setupAuth(overrides: {
-  isHouseholdOwner?: boolean
-  userId?: string
-  householdId?: string
-} = {}) {
+function listSummary(overrides: Partial<ListSummary> = {}): ListSummary {
+  return sampleList(overrides)
+}
+
+function setupListsState(
+  overrides: {
+    lists?: ListSummary[]
+    pending?: boolean
+    error?: string | null
+  } = {}
+): MockListsState {
+  const state: MockListsState = {
+    lists: ref(overrides.lists ?? [sampleList()]),
+    pending: ref(overrides.pending ?? false),
+    submitting: ref(false),
+    error: ref(overrides.error ?? null),
+    fieldErrors: ref({}),
+    load: vi.fn(async () => {}),
+    refresh: vi.fn(async () => {}),
+    create: vi.fn(async () => sampleList()),
+    update: vi.fn(async () => sampleList()),
+    archive: vi.fn(async () => true),
+    restore: vi.fn(async () => true)
+  }
+  listsMock.api = state
+  return state
+}
+
+function setupAuth(
+  overrides: {
+    isHouseholdOwner?: boolean
+    userId?: string
+    householdId?: string
+  } = {}
+) {
   authMock.isHouseholdOwner.value = overrides.isHouseholdOwner ?? true
   authMock.user.value.id = overrides.userId ?? 'u1'
   authMock.household.value.id = overrides.householdId ?? 'h1'
@@ -122,7 +131,7 @@ async function mountPage() {
 }
 
 function tabButton(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
-  return wrapper.findAll('button').find(button => button.text() === label)
+  return wrapper.findAll('button').find((button) => button.text() === label)
 }
 
 beforeEach(() => {
@@ -140,115 +149,118 @@ afterEach(() => {
 // mengenai modal basi dari test sebelumnya.
 async function flush(): Promise<void> {
   for (let index = 0; index < 5; index++) {
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
   }
 }
 
-  it('state loading menampilkan skeleton tanpa konten privat', async () => {
-    setupListsState({ lists: [], pending: true })
+it('state loading menampilkan skeleton tanpa konten privat', async () => {
+  setupListsState({ lists: [], pending: true })
 
-    const wrapper = await mountPage()
+  const wrapper = await mountPage()
 
-    expect(wrapper.find('[aria-label="Memuat daftar list"]').exists()).toBe(true)
-    expect(wrapper.text()).not.toContain('Belum ada list')
-  })
+  expect(wrapper.find('[aria-label="Memuat daftar list"]').exists()).toBe(true)
+  expect(wrapper.text()).not.toContain('Belum ada list')
+})
 
-  it('state kosong menampilkan CTA tambah', async () => {
-    setupListsState({ lists: [] })
+it('state kosong menampilkan CTA tambah', async () => {
+  setupListsState({ lists: [] })
 
-    const wrapper = await mountPage()
-    const text = wrapper.text()
+  const wrapper = await mountPage()
+  const text = wrapper.text()
 
-    expect(text).toContain('Belum ada list yang akan datang.')
-    expect(text).toContain('Tambah List')
-  })
+  expect(text).toContain('Belum ada list yang akan datang.')
+  expect(text).toContain('Tambah List')
+})
 
-  it('state error saat list kosong menampilkan alert + retry tanpa logout', async () => {
-    setupListsState({ lists: [], error: 'Koneksi terputus' })
+it('state error saat list kosong menampilkan alert + retry tanpa logout', async () => {
+  setupListsState({ lists: [], error: 'Koneksi terputus' })
 
-    const wrapper = await mountPage()
+  const wrapper = await mountPage()
 
-    expect(wrapper.text()).toContain('Data daftar list belum dapat dimuat.')
-    expect(wrapper.text()).toContain('Koneksi terputus')
-    expect(authMock.logout).not.toHaveBeenCalled()
-  })
+  expect(wrapper.text()).toContain('Data daftar list belum dapat dimuat.')
+  expect(wrapper.text()).toContain('Koneksi terputus')
+  expect(authMock.logout).not.toHaveBeenCalled()
+})
 
-  it('tombol "Coba lagi" memanggil refresh()', async () => {
-    const state = setupListsState({ lists: [], error: 'Koneksi terputus' })
+it('tombol "Coba lagi" memanggil refresh()', async () => {
+  const state = setupListsState({ lists: [], error: 'Koneksi terputus' })
 
-    const wrapper = await mountPage()
-    const retryButton = wrapper.findAll('button').find(button => button.text().includes('Coba lagi'))
+  const wrapper = await mountPage()
+  const retryButton = wrapper
+    .findAll('button')
+    .find((button) => button.text().includes('Coba lagi'))
 
-    expect(retryButton).toBeDefined()
+  expect(retryButton).toBeDefined()
 
-    await retryButton!.trigger('click')
+  await retryButton!.trigger('click')
 
-    expect(state.refresh).toHaveBeenCalledTimes(1)
-  })
+  expect(state.refresh).toHaveBeenCalledTimes(1)
+})
 
-  it('error aksi dengan list utuh tidak menyembunyikan list', async () => {
-    setupListsState({ error: 'List masih dipakai' })
+it('error aksi dengan list utuh tidak menyembunyikan list', async () => {
+  setupListsState({ error: 'List masih dipakai' })
 
-    const wrapper = await mountPage()
-    const text = wrapper.text()
+  const wrapper = await mountPage()
+  const text = wrapper.text()
 
-    expect(text).toContain('Shopping List')
-    expect(text).toContain('Aksi terakhir gagal.')
-  })
+  expect(text).toContain('Shopping List')
+  expect(text).toContain('Aksi terakhir gagal.')
+})
 
-  it('tombol Tambah membuka form dan submit memanggil create()', async () => {
-    const state = setupListsState()
+it('tombol Tambah membuka form dan submit memanggil create()', async () => {
+  const state = setupListsState()
 
-    const wrapper = await mountPage()
-    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+  const wrapper = await mountPage()
+  const addButton = wrapper.findAll('button').find((button) => button.text().includes('Tambah'))
 
-    await addButton!.trigger('click')
-    await flush()
+  await addButton!.trigger('click')
+  await flush()
 
-    expect(bodyText()).toContain('Tambah List')
+  expect(bodyText()).toContain('Tambah List')
 
-    // Form Lists hanya menawarkan type shopping (kontrak backend).
-    await new DOMWrapper(document.body.querySelector('#list-type') as Element).trigger('click')
-    await flush()
+  // Form Lists hanya menawarkan type shopping (kontrak backend).
+  await new DOMWrapper(document.body.querySelector('#list-type') as Element).trigger('click')
+  await flush()
 
-    const optionLabels = Array.from(document.body.querySelectorAll('[data-test="option"]'))
+  const optionLabels = Array.from(document.body.querySelectorAll('[data-test="option"]')).map(
+    (element) => element.textContent?.trim()
+  )
 
-    expect(optionLabels).toContain('Shopping')
-    expect(optionLabels).toContain('Tanpa tipe')
-    expect(optionLabels).not.toContain('Bills')
+  expect(optionLabels).toContain('Shopping')
+  expect(optionLabels).toContain('Tanpa tipe')
+  expect(optionLabels).not.toContain('Bills')
 
-    await new DOMWrapper(document.body.querySelector('#list-name') as Element).setValue('List Baru')
+  await new DOMWrapper(document.body.querySelector('#list-name') as Element).setValue('List Baru')
 
-    const submitButton = Array.from(document.body.querySelectorAll('button'))
-      .find(button => (button.textContent ?? '').trim() === 'Simpan')
+  const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+    (button) => (button.textContent ?? '').trim() === 'Simpan'
+  )
 
-    await new DOMWrapper(submitButton!).trigger('click')
+  await new DOMWrapper(submitButton!).trigger('click')
 
-    expect(state.create).toHaveBeenCalledTimes(1)
+  expect(state.create).toHaveBeenCalledTimes(1)
 
-    const values = state.create.mock.calls[0]?.[0] as Record<string, unknown>
+  const values = state.create.mock.calls[0]?.[0] as Record<string, unknown>
 
-    expect(values.name).toBe('List Baru')
-    expect(values.type).toBe('shopping')
-    expect(toastMock.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'List ditambah' })
-    )
-  })
+  expect(values.name).toBe('List Baru')
+  expect(values.type).toBe('shopping')
+  expect(toastMock.add).toHaveBeenCalledWith(expect.objectContaining({ title: 'List ditambah' }))
+})
 
-  it('non-owner: CTA tambah disembunyikan; baris tetap terbuka sebagai anchor (render-only)', async () => {
-    setupListsState()
-    authMock.isHouseholdOwner.value = false
+it('non-owner: CTA tambah disembunyikan; baris tetap terbuka sebagai anchor (render-only)', async () => {
+  setupListsState()
+  authMock.isHouseholdOwner.value = false
 
-    const wrapper = await mountPage()
+  const wrapper = await mountPage()
 
-    expect(wrapper.text()).not.toContain('Tambah List')
-    expect(wrapper.find('ul a[href="/lists/01J0LIST00000000000000001"]').exists()).toBe(true)
-  })
+  expect(wrapper.text()).not.toContain('Tambah List')
+  expect(wrapper.find('ul a[href="/lists/01J0LIST00000000000000001"]').exists()).toBe(true)
+})
 
-  it('halaman tidak memanggil logout', async () => {
-    setupListsState()
+it('halaman tidak memanggil logout', async () => {
+  setupListsState()
 
-    await mountPage()
+  await mountPage()
 
-    expect(authMock.logout).not.toHaveBeenCalled()
-  })
+  expect(authMock.logout).not.toHaveBeenCalled()
+})
