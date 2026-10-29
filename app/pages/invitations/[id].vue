@@ -7,7 +7,16 @@ const route = useRoute()
 const auth = useAuth()
 const toast = useToast()
 const invitations = useInvitations()
-const { items, pending, submitting, error, load, accept } = invitations
+const { items, pending, submitting, error, errorCode, load, accept } = invitations
+
+// Kode yang berarti tautan tidak dapat dipakai lagi. Mengulang klik hanya
+// akan menghasilkan error yang sama, jadi tombol terima dinonaktifkan.
+const TERMINAL_ERROR_CODES = new Set([
+  'INVITATION_NOT_FOUND',
+  'INVITATION_ALREADY_ACCEPTED',
+  'INVITATION_EXPIRED',
+  'ALREADY_HOUSEHOLD_MEMBER'
+])
 
 const invitationId = computed(() => String(route.params.id ?? ''))
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token : '')
@@ -15,7 +24,17 @@ const invitation = computed<HouseholdInvitationSummary | null>(() =>
   items.value.find(item => item.id === invitationId.value) ?? null
 )
 const alreadyInHousehold = computed(() => auth.household.value !== null)
-const canAccept = computed(() => token.value !== '' && !alreadyInHousehold.value)
+const acceptBlocked = computed(
+  () => errorCode.value !== null && TERMINAL_ERROR_CODES.has(errorCode.value)
+)
+const canAccept = computed(
+  () => token.value !== '' && !alreadyInHousehold.value && !acceptBlocked.value
+)
+// Error tanpa kode domain berasal dari kegagalan jaringan/server: daftar
+// undangan aman dimuat ulang tanpa mengubah token di URL.
+const loadRetryable = computed(
+  () => error.value !== null && errorCode.value === null && !pending.value
+)
 
 function formatExpiry(value: string): string {
   return new Intl.DateTimeFormat('id-ID', {
@@ -25,6 +44,10 @@ function formatExpiry(value: string): string {
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(value))
+}
+
+async function retryLoad(): Promise<void> {
+  await load(true)
 }
 
 async function onAccept(): Promise<void> {
@@ -113,6 +136,7 @@ await load()
         variant="soft"
         title="Undangan belum dapat diproses"
         :description="error"
+        :actions="loadRetryable ? [{ label: 'Coba lagi', onClick: retryLoad }] : undefined"
       />
 
       <UButton

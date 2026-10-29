@@ -1,6 +1,6 @@
 import type { CreatedHouseholdInvitation } from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
-import { readError } from '~/composables/useApiError'
+import { readError, readFieldErrors } from '~/composables/useApiError'
 
 interface HouseholdMembersResponse {
   success: boolean
@@ -20,6 +20,10 @@ export function useHouseholdMembers() {
   const pending = useState<boolean>('household-members-pending', () => false)
   const submitting = useState<boolean>('household-members-submitting', () => false)
   const error = useState<string | null>('household-members-error', () => null)
+  const inviteFieldErrors = useState<Record<string, string>>(
+    'household-members-invite-field-errors',
+    () => ({})
+  )
   const inflight = useState<boolean>('household-members-inflight', () => false)
   const loaded = useState<boolean>('household-members-loaded', () => false)
   const loadedFor = useState<string | null>('household-members-loaded-for', () => null)
@@ -87,6 +91,7 @@ export function useHouseholdMembers() {
 
     submitting.value = true
     error.value = null
+    inviteFieldErrors.value = {}
 
     try {
       const response = await $fetch<CreateInvitationResponse>(
@@ -102,6 +107,7 @@ export function useHouseholdMembers() {
       return response.data
     } catch (caught: unknown) {
       error.value = readError(caught, 'Undangan belum dapat dibuat.')
+      inviteFieldErrors.value = readFieldErrors(caught)
 
       return null
     } finally {
@@ -169,5 +175,25 @@ export function useHouseholdMembers() {
     }
   }
 
-  return { items, pending, submitting, error, loaded, load, refresh, invite, changeRole, remove }
+  // Bersihkan pesan undangan saat pengguna mengetik ulang email, tanpa
+  // menyentuh error daftar anggota yang mungkin masih relevan.
+  function clearInviteError(): void {
+    inviteFieldErrors.value = {}
+    error.value = null
+  }
+
+  return {
+    items,
+    pending,
+    submitting,
+    error,
+    inviteFieldErrors,
+    loaded,
+    load,
+    refresh,
+    invite,
+    changeRole,
+    remove,
+    clearInviteError
+  }
 }

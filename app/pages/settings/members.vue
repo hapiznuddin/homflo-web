@@ -6,14 +6,28 @@ definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const members = useHouseholdMembers()
 const auth = useAuth()
-const { items, pending, submitting, error, loaded, load, invite, changeRole, remove } = members
+const {
+  items,
+  pending,
+  submitting,
+  error,
+  inviteFieldErrors,
+  loaded,
+  load,
+  invite,
+  changeRole,
+  remove,
+  clearInviteError
+} = members
 const toast = useToast()
 const requestUrl = useRequestURL()
 const inviteEmail = ref('')
+const inviteLocalError = ref<string | null>(null)
 const lastInvite = ref<CreatedHouseholdInvitation | null>(null)
 const copied = ref(false)
 const confirmRemoveId = ref<string | null>(null)
 const canManage = computed(() => auth.isHouseholdOwner.value)
+const inviteError = computed(() => inviteLocalError.value ?? inviteFieldErrors.value.email ?? null)
 
 const inviteLink = computed(() => {
   if (!lastInvite.value) {
@@ -40,13 +54,45 @@ function formatExpiry(value: string): string {
   }).format(new Date(value))
 }
 
+// Validasi bentuk email di klien hanya untuk umpan balik cepat. Aturan
+// otoritatif tetap validasi Laravel (`required|string|email|max:255`).
+function validateInviteEmail(value: string): string | null {
+  const email = value.trim()
+
+  if (!email) {
+    return 'Email wajib diisi.'
+  }
+
+  if (email.length > 255) {
+    return 'Email maksimal 255 karakter.'
+  }
+
+  if (!/^[^\s@]+@[^\s@]+$/.test(email)) {
+    return 'Format email tidak valid.'
+  }
+
+  return null
+}
+
+function onInviteInput(): void {
+  inviteLocalError.value = null
+  clearInviteError()
+}
+
 async function submitInvite(): Promise<void> {
+  inviteLocalError.value = validateInviteEmail(inviteEmail.value)
+
+  if (inviteLocalError.value) {
+    return
+  }
+
   const created = await invite(inviteEmail.value)
 
   if (!created) {
     return
   }
 
+  inviteLocalError.value = null
   lastInvite.value = created
   copied.value = false
   inviteEmail.value = ''
@@ -58,7 +104,19 @@ async function submitInvite(): Promise<void> {
 }
 
 async function copyInviteLink(): Promise<void> {
-  if (!inviteLink.value || !navigator.clipboard) {
+  if (!inviteLink.value) {
+    return
+  }
+
+  // Peramban tanpa Clipboard API (mis. origin non-secure) tetap harus
+  // mendapat jalan keluar: salin manual dari kolom tautan.
+  if (!navigator.clipboard) {
+    toast.add({
+      title: 'Salin tautan secara manual',
+      description: 'Peramban ini tidak menyediakan akses papan klip. Pilih dan salin tautan dari kolom di atas.',
+      color: 'warning'
+    })
+
     return
   }
 
@@ -134,8 +192,30 @@ await load()
     />
 
     <template v-else>
-      <form v-if="canManage" class="flex gap-2 rounded-2xl border border-default bg-background p-3" @submit.prevent="submitInvite">
-        <UInput v-model="inviteEmail" type="email" autocomplete="email" placeholder="email@contoh.com" :disabled="submitting" class="min-w-0 flex-1" required />
+      <form
+        v-if="canManage"
+        class="flex flex-wrap items-start gap-2 rounded-2xl border border-default bg-background p-3"
+        novalidate
+        @submit.prevent="submitInvite"
+      >
+        <div class="min-w-0 flex-1">
+          <UInput
+            v-model="inviteEmail"
+            type="email"
+            autocomplete="email"
+            placeholder="email@contoh.com"
+            aria-label="Email anggota yang diundang"
+            :disabled="submitting"
+            :aria-invalid="inviteError ? 'true' : undefined"
+            :aria-describedby="inviteError ? 'invite-email-error' : undefined"
+            class="w-full"
+            required
+            @update:model-value="onInviteInput"
+          />
+          <p v-if="inviteError" id="invite-email-error" role="alert" class="mt-1 text-xs text-error">
+            {{ inviteError }}
+          </p>
+        </div>
         <UButton type="submit" :loading="submitting" :disabled="submitting">Undang</UButton>
       </form>
 

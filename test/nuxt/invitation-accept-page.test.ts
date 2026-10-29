@@ -28,6 +28,7 @@ interface MockInvitationsState {
   pending: Ref<boolean>
   submitting: Ref<boolean>
   error: Ref<string | null>
+  errorCode: Ref<string | null>
   load: ReturnType<typeof vi.fn>
   refresh: ReturnType<typeof vi.fn>
   accept: ReturnType<typeof vi.fn>
@@ -54,6 +55,7 @@ function setupInvitationsState(
     items?: HouseholdInvitationSummary[]
     pending?: boolean
     error?: string | null
+    errorCode?: string | null
   } = {}
 ): MockInvitationsState {
   const state: MockInvitationsState = {
@@ -61,6 +63,7 @@ function setupInvitationsState(
     pending: ref(overrides.pending ?? false),
     submitting: ref(false),
     error: ref(overrides.error ?? null),
+    errorCode: ref(overrides.errorCode ?? null),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {}),
     accept: vi.fn(async () => ({
@@ -145,5 +148,32 @@ describe('invitation accept page', () => {
 
     expect(wrapper.text()).toContain('Undangan sudah kedaluwarsa.')
     expect(wrapper.text()).toContain('Undangan belum dapat diproses')
+  })
+
+  it('error terminal menonaktifkan tombol terima dan tidak menawarkan retry', async () => {
+    setupInvitationsState({
+      error: 'Undangan sudah kedaluwarsa.',
+      errorCode: 'INVITATION_EXPIRED'
+    })
+
+    const wrapper = await mountPage('/invitations/inv1?token=token-rahasia')
+    const acceptButton = wrapper.findAll('button')
+      .find(button => button.text().includes('Terima undangan'))!
+
+    expect(acceptButton.attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('button').some(button => button.text() === 'Coba lagi')).toBe(false)
+  })
+
+  it('error sementara menampilkan aksi coba lagi yang memuat ulang undangan', async () => {
+    const state = setupInvitationsState({ error: 'Koneksi terputus.' })
+
+    const wrapper = await mountPage('/invitations/inv1?token=token-rahasia')
+    const retryButton = wrapper.findAll('button').find(button => button.text() === 'Coba lagi')
+
+    expect(retryButton).toBeDefined()
+
+    await retryButton!.trigger('click')
+
+    expect(state.load).toHaveBeenCalledWith(true)
   })
 })

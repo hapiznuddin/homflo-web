@@ -1,6 +1,6 @@
 import type { HouseholdInvitationSummary } from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
-import { readError } from '~/composables/useApiError'
+import { readError, readErrorCode } from '~/composables/useApiError'
 
 interface InvitationsResponse {
   success: boolean
@@ -19,6 +19,7 @@ export function useInvitations() {
   const pending = useState<boolean>('household-invitations-pending', () => false)
   const submitting = useState<boolean>('household-invitations-submitting', () => false)
   const error = useState<string | null>('household-invitations-error', () => null)
+  const errorCode = useState<string | null>('household-invitations-error-code', () => null)
   const inflight = useState<boolean>('household-invitations-inflight', () => false)
   const loaded = useState<boolean>('household-invitations-loaded', () => false)
 
@@ -48,6 +49,7 @@ export function useInvitations() {
     inflight.value = true
     pending.value = true
     error.value = null
+    errorCode.value = null
 
     try {
       const response = await $fetch<InvitationsResponse>('/api/invitations', {
@@ -58,6 +60,7 @@ export function useInvitations() {
       loaded.value = true
     } catch (caught: unknown) {
       error.value = readError(caught, FALLBACK_ERROR)
+      errorCode.value = readErrorCode(caught)
       loaded.value = false
     } finally {
       pending.value = false
@@ -76,6 +79,7 @@ export function useInvitations() {
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
 
     try {
       const response = await $fetch<AcceptInvitationResponse>(
@@ -93,6 +97,7 @@ export function useInvitations() {
       return response.data
     } catch (caught: unknown) {
       error.value = readError(caught, 'Undangan belum dapat diterima.')
+      errorCode.value = readErrorCode(caught)
 
       return null
     } finally {
@@ -100,5 +105,5 @@ export function useInvitations() {
     }
   }
 
-  return { items, pending, submitting, error, load, refresh, accept }
+  return { items, pending, submitting, error, errorCode, load, refresh, accept }
 }

@@ -48,6 +48,7 @@ const STATE_KEYS = [
   'household-invitations-pending',
   'household-invitations-submitting',
   'household-invitations-error',
+  'household-invitations-error-code',
   'household-invitations-inflight',
   'household-invitations-loaded'
 ]
@@ -129,5 +130,24 @@ describe('useInvitations', () => {
 
     expect(member).toBeNull()
     expect(api.error.value).toBe('Undangan sudah kedaluwarsa.')
+    expect(api.errorCode.value).toBe('INVITATION_EXPIRED')
+  })
+
+  it('errorCode dibersihkan kembali setelah pemuatan berhasil', async () => {
+    fetchMock.mockRejectedValueOnce({})
+
+    const api = await mountInvitations()
+
+    await api.load()
+
+    expect(api.error.value).toBe('Undangan belum dapat dimuat.')
+    expect(api.errorCode.value).toBeNull()
+
+    fetchMock.mockResolvedValueOnce({ success: true, data: [invitation()] })
+
+    await api.load(true)
+
+    expect(api.error.value).toBeNull()
+    expect(api.errorCode.value).toBeNull()
   })
 })

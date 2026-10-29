@@ -22,12 +22,14 @@ interface MockMembersState {
   pending: Ref<boolean>
   submitting: Ref<boolean>
   error: Ref<string | null>
+  inviteFieldErrors: Ref<Record<string, string>>
   loaded: Ref<boolean>
   load: ReturnType<typeof vi.fn>
   refresh: ReturnType<typeof vi.fn>
   invite: ReturnType<typeof vi.fn>
   changeRole: ReturnType<typeof vi.fn>
   remove: ReturnType<typeof vi.fn>
+  clearInviteError: ReturnType<typeof vi.fn>
 }
 
 const membersMock = vi.hoisted(() => ({ api: undefined as unknown }))
@@ -62,12 +64,14 @@ function setupMembersState(
     pending: ref(overrides.pending ?? false),
     submitting: ref(false),
     error: ref(overrides.error ?? null),
+    inviteFieldErrors: ref({}),
     loaded: ref(overrides.loaded ?? (items.length > 0 || (!overrides.pending && !overrides.error))),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {}),
     invite: vi.fn(async () => null),
     changeRole: vi.fn(async () => true),
-    remove: vi.fn(async () => true)
+    remove: vi.fn(async () => true),
+    clearInviteError: vi.fn(() => {})
   }
 
   membersMock.api = state
@@ -111,6 +115,46 @@ describe('settings members page', () => {
     expect(wrapper.text()).toContain('Owner')
   })
 
+  it('email kosong ditolak di klien tanpa memanggil backend', async () => {
+    const state = setupMembersState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('form').trigger('submit')
+    await flush()
+
+    expect(state.invite).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Email wajib diisi.')
+  })
+
+  it('format email tidak valid ditolak di klien tanpa memanggil backend', async () => {
+    const state = setupMembersState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('input[type="email"]').setValue('bukan-email')
+    await wrapper.find('form').trigger('submit')
+    await flush()
+
+    expect(state.invite).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Format email tidak valid.')
+  })
+
+  it('error validasi email dari backend tampil di bawah input dan hilang saat mengetik', async () => {
+    const state = setupMembersState()
+
+    const wrapper = await mountPage()
+
+    state.inviteFieldErrors.value = { email: 'Kolom Email harus berupa email yang valid.' }
+    await flush()
+
+    expect(wrapper.text()).toContain('Kolom Email harus berupa email yang valid.')
+
+    await wrapper.find('input[type="email"]').setValue('baru@example.com')
+
+    expect(state.clearInviteError).toHaveBeenCalled()
+  })
+
   it('undangan sukses menampilkan tautan token yang dapat dibagikan', async () => {
     const state = setupMembersState()
 
@@ -141,6 +185,47 @@ describe('settings members page', () => {
     expect((linkInput.element as HTMLInputElement).value).toContain('/invitations/inv1?token=token-rahasia')
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Undangan dibuat' })
+    )
+  })
+
+  it('tanpa Clipboard API, Salin memberi arahan untuk menyalin manual', async () => {
+    const state = setupMembersState()
+
+    state.invite.mockResolvedValueOnce({
+      invitation: {
+        id: 'inv1',
+        household: { id: 'h1', name: 'Rumah Budi' },
+        email: 'baru@example.com',
+        status: 'pending',
+        expires_at: '2026-11-05T10:00:00.000Z',
+        created_at: '2026-10-29T10:00:00.000Z'
+      },
+      token: 'token-rahasia'
+    })
+
+    const wrapper = await mountPage()
+
+    await wrapper.find('input[type="email"]').setValue('baru@example.com')
+    await wrapper.find('form').trigger('submit')
+    await flush()
+
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
+
+    try {
+      await wrapper.findAll('button').find(button => button.text() === 'Salin')!.trigger('click')
+      await flush()
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard')
+      }
+    }
+
+    expect(toastMock.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Salin tautan secara manual', color: 'warning' })
     )
   })
 
