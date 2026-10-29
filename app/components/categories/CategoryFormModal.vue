@@ -85,6 +85,7 @@ function onSubmit(): void {
             placeholder="cth. Belanja dapur"
             maxlength="255"
             autocomplete="off"
+            required
             class="w-full"
           />
           <p v-if="props.fieldErrors.name" class="mt-1 text-xs text-error">{{ props.fieldErrors.name }}</p>
@@ -105,9 +106,10 @@ function onSubmit(): void {
             <button
                 v-for="icon in availableIcons"
                 :key="icon"
+                type="button"
                 :class="['group border rounded-md border-input bg-background p-1.5 text-sm flex items-center justify-center hover:text-primary', form.icon === icon && 'border-primary group-data-[state=checked]:bg-primary']"
-                aria-pressed="false"
-                aria-label="Pilih ikon "
+                :aria-pressed="form.icon === icon"
+                :aria-label="`Pilih ikon ${icon.replace('i-lucide-', '')}`"
                 @click="form.icon = icon"
               >
               <UIcon :name="icon" class="size-4" aria-hidden="true" />
@@ -115,7 +117,10 @@ function onSubmit(): void {
           </div>
 
           <p v-if="props.fieldErrors.icon" class="mt-1 text-xs text-error">{{ props.fieldErrors.icon }}</p>
-          <p class="mt-1 text-xs text-muted">Kosongkan pilihan di atas untuk tanpa ikon.</p>
+          <p class="mt-1 text-xs text-muted">Pilih "Tanpa ikon" bila kategori tidak perlu ikon.</p>
+          <UButton type="button" color="neutral" variant="outline" size="xs" class="mt-2" @click="form.icon = ''">
+            Tanpa ikon
+          </UButton>
         </div>
 
         <div class="flex gap-2">

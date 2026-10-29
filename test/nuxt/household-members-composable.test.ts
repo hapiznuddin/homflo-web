@@ -59,6 +59,7 @@ const STATE_KEYS = [
   'household-members-submitting',
   'household-members-error',
   'household-members-inflight',
+  'household-members-loaded',
   'household-members-loaded-for'
 ]
 
@@ -79,6 +80,7 @@ describe('useHouseholdMembers', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/households/h1/members')
     expect(api.items.value).toEqual([member()])
+    expect(api.loaded.value).toBe(true)
 
     await api.load()
 

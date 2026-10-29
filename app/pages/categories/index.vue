@@ -7,7 +7,7 @@ definePageMeta({ middleware: ['auth', 'onboarding'] })
 const toast = useToast()
 const cat = useCategories()
 const auth = useAuth()
-const { items, pending, submitting, error, fieldErrors } = cat
+const { items, pending, submitting, error, fieldErrors, loaded } = cat
 const canManage = computed(() => auth.isHouseholdOwner.value)
 
 const formOpen = ref(false)
@@ -87,12 +87,12 @@ await cat.load()
       </div>
     </div>
 
-    <div v-if="pending && items.length === 0" class="flex flex-col gap-3" aria-label="Memuat kategori">
+    <div v-if="pending && !loaded" class="flex flex-col gap-3" aria-label="Memuat kategori">
       <USkeleton v-for="index in 5" :key="index" class="h-16" />
     </div>
 
     <UAlert
-      v-else-if="error && items.length === 0"
+      v-else-if="error && !loaded"
       color="error"
       variant="soft"
       title="Data kategori belum dapat dimuat."
@@ -145,7 +145,7 @@ await cat.load()
       </ul>
 
       <UAlert
-        v-if="error && items.length > 0"
+        v-if="error && loaded"
         color="error"
         variant="soft"
         title="Aksi terakhir gagal."

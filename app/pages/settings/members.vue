@@ -6,7 +6,7 @@ definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const members = useHouseholdMembers()
 const auth = useAuth()
-const { items, pending, submitting, error, load, invite, changeRole, remove } = members
+const { items, pending, submitting, error, loaded, load, invite, changeRole, remove } = members
 const toast = useToast()
 const requestUrl = useRequestURL()
 const inviteEmail = ref('')
@@ -120,12 +120,12 @@ await load()
       <p class="mt-1 text-sm text-muted">Anggota rumah tangga aktif dan perannya.</p>
     </div>
 
-    <div v-if="pending && items.length === 0" class="flex flex-col gap-3" aria-label="Memuat anggota">
+    <div v-if="pending && !loaded" class="flex flex-col gap-3" aria-label="Memuat anggota">
       <USkeleton v-for="index in 3" :key="index" class="h-16" />
     </div>
 
     <UAlert
-      v-else-if="error && items.length === 0"
+      v-else-if="error && !loaded"
       color="error"
       variant="soft"
       title="Data anggota belum dapat dimuat."
@@ -167,7 +167,13 @@ await load()
         </a>
       </div>
 
-      <ul class="divide-y divide-default overflow-hidden rounded-2xl border border-default bg-background">
+      <div v-if="items.length === 0" class="rounded-2xl border border-default bg-background px-4 py-10 text-center">
+        <p class="text-sm font-medium text-highlighted">Belum ada anggota yang dapat ditampilkan.</p>
+        <p class="mt-1 text-xs text-muted">Muat ulang data anggota untuk memeriksa kembali.</p>
+        <UButton color="neutral" variant="outline" size="sm" class="mt-3" @click="retry">Muat ulang</UButton>
+      </div>
+
+      <ul v-else class="divide-y divide-default overflow-hidden rounded-2xl border border-default bg-background">
         <li v-for="member in items" :key="member.id" class="flex flex-wrap items-center gap-3 px-4 py-3">
           <UAvatar :alt="member.name" :text="member.name.charAt(0).toUpperCase()" size="sm" />
           <div class="min-w-0 flex-1">
@@ -198,7 +204,7 @@ await load()
     </template>
 
     <UAlert
-      v-if="error && items.length > 0"
+      v-if="error && loaded"
       color="error"
       variant="soft"
       title="Aksi terakhir gagal."

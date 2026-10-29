@@ -22,6 +22,7 @@ interface MockMembersState {
   pending: Ref<boolean>
   submitting: Ref<boolean>
   error: Ref<string | null>
+  loaded: Ref<boolean>
   load: ReturnType<typeof vi.fn>
   refresh: ReturnType<typeof vi.fn>
   invite: ReturnType<typeof vi.fn>
@@ -52,13 +53,16 @@ function setupMembersState(
     items?: HouseholdMemberItem[]
     pending?: boolean
     error?: string | null
+    loaded?: boolean
   } = {}
 ): MockMembersState {
+  const items = overrides.items ?? [sampleMember()]
   const state: MockMembersState = {
-    items: ref(overrides.items ?? [sampleMember()]),
+    items: ref(items),
     pending: ref(overrides.pending ?? false),
     submitting: ref(false),
     error: ref(overrides.error ?? null),
+    loaded: ref(overrides.loaded ?? (items.length > 0 || (!overrides.pending && !overrides.error))),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {}),
     invite: vi.fn(async () => null),
@@ -166,5 +170,47 @@ describe('settings members page', () => {
     expect(wrapper.text()).toContain('Budi')
     expect(wrapper.text()).toContain('Aksi terakhir gagal.')
     expect(wrapper.text()).toContain('Kolom Email wajib diisi.')
+  })
+
+  it('daftar kosong menampilkan empty state dan aksi muat ulang', async () => {
+    const state = setupMembersState({ items: [], loaded: true })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Belum ada anggota yang dapat ditampilkan.')
+    expect(wrapper.findAll('button').some(button => button.text() === 'Muat ulang')).toBe(true)
+
+    state.load.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'Muat ulang')!.trigger('click')
+
+    expect(state.load).toHaveBeenCalledWith(true)
+  })
+
+  it('gagal muat awal menampilkan retry tanpa menampilkan form owner', async () => {
+    const state = setupMembersState({ items: [], error: 'Koneksi terputus', loaded: false })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Data anggota belum dapat dimuat.')
+    expect(text).toContain('Koneksi terputus')
+    expect(text).toContain('Coba lagi')
+    expect(wrapper.find('input[type="email"]').exists()).toBe(false)
+
+    state.load.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'Coba lagi')!.trigger('click')
+
+    expect(state.load).toHaveBeenCalledWith(true)
+  })
+
+  it('error aksi pada daftar kosong tetap menampilkan empty state, bukan error muat', async () => {
+    setupMembersState({ items: [], error: 'Undangan belum dapat dibuat.', loaded: true })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Belum ada anggota yang dapat ditampilkan.')
+    expect(text).toContain('Aksi terakhir gagal.')
+    expect(text).not.toContain('Data anggota belum dapat dimuat.')
   })
 })

@@ -34,6 +34,7 @@ interface MockCategoriesState {
   submitting: Ref<boolean>
   error: Ref<string | null>
   fieldErrors: Ref<Record<string, string>>
+  loaded: Ref<boolean>
   load: ReturnType<typeof vi.fn>
   refresh: ReturnType<typeof vi.fn>
   create: ReturnType<typeof vi.fn>
@@ -61,14 +62,17 @@ function setupCategoriesState(
     items?: CategoryItem[]
     pending?: boolean
     error?: string | null
+    loaded?: boolean
   } = {}
 ): MockCategoriesState {
+  const items = overrides.items ?? [sampleItem()]
   const state: MockCategoriesState = {
-    items: ref(overrides.items ?? [sampleItem()]),
+    items: ref(items),
     pending: ref(overrides.pending ?? false),
     submitting: ref(false),
     error: ref(overrides.error ?? null),
     fieldErrors: ref({}),
+    loaded: ref(overrides.loaded ?? (items.length > 0 || (!overrides.pending && !overrides.error))),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {}),
     create: vi.fn(async () => sampleItem()),
@@ -188,6 +192,17 @@ describe('categories page', () => {
     expect(text).toContain('Aksi terakhir gagal.')
   })
 
+  it('error aksi pada daftar kosong tetap menampilkan empty state, bukan error muat', async () => {
+    setupCategoriesState({ items: [], error: 'Kategori masih dipakai', loaded: true })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Belum ada kategori tercatat.')
+    expect(text).toContain('Aksi terakhir gagal.')
+    expect(text).not.toContain('Data kategori belum dapat dimuat.')
+  })
+
   it('tombol Tambah membuka form dan submit memanggil create()', async () => {
     const state = setupCategoriesState()
 
@@ -221,6 +236,52 @@ describe('categories page', () => {
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Kategori ditambah' })
     )
+  })
+
+  it('tombol ikon tidak mengirim form dan pilihan tanpa ikon mengirim null', async () => {
+    const state = setupCategoriesState()
+
+    const wrapper = await mountPage()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Tambah'))!.trigger('click')
+    await flush()
+
+    const nameInput = document.body.querySelector('#cat-name')
+
+    if (!nameInput) {
+      throw new Error('Input nama tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(nameInput as Element).setValue('Transport')
+
+    const iconButton = document.body.querySelector('button[aria-label="Pilih ikon wallet"]')
+
+    if (!iconButton) {
+      throw new Error('Tombol ikon tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(iconButton as Element).trigger('click')
+    await flush()
+
+    // Tombol pemilih ikon berada di dalam form; tanpa type="button" klik
+    // akan ikut men-submit kategori.
+    expect(state.create).not.toHaveBeenCalled()
+
+    const noIconButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tanpa ikon')
+
+    if (!noIconButton) {
+      throw new Error('Tombol tanpa ikon tidak ditemukan di modal')
+    }
+
+    await new DOMWrapper(noIconButton).trigger('click')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    await new DOMWrapper(submitButton!).trigger('click')
+
+    expect(state.create).toHaveBeenCalledWith({ name: 'Transport', icon: '', type: 'expense' })
   })
 
   it('memilih jenis income di form ikut dikirim ke create()', async () => {

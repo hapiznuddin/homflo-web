@@ -55,6 +55,7 @@ const STATE_KEYS = [
   'categories-error',
   'categories-field-errors',
   'categories-inflight',
+  'categories-loaded',
   'categories-request-seq'
 ]
 
@@ -75,6 +76,7 @@ describe('useCategories', () => {
     expect(cat.items.value).toEqual([catItem()])
     expect(cat.pending.value).toBe(false)
     expect(cat.error.value).toBeNull()
+    expect(cat.loaded.value).toBe(true)
   })
 
   it('load() ulang tanpa force memakai data segar (dedup)', async () => {
@@ -84,6 +86,20 @@ describe('useCategories', () => {
     await cat.load()
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('daftar kosong yang berhasil dimuat tetap dianggap termuat', async () => {
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValue({ success: true, data: [] })
+
+    const cat = await mountCategories()
+
+    await cat.load()
+    await cat.load()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(cat.items.value).toEqual([])
+    expect(cat.loaded.value).toBe(true)
   })
 
   it('API 401 tercatat sebagai error tanpa data dan tanpa logout', async () => {
@@ -96,6 +112,7 @@ describe('useCategories', () => {
     expect(cat.items.value).toEqual([])
     expect(cat.error.value).toBe('Sesi berakhir. Silakan login kembali.')
     expect(cat.pending.value).toBe(false)
+    expect(cat.loaded.value).toBe(false)
   })
 
   it('create() POST name/type/icon lalu refresh daftar', async () => {

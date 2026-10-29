@@ -21,6 +21,7 @@ export function useHouseholdMembers() {
   const submitting = useState<boolean>('household-members-submitting', () => false)
   const error = useState<string | null>('household-members-error', () => null)
   const inflight = useState<boolean>('household-members-inflight', () => false)
+  const loaded = useState<boolean>('household-members-loaded', () => false)
   const loadedFor = useState<string | null>('household-members-loaded-for', () => null)
 
   function requestHeaders(): Record<string, string> {
@@ -62,6 +63,7 @@ export function useHouseholdMembers() {
         { credentials: 'include', headers: requestHeaders() }
       )
       items.value = response.data
+      loaded.value = true
       loadedFor.value = householdId
     } catch (caught: unknown) {
       error.value = readError(caught, FALLBACK_ERROR)
@@ -167,5 +169,5 @@ export function useHouseholdMembers() {
     }
   }
 
-  return { items, pending, submitting, error, load, refresh, invite, changeRole, remove }
+  return { items, pending, submitting, error, loaded, load, refresh, invite, changeRole, remove }
 }

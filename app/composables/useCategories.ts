@@ -15,6 +15,7 @@ export function useCategories() {
   const error = useState<string | null>('categories-error', () => null)
   const fieldErrors = useState<Record<string, string>>('categories-field-errors', () => ({}))
   const inflight = useState<boolean>('categories-inflight', () => false)
+  const loaded = useState<boolean>('categories-loaded', () => false)
   const requestSeq = useState<number>('categories-request-seq', () => 0)
 
   function requestHeaders(): Record<string, string> {
@@ -39,8 +40,8 @@ export function useCategories() {
       return
     }
 
-    // Already have fresh data.
-    if (!force && items.value.length > 0 && !error.value) {
+    // Already loaded in this session (including a legitimately empty list).
+    if (!force && loaded.value && !error.value) {
       return
     }
 
@@ -65,6 +66,7 @@ export function useCategories() {
       // Server route meneruskan envelope Laravel apa adanya (pola
       // me.get.ts); unwrap di sini.
       items.value = envelope.data
+      loaded.value = true
     } catch (err) {
       if (current !== requestSeq.value) {
         return
@@ -194,6 +196,7 @@ export function useCategories() {
     submitting,
     error,
     fieldErrors,
+    loaded,
     load,
     refresh,
     create,

@@ -113,10 +113,36 @@ const submitting = ref(false)
 const formError = ref<string | null>(null)
 const done = ref(false)
 
+function validateForm(): string | null {
+  if (!form.current_password) {
+    return 'Kata sandi saat ini wajib diisi.'
+  }
+
+  if (!form.password) {
+    return 'Kata sandi baru wajib diisi.'
+  }
+
+  if (!form.password_confirmation) {
+    return 'Konfirmasi kata sandi baru wajib diisi.'
+  }
+
+  if (form.password !== form.password_confirmation) {
+    return 'Konfirmasi kata sandi baru tidak cocok.'
+  }
+
+  return null
+}
+
 async function onSubmit(): Promise<void> {
+  done.value = false
+  formError.value = validateForm()
+
+  if (formError.value) {
+    return
+  }
+
   submitting.value = true
   formError.value = null
-  done.value = false
 
   try {
     await nuxtApi('/password/change', { method: 'POST', body: { ...form } })
