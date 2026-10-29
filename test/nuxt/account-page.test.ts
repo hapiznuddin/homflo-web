@@ -51,6 +51,7 @@ describe('account page', () => {
   it('menampilkan profil dan hanya mengirim form yang valid', async () => {
     const wrapper = await mountPage()
 
+    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toContain('/settings')
     expect(wrapper.text()).toContain('Budi Santoso')
     expect(wrapper.text()).toContain('budi@example.com')
     expect(wrapper.text()).toContain('Email terverifikasi')

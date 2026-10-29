@@ -12,7 +12,7 @@ const sections = computed(() => [
   },
   {
     title: 'Anggota',
-    description: 'Lihat anggota rumah tangga dan perannya.',
+    description: 'Kelola anggota, peran, dan undangan rumah tangga.',
     icon: 'i-lucide-users',
     to: '/settings/members'
   },
@@ -30,7 +30,7 @@ const sections = computed(() => [
   },
   {
     title: 'Preferensi Aplikasi',
-    description: 'Pengaturan aplikasi yang tersedia pada kontrak saat ini.',
+    description: 'Belum tersedia pada kontrak saat ini.',
     icon: 'i-lucide-sliders-horizontal',
     to: '/settings/preferences'
   }

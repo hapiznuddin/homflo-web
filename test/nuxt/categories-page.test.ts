@@ -127,6 +127,14 @@ describe('categories page', () => {
     expect(text).toContain('Dapur')
   })
 
+  it('menyediakan tautan kembali ke Settings', async () => {
+    setupCategoriesState()
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toContain('/settings')
+  })
+
   it('state loading menampilkan skeleton tanpa konten privat', async () => {
     setupCategoriesState({ items: [], pending: true })
 
