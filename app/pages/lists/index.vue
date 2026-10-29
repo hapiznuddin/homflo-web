@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { ListSummary } from '~/types/lists'
-
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const toast = useToast()
@@ -212,7 +210,7 @@ await load()
               maxlength="255"
               autocomplete="off"
               class="w-full rounded-md border border-default bg-background p-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            >
           </div>
 
           <div>

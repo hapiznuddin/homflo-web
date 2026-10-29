@@ -4,13 +4,10 @@ import type { ListSummary, ListItem } from '~/types/lists'
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const toast = useToast()
-const auth = useAuth()
-const { getList, loadListItems, uncompleteListItem } = useLists()
+const { getList, loadListItems } = useLists()
 
 const route = useRoute()
 const listId = computed(() => String(route.params.id ?? ''))
-
-const isOwner = computed(() => auth.isHouseholdOwner?.value ?? false)
 
 const list = ref<ListSummary | null>(null)
 const items = ref<ListItem[]>([])
@@ -31,11 +28,11 @@ async function loadData(): Promise<void> {
     if (!list.value) {
       error.value = 'List tidak ditemukan'
     }
-  } catch (err: any) {
-    error.value = err.message || 'Gagal memuat detail list'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Gagal memuat detail list'
     toast.add({
       title: 'Error',
-      description: error.value,
+      description: error.value ?? undefined,
       color: 'error'
     })
   } finally {
@@ -43,17 +40,16 @@ async function loadData(): Promise<void> {
   }
 }
 
-// Confirm uncomplete
-async function confirmUncomplete(item: ListItem): Promise<void> {
-  const ok = confirm('Batal completion? Item akan kembali ke status active.')
-  if (ok) {
-    await uncompleteListItem(listId.value, item.id)
-    await loadData()
-  }
-}
-
 function formatCount(c: number): string {
   return String(c)
+}
+
+function listPrice(value: ListSummary): string {
+  const totals = value as ListSummary & {
+    actual_price?: string | null
+    estimated_price?: string | null
+  }
+  return totals.actual_price ?? totals.estimated_price ?? '0.00'
 }
 
 function formatQuantity(q: string | null): string {
@@ -121,7 +117,7 @@ await loadData()
           </span>
           <div class="min-w-0 flex-1">
             <p class="text-xl font-bold tracking-tight text-highlighted">
-              {{ formatPrice((list as any).actual_price ?? (list as any).estimated_price ?? '0.00') }}
+              {{ formatPrice(listPrice(list)) }}
             </p>
             <p class="truncate text-sm text-muted">{{ list.name }}</p>
           </div>

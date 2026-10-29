@@ -1,5 +1,5 @@
 import { LIST_ERROR_CODES } from '~/types/lists'
-import { readFieldErrors } from '~/composables/useApiError'
+import { readErrorCode, readFieldErrors } from '~/composables/useApiError'
 
 // Import types
 import type {
@@ -7,13 +7,9 @@ import type {
   ListItem,
   ListItemFormValues,
   ListCreateFormValues,
-  ListArchiveFormValues,
   ListItemExpense,
-  ListItemExpenseResponse,
-  ListsResponse,
-  ListDetailResponse,
   ListItemsResponse,
-  ListErrorCode,
+  ListErrorCode
 } from '~/types/lists'
 
 // ---------------------------------------------------------------------------
@@ -81,7 +77,7 @@ export function useLists() {
       const envelope = await $fetch<{ success: boolean, data: ListSummary[] }>('/api/lists', {
         params,
         credentials: 'include',
-        headers: requestHeaders(),
+        headers: requestHeaders()
       })
 
       if (current !== requestSeq.value) {
@@ -89,8 +85,7 @@ export function useLists() {
       }
 
       lists.value = envelope.data
-      items.value = envelope.data
-    } catch (err) {
+    } catch {
       if (current !== requestSeq.value) {
         return
       }
@@ -112,26 +107,19 @@ export function useLists() {
     try {
       const envelope = await $fetch<{ success: boolean, data: ListSummary }>('/api/lists/default', {
         credentials: 'include',
-        headers: requestHeaders(),
+        headers: requestHeaders()
       })
 
       if (envelope.success && envelope.data) {
-        const listData = envelope.data.data || envelope.data
-        selectedList.value = listData
-        defaultList.value = listData
-        return listData
-      }
-
-      if (envelope.data && envelope.data.code === 'DEFAULT_LIST_REQUIRED') {
-        defaultList.value = null
-        error.value = 'List ini diarsipkan; aksi tidak diperbolehkan.'
-        return null
+        selectedList.value = envelope.data
+        defaultList.value = envelope.data
+        return envelope.data
       }
 
       error.value = 'Gagal memuat default list'
       return null
-    } catch (err: any) {
-      if (err.statusCode === 409 && err.data?.error?.code === 'DEFAULT_LIST_REQUIRED') {
+    } catch (err) {
+      if (readErrorCode(err) === 'DEFAULT_LIST_REQUIRED') {
         defaultList.value = null
         error.value = 'List ini diarsipkan; aksi tidak diperbolehkan.'
         return null
@@ -148,7 +136,7 @@ export function useLists() {
         `/api/lists/${encodeURIComponent(listId)}`,
         {
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
@@ -159,7 +147,7 @@ export function useLists() {
 
       error.value = 'Gagal memuat list'
       return {} as ListSummary
-    } catch (err) {
+    } catch {
       error.value = 'Gagal memuat list'
       return {} as ListSummary
     }
@@ -178,18 +166,21 @@ export function useLists() {
         {
           params,
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       if (envelope.success && envelope.data) {
-        return envelope.data as ListItemsResponse
+        items.value = envelope.data
+        return { data: envelope.data }
       }
 
-      return []
-    } catch (err) {
+      items.value = []
+      return { data: [] }
+    } catch {
       error.value = `Gagal memuat item list ${listId}`
-      return []
+      items.value = []
+      return { data: [] }
     }
   }
 
@@ -207,19 +198,15 @@ export function useLists() {
         method: 'POST',
         body: values,
         credentials: 'include',
-        headers: requestHeaders(),
+        headers: requestHeaders()
       })
 
       await refreshLists()
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       const fieldErr = readFieldErrors(err)
-      if (Object.keys(fieldErr).length > 0) {
-        error.value = Object.values(fieldErr)[0]
-      } else {
-        error.value = 'Gagal membuat list'
-      }
+      error.value = Object.values(fieldErr)[0] ?? 'Gagal membuat list'
       fieldErrors.value = fieldErr
       return null
     } finally {
@@ -243,20 +230,16 @@ export function useLists() {
           method: 'PATCH',
           body: values,
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await refreshLists()
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       const fieldErr = readFieldErrors(err)
-      if (Object.keys(fieldErr).length > 0) {
-        error.value = Object.values(fieldErr)[0]
-      } else {
-        error.value = 'Gagal memperbarui list'
-      }
+      error.value = Object.values(fieldErr)[0] ?? 'Gagal memperbarui list'
       fieldErrors.value = fieldErr
       return null
     } finally {
@@ -279,14 +262,14 @@ export function useLists() {
         {
           method: 'POST',
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await refreshLists()
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal mengarsip list'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -310,14 +293,14 @@ export function useLists() {
         {
           method: 'POST',
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await refreshLists()
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal memulihkan list'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -342,14 +325,14 @@ export function useLists() {
           method: 'POST',
           body: values,
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await loadListItems(listId)
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal membuat item list'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -364,7 +347,7 @@ export function useLists() {
         `/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
         {
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
@@ -374,7 +357,7 @@ export function useLists() {
       }
 
       return {} as ListItem
-    } catch (err) {
+    } catch {
       return {} as ListItem
     }
   }
@@ -399,14 +382,14 @@ export function useLists() {
           method: 'PATCH',
           body: values,
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await loadListItems(listId)
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal memperbarui item list'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -430,14 +413,14 @@ export function useLists() {
         {
           method: 'POST',
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await loadListItems(listId)
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal menyelesaikan item'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -461,14 +444,14 @@ export function useLists() {
         {
           method: 'POST',
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await loadListItems(listId)
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal membatalkan completion item'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -499,14 +482,14 @@ export function useLists() {
           method: 'POST',
           body,
           credentials: 'include',
-          headers: requestHeaders(),
+          headers: requestHeaders()
         }
       )
 
       await loadListItems(listId)
 
       return envelope.data
-    } catch (err: any) {
+    } catch (err) {
       error.value = 'Gagal membuat expense untuk item'
       fieldErrors.value = readFieldErrors(err)
       return null
@@ -515,7 +498,7 @@ export function useLists() {
     }
   }
 
-  function mapErrorCode(code: ListErrorCode): string {
+  function mapErrorCode(code?: string): string {
     const messages: Record<ListErrorCode, string> = {
       [LIST_ERROR_CODES.ARCHIVED]: 'List ini diarsipkan; aksi tidak diperbolehkan.',
       [LIST_ERROR_CODES.NOT_FOUND]: 'List tidak ditemukan.',
@@ -523,9 +506,9 @@ export function useLists() {
       [LIST_ERROR_CODES.ALREADY_COMPLETED]: 'Item sudah completed.',
       [LIST_ERROR_CODES.NOT_COMPLETED]: 'Item belum completed.',
       [LIST_ERROR_CODES.PRICE_LOCKED]: 'Harga actual dikunci; Expense sudah ada.',
-      [LIST_ERROR_CODES.ACTUAL_PRICE_REQUIRED]: 'Actual price wajib diisi dan > 0.',
+      [LIST_ERROR_CODES.ACTUAL_PRICE_REQUIRED]: 'Actual price wajib diisi dan > 0.'
     }
-    return messages[code] || 'Terjadi kesalahan.'
+    return (code ? messages[code as ListErrorCode] : undefined) ?? 'Terjadi kesalahan.'
   }
 
   function clearError(): void {
@@ -554,12 +537,18 @@ export function useLists() {
     getListItem,
     updateListItem,
     completeListItem,
-    uncompleteListItem,    createListItemExpense,
+    uncompleteListItem,
+    createListItemExpense,
     clearError,
     LIST_ERROR_CODES,
     defaultList,
     items,
     filters,
+    // Aliases used by the Lists pages. They are the same functions, kept so
+    // the page contract (`load`/`refresh`/`create`) stays readable.
+    load: loadLists,
+    refresh: refreshLists,
+    create: createList,
+    mapErrorCode
   }
 }
-

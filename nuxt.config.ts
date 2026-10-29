@@ -119,7 +119,10 @@ export default defineNuxtConfig({
       // a cached /api response and never cache session cookies.
       runtimeCaching: [
         {
-          urlPattern: /^\/api\/.*/,
+          // A function matcher keeps the structural contract testable and is
+          // serialized verbatim into the generated sw.js, so the production
+          // bundle still contains the literal '/api/' guard.
+          urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
           handler: 'NetworkOnly'
         }
       ]

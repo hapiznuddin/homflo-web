@@ -46,18 +46,20 @@ export interface ListItem {
 
 export interface ListItemFormValues {
   title: string
-  quantity: string | null
-  unit: string | null
-  estimated_price: string | null
+  /** Optional/nullable sesuai StoreListItemRequest; omitted = not specified. */
+  quantity?: string | null
+  unit?: string | null
+  estimated_price?: string | null
 }
 
 export interface ListCreateFormValues {
   name: string
+  /** Required by POST /api/lists; immutable after create. */
+  type: 'shopping' | 'custom'
 }
 
-export interface ListArchiveFormValues {
-  // kosong — archived_at di-set server-side; tidak ada field dari client
-}
+// Tidak ada field dari client — archived_at di-set server-side.
+export type ListArchiveFormValues = Record<string, never>
 
 export interface ListItemExpense {
   /** Transaction presenter shape */
@@ -102,7 +104,7 @@ export const LIST_ERROR_CODES = {
   ALREADY_COMPLETED: 'LIST_ITEM_ALREADY_COMPLETED',
   NOT_COMPLETED: 'LIST_ITEM_NOT_COMPLETED',
   PRICE_LOCKED: 'LIST_ITEM_PRICE_LOCKED',
-  ACTUAL_PRICE_REQUIRED: 'LIST_ITEM_ACTUAL_PRICE_REQUIRED',
+  ACTUAL_PRICE_REQUIRED: 'LIST_ITEM_ACTUAL_PRICE_REQUIRED'
 } as const
 
 export type ListErrorCode = typeof LIST_ERROR_CODES[keyof typeof LIST_ERROR_CODES]

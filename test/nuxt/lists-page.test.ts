@@ -1,6 +1,6 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { DOMWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
 import type { ListSummary } from '~/types/lists'
 import ListsPage from '~/pages/lists/index.vue'
@@ -46,20 +46,6 @@ interface MockListsState {
   restore: ReturnType<typeof vi.fn>
 }
 
-const listsState: MockListsState = {
-  lists: ref([]),
-  pending: ref(false),
-  submitting: ref(false),
-  error: ref(null),
-  fieldErrors: ref({}),
-  load: vi.fn(async () => {}),
-  refresh: vi.fn(async () => {}),
-  create: vi.fn(async () => listSummary()),
-  update: vi.fn(async () => listSummary()),
-  archive: vi.fn(async () => true),
-  restore: vi.fn(async () => true)
-}
-
 function sampleList(overrides: Partial<ListSummary> = {}): ListSummary {
   return {
     id: '01J0LIST00000000000000001',
@@ -80,10 +66,6 @@ function sampleList(overrides: Partial<ListSummary> = {}): ListSummary {
     updated_at: '2026-10-01T00:00:00.000Z',
     ...overrides
   }
-}
-
-function listSummary(overrides: Partial<ListSummary> = {}): ListSummary {
-  return sampleList(overrides)
 }
 
 function setupListsState(
@@ -128,10 +110,6 @@ function bodyText(): string {
 
 async function mountPage() {
   return mountSuspended(ListsPage, { route: '/lists' })
-}
-
-function tabButton(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
-  return wrapper.findAll('button').find((button) => button.text() === label)
 }
 
 beforeEach(() => {

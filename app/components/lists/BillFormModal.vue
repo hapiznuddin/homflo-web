@@ -28,16 +28,21 @@ async function onSubmit(): Promise<void> {
   error.value = null
 
   try {
-    await createListItem(listId, { title, quantity: quantity.value, unit: unit.value, estimated_price: estimated_price.value })
+    await createListItem(props.listId, {
+      title: title.value,
+      quantity: quantity.value,
+      unit: unit.value,
+      estimated_price: estimated_price.value
+    })
     toast.add({
       title: 'Item ditambahkan',
       description: 'Item berhasil ditambahkan ke list.',
       color: 'success'
     })
     emit('update:modelValue', false)
-    router.push(`/lists/${listId}`)
-  } catch (err: any) {
-    error.value = mapErrorCode(err.code as any) || err.message || 'Gagal menambah item'
+    router.push(`/lists/${props.listId}`)
+  } catch (err) {
+    error.value = mapErrorCode((err as { code?: string }).code)
     toast.add({
       title: 'Error',
       description: error.value,
@@ -57,7 +62,7 @@ async function onSubmit(): Promise<void> {
       {{ error }}
     </div>
 
-    <form @submit.prevent="onSubmit" class="space-y-4">
+    <form class="space-y-4" @submit.prevent="onSubmit">
       <div>
         <label class="block text-sm font-medium mb-2">Judul Item</label>
         <input
@@ -66,7 +71,7 @@ async function onSubmit(): Promise<void> {
           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           required
           placeholder="Contoh: Sabun cuci"
-        />
+        >
       </div>
 
       <div>
@@ -76,7 +81,7 @@ async function onSubmit(): Promise<void> {
           type="number"
           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="1 (opsional)"
-        />
+        >
         <p class="text-xs text-muted">Null = tidak ditentukan; bukan 0.</p>
       </div>
 
@@ -87,7 +92,7 @@ async function onSubmit(): Promise<void> {
           type="text"
           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="pcs (opsional)"
-        />
+        >
         <p class="text-xs text-muted">Varchar(20) bebas teks; di-copy persis dari legacy.</p>
       </div>
 
@@ -98,7 +103,7 @@ async function onSubmit(): Promise<void> {
           type="number"
           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="Estimasi harga (opsional)"
-        />
+        >
         <p class="text-xs text-muted">Decimal(15,2); diisi saat completion.</p>
       </div>
 

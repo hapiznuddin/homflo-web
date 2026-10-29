@@ -14,8 +14,14 @@ const { createListItemExpense, mapErrorCode } = useLists()
 const actual_price = ref('' as string)
 const submitting = ref(false)
 const error = ref<string | null>(null)
-const wallets = ref([] as any[])
+interface WalletOption {
+  id: string
+  name: string
+  balance_cents: number | string
+}
+const wallets = ref([] as WalletOption[])
 const walletsError = ref<string | null>(null)
+const selectedWallet = ref('')
 
 // Load wallets when component mounts
 watch([props.listId], async () => {
@@ -23,7 +29,7 @@ watch([props.listId], async () => {
     // In a real implementation, fetch wallets from API
     // For now, use placeholder
     wallets.value = []
-  } catch (err) {
+  } catch {
     walletsError.value = 'Gagal memuat dompet'
   }
 })
@@ -47,8 +53,8 @@ async function onSubmit(): Promise<void> {
     })
     emit('update:modelValue', false)
     router.push(`/lists/${props.listId}`)
-  } catch (err: any) {
-    error.value = mapErrorCode(err.code as any) || err.message || 'Gagal membuat expense'
+  } catch (err) {
+    error.value = mapErrorCode((err as { code?: string }).code)
     toast.add({
       title: 'Error',
       description: error.value,
@@ -78,7 +84,7 @@ async function onSubmit(): Promise<void> {
     </template>
 
     <template v-else>
-      <form @submit.prevent="onSubmit" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="onSubmit">
         <div>
           <label class="block text-sm font-medium mb-2">Harga Actual</label>
           <input
@@ -88,7 +94,7 @@ async function onSubmit(): Promise<void> {
             min="1"
             required
             placeholder="Contoh: 15000.00"
-          />
+          >
           <p class="text-xs text-muted">Harga actual wajib > 0. Diambil dari actual_price item atau input baru.</p>
         </div>
 
@@ -99,8 +105,13 @@ async function onSubmit(): Promise<void> {
             class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">-- Pilih dompet --</option>
-            <option v-for="wallet in wallets" :key="wallet.id" :value="wallet.id">
-              {{ wallet.name }} (Saldo: {{ wallet.balance_cents }})</option>
+            <option
+              v-for="wallet in wallets"
+              :key="wallet.id"
+              :value="wallet.id"
+            >
+              {{ wallet.name }} (Saldo: {{ wallet.balance_cents }})
+            </option>
           </select>
         </div>
 
@@ -123,3 +134,4 @@ async function onSubmit(): Promise<void> {
       </form>
     </template>
   </div>
+</template>

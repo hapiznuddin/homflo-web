@@ -2,7 +2,7 @@ import { clearNuxtState } from '#app'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ListSummary, ListItem, ListItemsResponse, ListsResponse } from '~/types/lists'
+import type { ListSummary } from '~/types/lists'
 import { useLists } from '~/composables/useLists'
 
 // $fetch auto-import Nuxt berasal dari #build/fetch.mjs (bukan global),
@@ -57,14 +57,6 @@ function listItem(id: string = '01JLIST00000000000000000001'): ListSummary {
     created_by: null,
     created_at: '2026-10-01T00:00:00.000000Z',
     updated_at: '2026-10-01T00:00:00.000000Z'
-  }
-}
-
-function listItemFormValues(overrides: Partial<ListItemFormValues> = {}): ListItemFormValues {
-  return {
-    title: 'Belanja Bulanan',
-    amount: '50000',
-    ...overrides
   }
 }
 
@@ -164,7 +156,7 @@ describe('useLists', () => {
   })
 
   it('loadDefaultList() sukses ketika default list ada', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000001') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000001') })
 
     const lists = await mountLists()
 
@@ -176,7 +168,7 @@ describe('useLists', () => {
 
   it('getList() mengambil /api/lists/{id}', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000002') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000002') })
 
     const lists = await mountLists()
 
@@ -189,7 +181,7 @@ describe('useLists', () => {
 
   it('loadListItems() mengambil /api/lists/{id}/items', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: [] } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
 
     const lists = await mountLists()
 
@@ -202,7 +194,7 @@ describe('useLists', () => {
 
   it('loadListItems() dengan status active', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: [] } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
 
     const lists = await mountLists()
 
@@ -214,7 +206,7 @@ describe('useLists', () => {
 
   it('loadListItems() dengan status completed', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: [] } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
 
     const lists = await mountLists()
 
@@ -225,36 +217,38 @@ describe('useLists', () => {
   })
 
   it('createList() POST ke /api/lists dengan body valid', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000003') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000003') })
 
     const lists = await mountLists()
 
     await lists.createList({
-      title: 'Belanja Bulanan'
+      name: 'Belanja Bulanan',
+      type: 'shopping'
     })
 
     const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
     expect(url).toBe('/api/lists')
     expect(options.method).toBe('POST')
-    expect(options.body).toEqual({ title: 'Belanja Bulanan' })
+    expect(options.body).toEqual({ name: 'Belanja Bulanan', type: 'shopping' })
   })
 
   it('createList() 422 validasi field errors', async () => {
-    fetchMock.mockRejectedValueOnce({ statusCode: 422, data: { data: { errors: { title: ['The title field is required.'] } } } })
+    fetchMock.mockRejectedValueOnce({ statusCode: 422, data: { data: { errors: { name: ['The name field is required.'] } } } })
 
     const lists = await mountLists()
 
     const saved = await lists.createList({
-      title: ''
+      name: '',
+      type: 'shopping'
     })
 
     expect(saved).toBeNull()
-    expect(lists.fieldErrors.value).toEqual({ title: 'Kolom judul wajib diisi.' })
-    expect(lists.error.value).toBe('Kolom judul wajib diisi.')
+    expect(lists.fieldErrors.value).toEqual({ name: 'Kolom nama wajib diisi.' })
+    expect(lists.error.value).toBe('Kolom nama wajib diisi.')
   })
 
   it('updateList() PATCH ke /api/lists/{id}', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000004') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000004') })
 
     const lists = await mountLists()
 
@@ -267,7 +261,7 @@ describe('useLists', () => {
   })
 
   it('archiveList() POST ke /api/lists/{id}/archive', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000005') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000005') })
 
     const lists = await mountLists()
 
@@ -280,7 +274,7 @@ describe('useLists', () => {
   })
 
   it('restoreList() POST ke /api/lists/{id}/restore', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: listItem('01JLIST00000000000000000006') } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: listItem('01JLIST00000000000000000006') })
 
     const lists = await mountLists()
 
@@ -292,7 +286,7 @@ describe('useLists', () => {
   })
 
   it('createListItem() POST ke /api/lists/{id}/items', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -325,7 +319,7 @@ describe('useLists', () => {
 
   it('getListItem() GET ke /api/lists/{id}/items/{itemId}', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -337,7 +331,7 @@ describe('useLists', () => {
   })
 
   it('updateListItem() PATCH ke /api/lists/{id}/items/{itemId}', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Telur', quantity: '2', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Telur', quantity: '2', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -351,7 +345,7 @@ describe('useLists', () => {
   })
 
   it('completeListItem() POST ke /api/lists/{id}/items/{itemId}/complete', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: '2026-10-28T00:00:00.000000Z', created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: '2026-10-28T00:00:00.000000Z', created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -363,7 +357,7 @@ describe('useLists', () => {
   })
 
   it('uncompleteListItem() POST ke /api/lists/{id}/items/{itemId}/uncomplete', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -375,7 +369,7 @@ describe('useLists', () => {
   })
 
   it('createListItemExpense() POST ke /api/lists/{id}/items/{itemId}/expense', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: '50000', completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: '50000', completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
@@ -388,7 +382,7 @@ describe('useLists', () => {
   })
 
   it('createListItemExpense() tanpa actualPrice', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } } })
+    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
 
     const lists = await mountLists()
 
