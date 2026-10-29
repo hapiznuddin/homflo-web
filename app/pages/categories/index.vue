@@ -77,7 +77,8 @@ await cat.load()
   <div class="flex flex-col gap-4 sm:gap-5 w-full">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="min-w-0">
-        <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Kategori</h1>
+        <UButton to="/settings" color="neutral" variant="link" icon="i-lucide-arrow-left" class="-ml-2">Pengaturan</UButton>
+        <h1 class="mt-1 truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Kategori</h1>
         <p class="mt-0.5 text-sm text-muted">Kelompok pengeluaran dan pemasukan rumah tangga.</p>
       </div>
       <div class="flex shrink-0 gap-2">

@@ -1,7 +1,8 @@
 <template>
   <div class="flex flex-col gap-6">
     <section aria-label="Profil">
-      <h1 class="text-xl font-bold">Akun</h1>
+      <UButton v-if="auth.household.value" to="/settings" color="neutral" variant="link" icon="i-lucide-arrow-left" class="-ml-2">Pengaturan</UButton>
+      <h1 class="mt-1 text-xl font-bold">Akun</h1>
       <dl class="mt-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
         <div class="flex justify-between gap-2 py-1">
           <dt class="text-slate-600">Nama</dt>

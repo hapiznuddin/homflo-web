@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CreatedHouseholdInvitation } from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
 
 definePageMeta({ middleware: ['auth', 'onboarding'] })
@@ -7,23 +8,80 @@ const members = useHouseholdMembers()
 const auth = useAuth()
 const { items, pending, submitting, error, load, invite, changeRole, remove } = members
 const toast = useToast()
+const requestUrl = useRequestURL()
 const inviteEmail = ref('')
+const lastInvite = ref<CreatedHouseholdInvitation | null>(null)
+const copied = ref(false)
 const confirmRemoveId = ref<string | null>(null)
 const canManage = computed(() => auth.isHouseholdOwner.value)
+
+const inviteLink = computed(() => {
+  if (!lastInvite.value) {
+    return ''
+  }
+
+  const id = encodeURIComponent(lastInvite.value.invitation.id)
+  const token = encodeURIComponent(lastInvite.value.token)
+
+  return `${requestUrl.origin}/invitations/${id}?token=${token}`
+})
 
 function roleLabel(role: HouseholdMemberItem['role']): string {
   return role === 'owner' ? 'Owner' : 'Member'
 }
 
+function formatExpiry(value: string): string {
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value))
+}
+
 async function submitInvite(): Promise<void> {
-  if (await invite(inviteEmail.value)) {
-    toast.add({ title: 'Undangan dikirim', description: 'Undangan anggota berhasil dibuat.', color: 'success' })
-    inviteEmail.value = ''
+  const created = await invite(inviteEmail.value)
+
+  if (!created) {
+    return
+  }
+
+  lastInvite.value = created
+  copied.value = false
+  inviteEmail.value = ''
+  toast.add({
+    title: 'Undangan dibuat',
+    description: 'Bagikan tautan undangan kepada anggota yang dituju.',
+    color: 'success'
+  })
+}
+
+async function copyInviteLink(): Promise<void> {
+  if (!inviteLink.value || !navigator.clipboard) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(inviteLink.value)
+    copied.value = true
+    toast.add({ title: 'Tautan disalin', color: 'success' })
+  } catch {
+    toast.add({
+      title: 'Tautan belum dapat disalin',
+      description: 'Salin tautan secara manual dari kolom di atas.',
+      color: 'error'
+    })
   }
 }
 
+function retry(): void {
+  void load(true)
+}
+
 async function updateRole(member: HouseholdMemberItem, event: Event): Promise<void> {
-  const role = (event.target as HTMLSelectElement).value as HouseholdMemberItem['role']
+  const select = event.target as HTMLSelectElement
+  const role = select.value as HouseholdMemberItem['role']
 
   if (role === member.role) {
     return
@@ -31,6 +89,9 @@ async function updateRole(member: HouseholdMemberItem, event: Event): Promise<vo
 
   if (await changeRole(member.id, role)) {
     toast.add({ title: 'Peran anggota diubah', color: 'success' })
+  } else {
+    // Jangan biarkan select menampilkan peran yang gagal disimpan server.
+    select.value = member.role
   }
 }
 
@@ -69,7 +130,7 @@ await load()
       variant="soft"
       title="Data anggota belum dapat dimuat."
       :description="error"
-      :actions="[{ label: 'Coba lagi', onClick: load }]"
+      :actions="[{ label: 'Coba lagi', onClick: retry }]"
     />
 
     <template v-else>
@@ -77,6 +138,34 @@ await load()
         <UInput v-model="inviteEmail" type="email" autocomplete="email" placeholder="email@contoh.com" :disabled="submitting" class="min-w-0 flex-1" required />
         <UButton type="submit" :loading="submitting" :disabled="submitting">Undang</UButton>
       </form>
+
+      <div
+        v-if="canManage && lastInvite"
+        class="flex flex-col gap-3 rounded-2xl border border-default bg-elevated/40 p-4"
+        aria-live="polite"
+      >
+        <div>
+          <p class="text-sm font-medium text-highlighted">Tautan undangan untuk {{ lastInvite.invitation.email }}</p>
+          <p class="mt-1 text-xs text-muted">
+            Berlaku sampai {{ formatExpiry(lastInvite.invitation.expires_at) }}. Homflo belum mengirim email otomatis;
+            bagikan tautan ini langsung kepada anggota. Tautan berisi token rahasia dan hanya ditampilkan sekali.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <UInput
+            :model-value="inviteLink"
+            readonly
+            aria-label="Tautan undangan"
+            class="min-w-0 flex-1"
+          />
+          <UButton color="neutral" variant="outline" @click="copyInviteLink">
+            {{ copied ? 'Tersalin' : 'Salin' }}
+          </UButton>
+        </div>
+        <a :href="inviteLink" target="_blank" rel="noopener noreferrer" class="text-sm underline">
+          Buka tautan undangan
+        </a>
+      </div>
 
       <ul class="divide-y divide-default overflow-hidden rounded-2xl border border-default bg-background">
         <li v-for="member in items" :key="member.id" class="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -112,7 +201,7 @@ await load()
       v-if="error && items.length > 0"
       color="error"
       variant="soft"
-      title="Pemuatan terakhir gagal."
+      title="Aksi terakhir gagal."
       :description="error"
     />
   </div>
