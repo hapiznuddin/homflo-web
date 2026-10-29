@@ -83,8 +83,9 @@ export function pickListCompleteBody(raw: Record<string, unknown> | null | undef
 export function pickListExpenseBody(raw: Record<string, unknown> | null | undefined): Record<string, unknown> {
   const body = pick(raw, LIST_EXPENSE_ALLOWED_KEYS)
 
-  // wallet_id is optional in the current backend flow (it resolves the
-  // household's active wallet when omitted); never forward an empty value.
+  // wallet_id is required by the contract (§8.3). An empty control value is
+  // omitted so Laravel's required rule produces the 422 field error rather
+  // than forwarding a meaningless empty string.
   if (body.wallet_id === '') {
     delete body.wallet_id
   }

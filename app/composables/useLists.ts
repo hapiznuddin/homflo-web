@@ -7,10 +7,18 @@ import type {
   ListItem,
   ListItemFormValues,
   ListCreateFormValues,
-  ListItemExpense,
+  ListItemExpenseInput,
+  ListItemExpenseResponse,
   ListItemsResponse,
   ListErrorCode
 } from '~/types/lists'
+
+const EMPTY_ITEMS_RESPONSE = (listId: string): ListItemsResponse => ({
+  list_id: listId,
+  counts: { active: 0, completed: 0 },
+  active: [],
+  completed: []
+})
 
 // ---------------------------------------------------------------------------
 // Read-model + mutasi lists: Browser -> Nuxt /api/lists -> Laravel -> PostgreSQL.
@@ -153,34 +161,29 @@ export function useLists() {
     }
   }
 
-  async function loadListItems(listId: string, status?: 'active' | 'completed'): Promise<ListItemsResponse> {
+  async function loadListItems(listId: string): Promise<ListItemsResponse> {
     try {
-      const params: Record<string, string> = {}
-
-      if (status) {
-        params.status = status
-      }
-
-      const envelope = await $fetch<{ success: boolean, data: ListItem[] }>(
+      const envelope = await $fetch<{ success: boolean, data: ListItemsResponse }>(
         `/api/lists/${encodeURIComponent(listId)}/items`,
         {
-          params,
           credentials: 'include',
           headers: requestHeaders()
         }
       )
 
       if (envelope.success && envelope.data) {
-        items.value = envelope.data
-        return { data: envelope.data }
+        // State `items` tetap datar untuk konsumen lama; sumber kebenaran
+        // urutan/grup ada pada response kontrak.
+        items.value = [...envelope.data.active, ...envelope.data.completed]
+        return envelope.data
       }
 
       items.value = []
-      return { data: [] }
+      return EMPTY_ITEMS_RESPONSE(listId)
     } catch {
       error.value = `Gagal memuat item list ${listId}`
       items.value = []
-      return { data: [] }
+      return EMPTY_ITEMS_RESPONSE(listId)
     }
   }
 
@@ -341,25 +344,22 @@ export function useLists() {
     }
   }
 
+  /**
+   * Convenience lookup: the contract deliberately has no nested item GET,
+   * so the item is read from the grouped list response and cached in state.
+   */
   async function getListItem(listId: string, itemId: string): Promise<ListItem> {
-    try {
-      const envelope = await $fetch<{ success: boolean, data: ListItem }>(
-        `/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
-        {
-          credentials: 'include',
-          headers: requestHeaders()
-        }
-      )
+    const response = await loadListItems(listId)
+    const found = [...response.active, ...response.completed]
+      .find(item => item.id === itemId) ?? null
 
-      if (envelope.success && envelope.data) {
-        selectedItem.value = envelope.data
-        return envelope.data
-      }
-
-      return {} as ListItem
-    } catch {
-      return {} as ListItem
+    if (found !== null) {
+      selectedItem.value = found
+      return found
     }
+
+    error.value = 'Item list tidak ditemukan.'
+    return {} as ListItem
   }
 
   async function updateListItem(
@@ -463,8 +463,8 @@ export function useLists() {
   async function createListItemExpense(
     listId: string,
     itemId: string,
-    actualPrice?: string
-  ): Promise<ListItemExpense | null> {
+    input: ListItemExpenseInput
+  ): Promise<ListItemExpenseResponse | null> {
     if (submitting.value) {
       return null
     }
@@ -474,13 +474,11 @@ export function useLists() {
     fieldErrors.value = {}
 
     try {
-      const body = actualPrice !== undefined ? { actual_price: actualPrice } : {}
-
-      const envelope = await $fetch<{ success: boolean, data: ListItemExpense }>(
+      const envelope = await $fetch<{ success: boolean, data: ListItemExpenseResponse }>(
         `/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/expense`,
         {
           method: 'POST',
-          body,
+          body: input,
           credentials: 'include',
           headers: requestHeaders()
         }
@@ -503,10 +501,12 @@ export function useLists() {
       [LIST_ERROR_CODES.ARCHIVED]: 'List ini diarsipkan; aksi tidak diperbolehkan.',
       [LIST_ERROR_CODES.NOT_FOUND]: 'List tidak ditemukan.',
       [LIST_ERROR_CODES.ITEM_NOT_FOUND]: 'Item list tidak ditemukan.',
+      [LIST_ERROR_CODES.ITEM_HAS_EXPENSE]: 'Item memiliki Expense dan tidak dapat dihapus.',
       [LIST_ERROR_CODES.ALREADY_COMPLETED]: 'Item sudah completed.',
       [LIST_ERROR_CODES.NOT_COMPLETED]: 'Item belum completed.',
       [LIST_ERROR_CODES.PRICE_LOCKED]: 'Harga actual dikunci; Expense sudah ada.',
-      [LIST_ERROR_CODES.ACTUAL_PRICE_REQUIRED]: 'Actual price wajib diisi dan > 0.'
+      [LIST_ERROR_CODES.ACTUAL_PRICE_REQUIRED]: 'Actual price wajib diisi dan > 0.',
+      [LIST_ERROR_CODES.EXPENSE_LOCKED]: 'Expense dari item list tidak dapat diubah atau dihapus.'
     }
     return (code ? messages[code as ListErrorCode] : undefined) ?? 'Terjadi kesalahan.'
   }

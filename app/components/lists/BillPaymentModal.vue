@@ -45,7 +45,16 @@ async function onSubmit(): Promise<void> {
   error.value = null
 
   try {
-    await createListItemExpense(props.listId, props.itemId, actual_price.value || undefined)
+    const result = await createListItemExpense(props.listId, props.itemId, {
+      wallet_id: selectedWallet.value,
+      actual_price: actual_price.value || undefined
+    })
+
+    if (result === null) {
+      error.value = mapErrorCode('LIST_ITEM_ACTUAL_PRICE_REQUIRED')
+      return
+    }
+
     toast.add({
       title: 'Expense tercatat',
       description: 'Transaksi expense berhasil dicatat ke ledger.',

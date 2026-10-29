@@ -2,7 +2,7 @@ import { clearNuxtState } from '#app'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ListSummary } from '~/types/lists'
+import type { ListItem, ListItemsResponse, ListSummary } from '~/types/lists'
 import { useLists } from '~/composables/useLists'
 
 // $fetch auto-import Nuxt berasal dari #build/fetch.mjs (bukan global),
@@ -57,6 +57,68 @@ function listItem(id: string = '01JLIST00000000000000000001'): ListSummary {
     created_by: null,
     created_at: '2026-10-01T00:00:00.000000Z',
     updated_at: '2026-10-01T00:00:00.000000Z'
+  }
+}
+
+function itemFixture(overrides: Partial<ListItem> = {}): ListItem {
+  return {
+    id: '01JLISTITEM00000000000000001',
+    list_id: '01JLIST00000000000000000001',
+    title: 'Beli Susu',
+    quantity: '1',
+    unit: 'pcs',
+    estimated_price: '10000',
+    actual_price: null,
+    status: 'active',
+    completed_at: null,
+    completed_by: null,
+    created_by: null,
+    expense: null,
+    created_at: '2026-10-01T00:00:00.000000Z',
+    updated_at: '2026-10-01T00:00:00.000000Z',
+    ...overrides
+  }
+}
+
+function itemsEnvelope(
+  active: ListItem[] = [],
+  completed: ListItem[] = []
+): { success: boolean, data: ListItemsResponse } {
+  return {
+    success: true,
+    data: {
+      list_id: '01JLIST00000000000000000001',
+      counts: { active: active.length, completed: completed.length },
+      active,
+      completed
+    }
+  }
+}
+
+function expenseEnvelope(created = true): { success: boolean, data: unknown } {
+  return {
+    success: true,
+    data: {
+      created,
+      expense: {
+        id: '01JTRX00000000000000000001',
+        household_id: 'h1',
+        type: 'expense',
+        amount: '50000.00',
+        occurred_on: '2026-10-29',
+        description: 'Beli Susu',
+        wallet: 'Tunai',
+        wallet_id: '01JWALLET0000000000000001',
+        destination_wallet_id: null,
+        source_wallet: { id: '01JWALLET0000000000000001', name: 'Tunai', type: 'cash', is_active: true },
+        destination_wallet: null,
+        category: null,
+        bill_payment: null,
+        created_at: '2026-10-29T00:00:00.000000Z',
+        updated_at: '2026-10-29T00:00:00.000000Z'
+      },
+      item: itemFixture({ status: 'completed', actual_price: '50000.00' })
+    }
   }
 }
 
@@ -179,41 +241,44 @@ describe('useLists', () => {
     expect(lists.selectedList.value).not.toBeNull()
   })
 
-  it('loadListItems() mengambil /api/lists/{id}/items', async () => {
+  it('loadListItems() mengambil grup active/completed tanpa query param', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
+    const active = itemFixture({ title: 'Aktif' })
+    const completed = itemFixture({
+      id: '01JLISTITEM00000000000000002',
+      title: 'Selesai',
+      status: 'completed',
+      completed_at: '2026-10-28T00:00:00.000000Z'
+    })
+    fetchMock.mockResolvedValueOnce(itemsEnvelope([active], [completed]))
 
     const lists = await mountLists()
 
-    await lists.loadListItems('01JLIST00000000000000000001')
+    const response = await lists.loadListItems('01JLIST00000000000000000001')
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/lists/01JLIST00000000000000000001/items')
-    expect(lists.items.value).toHaveLength(0)
+    const [url, options] = fetchMock.mock.calls[0] as [string, { params?: Record<string, unknown> }]
+    expect(url).toBe('/api/lists/01JLIST00000000000000000001/items')
+    expect(options.params).toBeUndefined()
+    expect(response.counts).toEqual({ active: 1, completed: 1 })
+    expect(response.active.map(item => item.title)).toEqual(['Aktif'])
+    expect(response.completed.map(item => item.title)).toEqual(['Selesai'])
+    // State datar tetap mengikuti urutan kontrak: active lalu completed.
+    expect(lists.items.value.map(item => item.id)).toEqual([active.id, completed.id])
   })
 
-  it('loadListItems() dengan status active', async () => {
+  it('loadListItems() mengembalikan grup kosong saat fetch gagal', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
+    fetchMock.mockRejectedValueOnce(new Error('network'))
 
     const lists = await mountLists()
 
-    await lists.loadListItems('01JLIST00000000000000000001', 'active')
+    const response = await lists.loadListItems('01JLIST00000000000000000001')
 
-    const [, options] = fetchMock.mock.calls[0] as [string, { params: Record<string, unknown> }]
-    expect(options.params).toEqual({ status: 'active' })
-  })
-
-  it('loadListItems() dengan status completed', async () => {
-    fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: [] })
-
-    const lists = await mountLists()
-
-    await lists.loadListItems('01JLIST00000000000000000001', 'completed')
-
-    const [, options] = fetchMock.mock.calls[0] as [string, { params: Record<string, unknown> }]
-    expect(options.params).toEqual({ status: 'completed' })
+    expect(response.counts).toEqual({ active: 0, completed: 0 })
+    expect(response.active).toEqual([])
+    expect(response.completed).toEqual([])
+    expect(lists.error.value).toBe('Gagal memuat item list 01JLIST00000000000000000001')
   })
 
   it('createList() POST ke /api/lists dengan body valid', async () => {
@@ -286,7 +351,9 @@ describe('useLists', () => {
   })
 
   it('createListItem() POST ke /api/lists/{id}/items', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture() })
+      .mockResolvedValueOnce(itemsEnvelope([itemFixture()]))
 
     const lists = await mountLists()
 
@@ -317,21 +384,37 @@ describe('useLists', () => {
     expect(lists.fieldErrors.value).toEqual({ title: 'Kolom judul wajib diisi.' })
   })
 
-  it('getListItem() GET ke /api/lists/{id}/items/{itemId}', async () => {
+  it('getListItem() membaca item dari grup tanpa route nested', async () => {
     fetchMock.mockReset()
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
+    const target = itemFixture()
+    fetchMock.mockResolvedValueOnce(itemsEnvelope([target], []))
 
     const lists = await mountLists()
 
-    await lists.getListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001')
+    const item = await lists.getListItem('01JLIST00000000000000000001', target.id)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001')
-    expect(lists.selectedItem.value).not.toBeNull()
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/lists/01JLIST00000000000000000001/items')
+    expect(item.id).toBe(target.id)
+    expect(lists.selectedItem.value?.id).toBe(target.id)
+  })
+
+  it('getListItem() memberi error saat item tidak ada di kedua grup', async () => {
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValueOnce(itemsEnvelope([], []))
+
+    const lists = await mountLists()
+
+    const item = await lists.getListItem('01JLIST00000000000000000001', 'missing')
+
+    expect(item.id).toBeUndefined()
+    expect(lists.error.value).toBe('Item list tidak ditemukan.')
   })
 
   it('updateListItem() PATCH ke /api/lists/{id}/items/{itemId}', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Telur', quantity: '2', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-01T00:00:00.000000Z' } })
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture({ title: 'Beli Telur', quantity: '2' }) })
+      .mockResolvedValueOnce(itemsEnvelope([itemFixture({ title: 'Beli Telur', quantity: '2' })]))
 
     const lists = await mountLists()
 
@@ -345,7 +428,9 @@ describe('useLists', () => {
   })
 
   it('completeListItem() POST ke /api/lists/{id}/items/{itemId}/complete', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: '2026-10-28T00:00:00.000000Z', created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture({ status: 'completed', completed_at: '2026-10-28T00:00:00.000000Z' }) })
+      .mockResolvedValueOnce(itemsEnvelope([], [itemFixture({ status: 'completed', completed_at: '2026-10-28T00:00:00.000000Z' })]))
 
     const lists = await mountLists()
 
@@ -357,7 +442,9 @@ describe('useLists', () => {
   })
 
   it('uncompleteListItem() POST ke /api/lists/{id}/items/{itemId}/uncomplete', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture() })
+      .mockResolvedValueOnce(itemsEnvelope([itemFixture()], []))
 
     const lists = await mountLists()
 
@@ -368,29 +455,43 @@ describe('useLists', () => {
     expect(options.method).toBe('POST')
   })
 
-  it('createListItemExpense() POST ke /api/lists/{id}/items/{itemId}/expense', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: '50000', completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
+  it('createListItemExpense() POST body kontrak dan unwrap {created, expense, item}', async () => {
+    fetchMock
+      .mockResolvedValueOnce(expenseEnvelope(true))
+      .mockResolvedValueOnce(itemsEnvelope([], [itemFixture({ status: 'completed', actual_price: '50000.00' })]))
 
     const lists = await mountLists()
 
-    await lists.createListItemExpense('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', '50000')
+    const result = await lists.createListItemExpense('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', {
+      wallet_id: '01JWALLET0000000000000001',
+      actual_price: '50000'
+    })
 
     const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
     expect(url).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001/expense')
     expect(options.method).toBe('POST')
-    expect(options.body.actual_price).toBe('50000')
+    expect(options.body).toEqual({
+      wallet_id: '01JWALLET0000000000000001',
+      actual_price: '50000'
+    })
+    expect(result?.created).toBe(true)
+    expect(result?.expense.id).toBe('01JTRX00000000000000000001')
+    expect(result?.item.id).toBe(itemFixture().id)
   })
 
-  it('createListItemExpense() tanpa actualPrice', async () => {
-    fetchMock.mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000001', list_id: '01JLIST00000000000000000001', title: 'Beli Susu', quantity: '1', unit: 'pcs', estimated_price: '10000', actual_price: null, completed_at: null, created_at: '2026-10-01T00:00:00.000000Z', updated_at: '2026-10-28T00:00:00.000000Z' } })
+  it('createListItemExpense() retry mengembalikan created=false', async () => {
+    fetchMock
+      .mockResolvedValueOnce(expenseEnvelope(false))
+      .mockResolvedValueOnce(itemsEnvelope([], [itemFixture({ status: 'completed' })]))
 
     const lists = await mountLists()
 
-    await lists.createListItemExpense('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001')
+    const result = await lists.createListItemExpense('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', {
+      wallet_id: '01JWALLET0000000000000001'
+    })
 
-    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
-    expect(url).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001/expense')
-    expect(options.method).toBe('POST')
-    expect(options.body).toEqual({})
+    const [, options] = fetchMock.mock.calls[0] as [string, { body: Record<string, unknown> }]
+    expect(options.body).toEqual({ wallet_id: '01JWALLET0000000000000001' })
+    expect(result?.created).toBe(false)
   })
 })

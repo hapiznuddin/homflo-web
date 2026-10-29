@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ListSummary, ListItem } from '~/types/lists'
+import type { ListSummary, ListItemsResponse } from '~/types/lists'
 
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
@@ -10,7 +10,7 @@ const route = useRoute()
 const listId = computed(() => String(route.params.id ?? ''))
 
 const list = ref<ListSummary | null>(null)
-const items = ref<ListItem[]>([])
+const items = ref<ListItemsResponse | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -22,8 +22,8 @@ async function loadData(): Promise<void> {
     const listResult = await getList(listId.value)
     list.value = listResult
 
-    const itemsResult = await loadListItems(listId.value)
-    items.value = itemsResult?.data ?? []
+    // Contract §10.6: items selalu datang sebagai dua grup, bukan array datar.
+    items.value = await loadListItems(listId.value)
 
     if (!list.value) {
       error.value = 'List tidak ditemukan'
@@ -140,24 +140,51 @@ await loadData()
         </dl>
 
         <!-- Item list -->
-        <template v-if="items.length > 0">
-          <h3 class="text-sm font-medium text-muted uppercase mb-2">Item</h3>
-          <ul class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-3">
-            <li v-for="item in items" :key="item.id" class="flex w-full items-center gap-3 py-2 text-left text-sm">
-              <span class="flex size-8 shrink-0 items-center justify-center rounded bg-elevated" aria-hidden="true">
-                <UIcon :name="item.completed_at ? 'i-lucide-check-circle' : 'i-lucide-minus'" class="size-3.5 text-default" aria-hidden="true" />
-              </span>
-              <span class="min-w-0 flex-1 truncate">
-                <span class="font-medium truncate">{{ item.title }}</span>
-                <span v-if="item.quantity" class="text-[11px] text-muted">· {{ formatQuantity(item.quantity) }}</span>
-                <span v-if="item.unit" class="text-[10px] text-muted">({{ item.unit }})</span>
-              </span>
-              <span class="flex shrink-0 flex-col items-end gap-1">
-                <span v-if="item.completed_at" class="text-sm font-semibold text-success">Completed</span>
-                <span v-else class="text-sm text-muted">Active</span>
-              </span>
-            </li>
-          </ul>
+        <template v-if="items && (items.active.length > 0 || items.completed.length > 0)">
+          <div class="flex flex-col gap-4">
+            <section v-if="items.active.length > 0" class="flex flex-col gap-2">
+              <h3 class="text-sm font-medium text-muted uppercase">
+                Aktif ({{ formatCount(items.counts.active) }})
+              </h3>
+              <ul class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-3">
+                <li v-for="item in items.active" :key="item.id" class="flex w-full items-center gap-3 py-2 text-left text-sm">
+                  <span class="flex size-8 shrink-0 items-center justify-center rounded bg-elevated" aria-hidden="true">
+                    <UIcon name="i-lucide-minus" class="size-3.5 text-default" aria-hidden="true" />
+                  </span>
+                  <span class="min-w-0 flex-1 truncate">
+                    <span class="font-medium truncate">{{ item.title }}</span>
+                    <span v-if="item.quantity" class="text-[11px] text-muted">· {{ formatQuantity(item.quantity) }}</span>
+                    <span v-if="item.unit" class="text-[10px] text-muted">({{ item.unit }})</span>
+                  </span>
+                  <span class="flex shrink-0 flex-col items-end gap-1">
+                    <span class="text-sm text-muted">Active</span>
+                  </span>
+                </li>
+              </ul>
+            </section>
+
+            <section v-if="items.completed.length > 0" class="flex flex-col gap-2">
+              <h3 class="text-sm font-medium text-muted uppercase">
+                Completed ({{ formatCount(items.counts.completed) }})
+              </h3>
+              <ul class="flex flex-col divide-y divide-default rounded-2xl border border-default bg-background px-3">
+                <li v-for="item in items.completed" :key="item.id" class="flex w-full items-center gap-3 py-2 text-left text-sm">
+                  <span class="flex size-8 shrink-0 items-center justify-center rounded bg-elevated" aria-hidden="true">
+                    <UIcon name="i-lucide-check-circle" class="size-3.5 text-default" aria-hidden="true" />
+                  </span>
+                  <span class="min-w-0 flex-1 truncate">
+                    <span class="font-medium truncate">{{ item.title }}</span>
+                    <span v-if="item.quantity" class="text-[11px] text-muted">· {{ formatQuantity(item.quantity) }}</span>
+                    <span v-if="item.unit" class="text-[10px] text-muted">({{ item.unit }})</span>
+                    <span v-if="item.expense" class="text-[10px] text-muted">· Expense {{ formatPrice(item.expense.amount) }}</span>
+                  </span>
+                  <span class="flex shrink-0 flex-col items-end gap-1">
+                    <span class="text-sm font-semibold text-success">Completed</span>
+                  </span>
+                </li>
+              </ul>
+            </section>
+          </div>
         </template>
         <template v-else>
           <p class="text-sm text-muted">Belum ada item di list ini.</p>

@@ -73,23 +73,18 @@ describe('Lists GET proxies', () => {
     expect(laravelFetch).toHaveBeenCalledWith({}, '/lists/abc%2Fdef')
   })
 
-  it('GET /api/lists/{id}/items forwards the status filter', async () => {
+  it('GET /api/lists/{id}/items ignores query params and returns both groups', async () => {
     const handler = await load('[id]/items/index.get.ts')
     params({ id: 'list-1' })
     getQuery.mockReturnValue({ status: 'completed', evil: 'x' })
 
     await handler({})
 
-    expect(laravelFetch).toHaveBeenCalledWith({}, '/lists/list-1/items?status=completed')
+    expect(laravelFetch).toHaveBeenCalledWith({}, '/lists/list-1/items')
   })
 
-  it('GET /api/lists/{id}/items/{itemId} targets the nested item', async () => {
-    const handler = await load('[id]/items/[itemId].get.ts')
-    params({ id: 'list-1', itemId: 'item-1' })
-
-    await handler({})
-
-    expect(laravelFetch).toHaveBeenCalledWith({}, '/lists/list-1/items/item-1')
+  it('the non-MVP nested item GET proxy is not registered', async () => {
+    expect(modules['../../server/api/lists/[id]/items/[itemId].get.ts']).toBeUndefined()
   })
 })
 
