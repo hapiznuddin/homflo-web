@@ -2,13 +2,17 @@
 definePageMeta({ layout: 'auth', middleware: 'auth' })
 
 const auth = useAuth()
+const route = useRoute()
 const { nuxtApi } = useLaravel()
 const { isEmailVerified } = auth
 const toast = useToast()
+import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
 
-const submitting = ref(false)
+const submitted = ref(false)
 const formError = ref<string | null>(null)
+const submitting = ref(false)
 const sent = ref(false)
+const redirect = computed<string | null>(() => safeRedirectPath(route.query.redirect as string | null))
 
 async function onResend(): Promise<void> {
   submitting.value = true
@@ -29,9 +33,14 @@ async function onResend(): Promise<void> {
       description: readError(error, 'Gagal mengirim tautan. Coba lagi.'),
       color: 'error'
     })
-    // formError.value = readError(error, 'Gagal mengirim tautan. Coba lagi.')
   } finally {
     submitting.value = false
+  }
+
+  // After resend, apply redirect if present (for authenticated users)
+  if (redirect.value !== null && auth.isEmailVerified.value) {
+    const destination = redirect.value
+    await navigateTo(destination)
   }
 }
 </script>
@@ -70,6 +79,17 @@ async function onResend(): Promise<void> {
         >
           Kirim tautan verifikasi
         </UButton>
+        <template v-if="redirect.value !== null && isEmailVerified">
+          <UButton
+            block
+            size="xl"
+            class="mt-2"
+            loading-auto
+            @click="navigateTo(redirect.value!)"
+          >
+            Lanjutkan
+          </UButton>
+        </template>
       </div>
     </template>
   </div>

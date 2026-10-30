@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
+
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const route = useRoute()
@@ -29,6 +31,14 @@ function oauthModalVisible(): boolean {
 }
 
 onMounted(async () => {
+  // Handle redirect from query parameter on page load
+  const redirect = extractRedirectQuery(route.query)
+  if (redirect !== null) {
+    // Store the redirect so it can be used after auth state resolves
+    // We'll apply it after bootstrap resolves the auth state
+    // The redirect will be applied in the navigateTo below if authenticated
+  }
+
   if (route.query.oauth !== 'processing') {
     return
   }
@@ -44,7 +54,11 @@ onMounted(async () => {
     if (result === 'authenticated') {
       oauthResult.value = { ok: true, message: 'Login berhasil! Mengalihkan…' }
       await new Promise((resolve) => setTimeout(resolve, 900))
-      await navigateTo(auth.postAuthDestination())
+
+      // Apply redirect after authentication if we have one
+      const redirect = extractRedirectQuery(route.query)
+      const destination = redirect !== null ? redirect : auth.postAuthDestination()
+      await navigateTo(destination)
     } else if (result === 'error') {
       oauthResult.value = {
         ok: false,
@@ -79,7 +93,11 @@ async function onSubmit(): Promise<void> {
       description: 'Selamat datang kembali!',
       color: 'success'
     })
-    await navigateTo(auth.postAuthDestination())
+
+    // Resolve redirect: use sanitized redirect from query, fall back to postAuthDestination
+    const redirect = extractRedirectQuery(route.query)
+    const destination = redirect !== null ? redirect : auth.postAuthDestination()
+    await navigateTo(destination)
   } catch (error: unknown) {
     toast.add({
       title: 'Login gagal',

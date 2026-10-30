@@ -7,6 +7,7 @@ const auth = useAuth()
 const { startGoogleOAuth, oauthRedirecting, oauthProcessing } = auth
 const { csrf, origin } = useLaravel()
 const toast = useToast()
+import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
 
 const form = reactive({
   username: '',
@@ -38,14 +39,17 @@ async function onSubmit(): Promise<void> {
       description: 'Selamat datang di Homflo!',
       color: 'success'
     })
-    await navigateTo(auth.postAuthDestination())
+
+    // Resolve redirect: use sanitized redirect from query, fall back to postAuthDestination
+    const redirect = extractRedirectQuery(route.query)
+    const destination = redirect !== null ? redirect : auth.postAuthDestination()
+    await navigateTo(destination)
   } catch (error: unknown) {
     toast.add({
       title: 'Pendaftaran gagal',
       description: readError(error, 'Pendaftaran gagal. Periksa kembali isian Anda.'),
       color: 'error'
     })
-    // formError.value = readError(error, 'Pendaftaran gagal. Periksa kembali isian Anda.')
   } finally {
     submitting.value = false
   }
@@ -66,6 +70,12 @@ function oauthModalVisible(): boolean {
 }
 
 onMounted(async () => {
+  // Handle redirect from query parameter on page load
+  const redirect = extractRedirectQuery(route.query)
+  if (redirect !== null) {
+    // Will be applied after authentication below
+  }
+
   if (route.query.oauth !== 'processing') {
     return
   }
@@ -81,7 +91,11 @@ onMounted(async () => {
     if (result === 'authenticated') {
       oauthResult.value = { ok: true, message: 'Pendaftaran berhasil! Mengalihkan…' }
       await new Promise((resolve) => setTimeout(resolve, 900))
-      await navigateTo(auth.postAuthDestination())
+
+      // Apply redirect after authentication if we have one
+      const redirect = extractRedirectQuery(route.query)
+      const destination = redirect !== null ? redirect : auth.postAuthDestination()
+      await navigateTo(destination)
     } else if (result === 'error') {
       oauthResult.value = {
         ok: false,
