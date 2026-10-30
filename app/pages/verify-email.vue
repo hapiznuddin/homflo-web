@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { safeRedirectPath } from '~/utils/redirect'
+
 definePageMeta({ layout: 'auth', middleware: 'auth' })
 
 const auth = useAuth()
@@ -6,13 +8,16 @@ const route = useRoute()
 const { nuxtApi } = useLaravel()
 const { isEmailVerified } = auth
 const toast = useToast()
-import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
 
-const submitted = ref(false)
 const formError = ref<string | null>(null)
 const submitting = ref(false)
 const sent = ref(false)
-const redirect = computed<string | null>(() => safeRedirectPath(route.query.redirect as string | null))
+const redirect = computed<string | null>(() => {
+  const raw = route.query.redirect
+  if (raw === null || raw === undefined) return null
+  return safeRedirectPath(raw as string)
+})
+const redirectPath = computed<string | null>(() => redirect.value)
 
 async function onResend(): Promise<void> {
   submitting.value = true
@@ -79,13 +84,14 @@ async function onResend(): Promise<void> {
         >
           Kirim tautan verifikasi
         </UButton>
-        <template v-if="redirect.value !== null && isEmailVerified">
+        <template v-if="redirectPath !== null && isEmailVerified">
+          <!-- ts: redirect.value is string | null, but v-if guards null -->
           <UButton
             block
             size="xl"
             class="mt-2"
             loading-auto
-            @click="navigateTo(redirect.value!)"
+            @click="navigateTo(redirectPath as string)"
           >
             Lanjutkan
           </UButton>

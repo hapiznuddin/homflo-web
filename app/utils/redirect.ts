@@ -21,8 +21,16 @@ export function safeRedirectPath(path: string): string | null {
   }
 
   // 3. Tolak yang mengandung \\ atau karakter kontrol (\u0000–\u001f)
-  if (path.includes('\\') || /[\u0000-\u001f]/.test(path)) {
+  if (path.includes('\\')) {
     return null
+  }
+
+  // 3. Tolak karakter kontrol ASCII 0-31
+  for (let i = 0; i < path.length; i++) {
+    const code = path.charCodeAt(i)
+    if (code < 0x20) {
+      return null
+    }
   }
 
   // 4. Parse dengan basis origin dummy; tolak bila origin berubah

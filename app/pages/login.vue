@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
+import { extractRedirectQuery } from '~/utils/redirect'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 

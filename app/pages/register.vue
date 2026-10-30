@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { extractRedirectQuery } from '~/utils/redirect'
+
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const route = useRoute()
@@ -7,7 +9,6 @@ const auth = useAuth()
 const { startGoogleOAuth, oauthRedirecting, oauthProcessing } = auth
 const { csrf, origin } = useLaravel()
 const toast = useToast()
-import { extractRedirectQuery, safeRedirectPath } from '~/utils/redirect'
 
 const form = reactive({
   username: '',
