@@ -23,6 +23,10 @@ const navigateToMock = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('navigateTo', () => navigateToMock)
 
+const householdScopeMock = vi.hoisted(() => ({ invalidate: vi.fn() }))
+
+mockNuxtImport('useHouseholdScope', () => () => householdScopeMock)
+
 interface MockInvitationsState {
   items: Ref<HouseholdInvitationSummary[]>
   pending: Ref<boolean>
@@ -98,6 +102,7 @@ describe('invitation accept page', () => {
     authMock.postAuthDestination.mockClear()
     toastMock.add.mockClear()
     navigateToMock.mockClear()
+    householdScopeMock.invalidate.mockClear()
   })
 
   it('menampilkan detail undangan dan menerima token dari query', async () => {
@@ -128,26 +133,51 @@ describe('invitation accept page', () => {
     expect(wrapper.findAll('button').some(button => button.text().includes('Terima undangan'))).toBe(false)
   })
 
-  it('akun yang sudah punya rumah tangga tidak dapat menerima undangan', async () => {
+  it('akun yang sudah punya rumah tangga tetap dapat menerima undangan', async () => {
     authMock.household.value = { id: 'h1', name: 'Rumah Lama', role: 'owner' }
     setupInvitationsState()
 
     const wrapper = await mountPage('/invitations/inv1?token=token-rahasia')
 
-    expect(wrapper.text()).toContain('Akun ini sudah tergabung dalam rumah tangga')
-    expect(wrapper.findAll('button').find(button => button.text().includes('Terima undangan'))!.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Akun ini sudah tergabung dalam rumah tangga lain')
+    expect(wrapper.text()).toContain('Rumah tangga yang diundang menjadi rumah tangga aktif')
+
+    const acceptButton = wrapper.findAll('button')
+      .find(button => button.text().includes('Terima undangan'))!
+
+    expect(acceptButton.attributes('disabled')).toBeUndefined()
+
+    await acceptButton.trigger('click')
+    await flush()
+
+    expect(householdScopeMock.invalidate).toHaveBeenCalledTimes(1)
+    expect(authMock.refresh).toHaveBeenCalledTimes(1)
+    expect(navigateToMock).toHaveBeenCalledWith('/dashboard')
   })
 
-  it('menampilkan pesan backend saat undangan gagal diterima', async () => {
+  it('acceptance gagal tidak meng-invalidate scope maupun mengubah context', async () => {
     const state = setupInvitationsState()
 
     state.accept.mockResolvedValueOnce(null)
-    state.error.value = 'Undangan sudah kedaluwarsa.'
+    state.error.value = 'Undangan sudah terlanjut diterima.'
+    state.errorCode.value = 'INVITATION_ALREADY_ACCEPTED'
 
     const wrapper = await mountPage('/invitations/inv1?token=token-rahasia')
 
-    expect(wrapper.text()).toContain('Undangan sudah kedaluwarsa.')
+    expect(wrapper.text()).toContain('Undangan sudah terlanjut diterima.')
     expect(wrapper.text()).toContain('Undangan belum dapat diproses')
+
+    const acceptButton = wrapper.findAll('button')
+      .find(button => button.text().includes('Terima undangan'))!
+
+    expect(acceptButton.attributes('disabled')).toBeDefined()
+
+    await acceptButton.trigger('click')
+    await flush()
+
+    expect(householdScopeMock.invalidate).not.toHaveBeenCalled()
+    expect(authMock.refresh).not.toHaveBeenCalled()
+    expect(navigateToMock).not.toHaveBeenCalled()
   })
 
   it('error terminal menonaktifkan tombol terima dan tidak menawarkan retry', async () => {

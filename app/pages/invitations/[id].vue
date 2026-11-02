@@ -28,7 +28,7 @@ const acceptBlocked = computed(
   () => errorCode.value !== null && TERMINAL_ERROR_CODES.has(errorCode.value)
 )
 const canAccept = computed(
-  () => token.value !== '' && !alreadyInHousehold.value && !acceptBlocked.value
+  () => token.value !== '' && !acceptBlocked.value
 )
 // Error tanpa kode domain berasal dari kegagalan jaringan/server: daftar
 // undangan aman dimuat ulang tanpa mengubah token di URL.
@@ -50,6 +50,8 @@ async function retryLoad(): Promise<void> {
   await load(true)
 }
 
+const householdScope = useHouseholdScope()
+
 async function onAccept(): Promise<void> {
   if (!canAccept.value) {
     return
@@ -62,6 +64,10 @@ async function onAccept(): Promise<void> {
     return
   }
 
+  // Invalidate household-scoped state of the previous household before
+  // refreshing: after the switch, stale requests from the old scope epoch
+  // must not overwrite the new household's data.
+  householdScope.invalidate()
   await auth.refresh()
   toast.add({
     title: 'Undangan diterima',
@@ -124,10 +130,10 @@ await load()
 
       <UAlert
         v-if="alreadyInHousehold"
-        color="warning"
+        color="info"
         variant="soft"
-        title="Akun ini sudah tergabung dalam rumah tangga"
-        description="Kontrak saat ini belum menyediakan pemilihan rumah tangga aktif, sehingga undangan tidak dapat diterima dari akun yang sudah memiliki rumah tangga."
+        title="Akun ini sudah tergabung dalam rumah tangga lain"
+        description="Anda dapat menerima undangan ini. Rumah tangga yang diundang menjadi rumah tangga aktif, dan keanggotaan sebelumnya tetap tersimpan."
       />
 
       <UAlert
