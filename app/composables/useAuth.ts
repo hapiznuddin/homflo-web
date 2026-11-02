@@ -35,12 +35,6 @@ export type AuthorizableAction =
   | 'member.remove'
   | 'invitation.accept'
 
-function useApiBase(): string {
-  const config = useRuntimeConfig()
-
-  return (config.public.apiBase as string).replace(/\/+$/, '')
-}
-
 function isUnauthorized(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -51,6 +45,8 @@ function isUnauthorized(error: unknown): boolean {
 }
 
 export function useAuth() {
+  const apiBase = (useRuntimeConfig().public.apiBase as string).replace(/\/+$/, '')
+  const preferences = usePreferences()
   const user = useState<AuthUser | null>('auth-user', () => null)
   const household = useState<AuthHousehold | null>('auth-household', () => null)
   const households = useState<AuthHousehold[]>('auth-households', () => [])
@@ -132,7 +128,7 @@ export function useAuth() {
       // Backend preference is the authority. Loading it here also lets SSR
       // emit the theme cookie before the document paints, so the first frame
       // already matches the user's preference. Failures never affect auth.
-      await usePreferences().load()
+      await preferences.load()
 
       return status.value
     } catch (err) {
@@ -239,7 +235,7 @@ export function useAuth() {
 
     setOAuthIntent(page)
     oauthRedirecting.value = true
-    window.location.href = `${useApiBase()}/auth/google/redirect`
+    window.location.href = `${apiBase}/auth/google/redirect`
   }
 
   // Back-compat alias.

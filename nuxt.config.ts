@@ -93,7 +93,8 @@ export default defineNuxtConfig({
     // /api/ runtime rule is preserved, and 'prompt' registration never
     // claims open clients.
     devOptions: {
-      enabled: true
+      enabled: true,
+      suppressWarnings: true
     },
     manifest: {
       id: '/',

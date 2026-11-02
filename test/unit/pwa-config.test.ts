@@ -28,7 +28,7 @@ interface PwaManifestShape {
 interface PwaConfigShape {
   registerType?: string
   manifest?: PwaManifestShape
-  devOptions?: { enabled?: boolean }
+  devOptions?: { enabled?: boolean; suppressWarnings?: boolean }
   workbox?: {
     runtimeCaching?: Array<{ urlPattern?: unknown; handler?: string }>
   }
@@ -75,6 +75,7 @@ describe('nuxt.config PWA contract', () => {
 
   it('devOptions aktif agar manifest diserve resmi oleh vite-plugin-pwa di dev', () => {
     expect(nuxtConfig.pwa?.devOptions?.enabled).toBe(true)
+    expect(nuxtConfig.pwa?.devOptions?.suppressWarnings).toBe(true)
   })
 
   it('runtimeCaching menjaga seluruh /api/ tetap NetworkOnly (data finansial & sesi tak boleh di-cache)', () => {
