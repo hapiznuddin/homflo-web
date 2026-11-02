@@ -10,6 +10,7 @@ import {
   vehiclesForOverview
 } from '~/utils/vehicleOverview'
 import { readError } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Vehicles Overview: Browser -> Nuxt /api/vehicles -> Laravel, then one
@@ -55,6 +56,7 @@ function emptySection<T>(): OverviewSectionState<T> {
 }
 
 export function useVehicleOverview(vehicles: MaybeRefOrGetter<VehicleItem[]>) {
+  const householdScope = useHouseholdScope()
   const currentVehicles = computed(() => toValue(vehicles))
   const overviewVehicles = computed(() => vehiclesForOverview(currentVehicles.value))
   const overviewKey = computed(() => overviewVehicles.value.map(vehicle => vehicle.id).join('|'))
@@ -161,6 +163,7 @@ export function useVehicleOverview(vehicles: MaybeRefOrGetter<VehicleItem[]>) {
 
     const requestId = ++state.requestSeq
     state.inflight = true
+    const requestToken = householdScope.token()
 
     let settled: Array<PromiseSettledResult<T[]>>
 
@@ -171,7 +174,7 @@ export function useVehicleOverview(vehicles: MaybeRefOrGetter<VehicleItem[]>) {
         vehicle => fetchRecords<T>(pathForVehicle(vehicle.id))
       )
     } catch (err) {
-      if (requestId !== state.requestSeq) {
+      if (requestId !== state.requestSeq || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -185,7 +188,7 @@ export function useVehicleOverview(vehicles: MaybeRefOrGetter<VehicleItem[]>) {
     }
 
     // A newer load has superseded this response. Leave all state to it.
-    if (requestId !== state.requestSeq) {
+    if (requestId !== state.requestSeq || !householdScope.isCurrent(requestToken)) {
       return
     }
 

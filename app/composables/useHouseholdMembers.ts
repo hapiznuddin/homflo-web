@@ -1,6 +1,7 @@
 import type { CreatedHouseholdInvitation } from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
 import { readError, readFieldErrors } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 interface HouseholdMembersResponse {
   success: boolean
@@ -16,6 +17,7 @@ const FALLBACK_ERROR = 'Data anggota rumah tangga belum dapat dimuat.'
 
 export function useHouseholdMembers() {
   const auth = useAuth()
+  const householdScope = useHouseholdScope()
   const items = useState<HouseholdMemberItem[]>('household-members-items', () => [])
   const pending = useState<boolean>('household-members-pending', () => false)
   const submitting = useState<boolean>('household-members-submitting', () => false)
@@ -57,6 +59,8 @@ export function useHouseholdMembers() {
       return
     }
 
+    const requestToken = householdScope.token()
+
     inflight.value = true
     pending.value = true
     error.value = null
@@ -66,15 +70,27 @@ export function useHouseholdMembers() {
         `/api/households/${encodeURIComponent(householdId)}/members`,
         { credentials: 'include', headers: requestHeaders() }
       )
+
+      if (!householdScope.isCurrent(requestToken)) {
+        return
+      }
+
+      // Server route meneruskan envelope Laravel apa adanya; unwrap di sini.
       items.value = response.data
       loaded.value = true
       loadedFor.value = householdId
     } catch (caught: unknown) {
+      if (!householdScope.isCurrent(requestToken)) {
+        return
+      }
+
       error.value = readError(caught, FALLBACK_ERROR)
       loadedFor.value = null
     } finally {
-      pending.value = false
-      inflight.value = false
+      if (householdScope.isCurrent(requestToken)) {
+        pending.value = false
+        inflight.value = false
+      }
     }
   }
 

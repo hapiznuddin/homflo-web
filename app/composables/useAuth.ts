@@ -17,7 +17,14 @@ export interface AuthHousehold {
 export interface MeData {
   user: AuthUser
   household: AuthHousehold | null
+  households: AuthHousehold[]
   onboarding: { required: boolean }
+}
+
+export interface AuthHouseholdContext {
+  household: AuthHousehold | null
+  households?: AuthHousehold[]
+  onboarding?: { required: boolean }
 }
 
 export type AuthorizableAction =
@@ -46,6 +53,7 @@ function isUnauthorized(error: unknown): boolean {
 export function useAuth() {
   const user = useState<AuthUser | null>('auth-user', () => null)
   const household = useState<AuthHousehold | null>('auth-household', () => null)
+  const households = useState<AuthHousehold[]>('auth-households', () => [])
   const onboarding = useState<{ required: boolean }>('auth-onboarding', () => ({ required: false }))
   const status = useState<AuthStatus>('auth-status', () => 'idle')
   const error = useState<string | null>('auth-error', () => null)
@@ -117,13 +125,21 @@ export function useAuth() {
       })
       user.value = response.data.user
       household.value = response.data.household
+      households.value = response.data.households ?? []
       onboarding.value = response.data.onboarding
       status.value = 'authenticated'
+
+      // Backend preference is the authority. Loading it here also lets SSR
+      // emit the theme cookie before the document paints, so the first frame
+      // already matches the user's preference. Failures never affect auth.
+      await usePreferences().load()
+
       return status.value
     } catch (err) {
       if (isUnauthorized(err)) {
         user.value = null
         household.value = null
+        households.value = []
         status.value = 'unauthenticated'
       } else {
         error.value = 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.'
@@ -148,9 +164,36 @@ export function useAuth() {
   function markUnauthenticated(): void {
     user.value = null
     household.value = null
+    households.value = []
     onboarding.value = { required: false }
     error.value = null
     status.value = 'unauthenticated'
+  }
+
+  // Apply a server-confirmed household context. Only server responses call
+  // this; the client never guesses the active household or its role.
+  function applyHouseholdContext(context: AuthHouseholdContext): void {
+    if (context.households) {
+      households.value = context.households
+    }
+
+    household.value = context.household
+
+    if (!context.households && context.household) {
+      const index = households.value.findIndex(item => item.id === context.household!.id)
+
+      if (index === -1) {
+        households.value = [...households.value, context.household]
+      } else {
+        households.value = households.value.map(item =>
+          item.id === context.household!.id ? context.household! : item
+        )
+      }
+    }
+
+    if (context.onboarding) {
+      onboarding.value = context.onboarding
+    }
   }
 
   async function logout(): Promise<void> {
@@ -211,6 +254,7 @@ export function useAuth() {
   return {
     user,
     household,
+    households,
     onboarding,
     status,
     pending,
@@ -233,6 +277,7 @@ export function useAuth() {
     setOAuthIntent,
     takeOAuthIntent,
     postAuthDestination,
-    markUnauthenticated
+    markUnauthenticated,
+    applyHouseholdContext
   }
 }

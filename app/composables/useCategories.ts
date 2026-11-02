@@ -1,5 +1,6 @@
 import type { CategoryFormValues, CategoryItem } from '~/types/categories'
 import { readError, readFieldErrors } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Katalog kategori: Browser -> Nuxt /api/categories -> Laravel ->
@@ -9,6 +10,7 @@ import { readError, readFieldErrors } from '~/composables/useApiError'
 // ---------------------------------------------------------------------------
 
 export function useCategories() {
+  const householdScope = useHouseholdScope()
   const items = useState<CategoryItem[]>('categories-items', () => [])
   const pending = useState<boolean>('categories-pending', () => false)
   const submitting = useState<boolean>('categories-submitting', () => false)
@@ -52,6 +54,7 @@ export function useCategories() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: CategoryItem[] }>('/api/categories', {
@@ -59,7 +62,7 @@ export function useCategories() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -68,13 +71,13 @@ export function useCategories() {
       items.value = envelope.data
       loaded.value = true
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data kategori belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflight.value = false
       }

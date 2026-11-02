@@ -10,6 +10,7 @@ import type {
 } from '~/types/bills'
 import { readError, readFieldErrors } from '~/composables/useApiError'
 import { normalizeAmountInput } from '~/utils/transactions'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Read-model + mutasi bills: Browser -> Nuxt /api/bills -> Laravel ->
@@ -21,6 +22,7 @@ import { normalizeAmountInput } from '~/utils/transactions'
 // ---------------------------------------------------------------------------
 
 export function useBills() {
+  const householdScope = useHouseholdScope()
   const items = useState<BillItem[]>('bills-items', () => [])
   const filters = useState<BillFilters>('bills-filters', () => ({}))
   const pending = useState<boolean>('bills-pending', () => false)
@@ -72,6 +74,7 @@ export function useBills() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const params: Record<string, string> = {}
@@ -88,7 +91,7 @@ export function useBills() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -97,13 +100,13 @@ export function useBills() {
       // (kontrak backend: array flat).
       items.value = envelope.data
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data tagihan belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflightKey.value = null
       }

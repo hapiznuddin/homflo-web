@@ -2,6 +2,7 @@ import type { AssetFormValues, AssetItem } from '~/types/assets'
 import { readError, readFieldErrors } from '~/composables/useApiError'
 import { ASSET_NO_PROPERTY } from '~/utils/assets'
 import { normalizeAmountInput } from '~/utils/transactions'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Katalog aset: Browser -> Nuxt /api/assets -> Laravel -> PostgreSQL.
@@ -13,6 +14,7 @@ import { normalizeAmountInput } from '~/utils/transactions'
 const EMPTY = ''
 
 export function useAssets() {
+  const householdScope = useHouseholdScope()
   const items = useState<AssetItem[]>('assets-items', () => [])
   const pending = useState<boolean>('assets-pending', () => false)
   const submitting = useState<boolean>('assets-submitting', () => false)
@@ -55,6 +57,7 @@ export function useAssets() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: AssetItem[] }>('/api/assets', {
@@ -62,20 +65,20 @@ export function useAssets() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       // Server route meneruskan envelope Laravel apa adanya; unwrap di sini.
       items.value = envelope.data
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data aset belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflight.value = false
       }

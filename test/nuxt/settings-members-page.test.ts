@@ -1,6 +1,7 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref, type Ref } from 'vue'
+import type { HouseholdInvitationItem } from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
 import MembersPage from '~/pages/settings/members.vue'
 
@@ -35,6 +36,10 @@ interface MockMembersState {
 const membersMock = vi.hoisted(() => ({ api: undefined as unknown }))
 
 mockNuxtImport('useHouseholdMembers', () => () => membersMock.api)
+
+const invitationsMock = vi.hoisted(() => ({ api: undefined as unknown }))
+
+mockNuxtImport('useHouseholdInvitations', () => () => invitationsMock.api)
 
 function sampleMember(overrides: Partial<HouseholdMemberItem> = {}): HouseholdMemberItem {
   return {
@@ -79,6 +84,45 @@ function setupMembersState(
   return state
 }
 
+function sampleInvitation(overrides: Partial<HouseholdInvitationItem> = {}): HouseholdInvitationItem {
+  return {
+    id: 'inv-1',
+    email: 'siti@example.com',
+    status: 'pending',
+    expires_at: '2026-11-05T10:00:00.000Z',
+    created_at: '2026-10-29T10:00:00.000Z',
+    accepted_at: null,
+    revoked_at: null,
+    invited_by: { id: 'u1', name: 'Budi' },
+    ...overrides
+  }
+}
+
+function setupInvitationsState(
+  overrides: {
+    items?: HouseholdInvitationItem[]
+    pending?: boolean
+    submitting?: boolean
+    error?: string | null
+    loaded?: boolean
+    revokeResult?: boolean
+  } = {}
+) {
+  const state = {
+    items: ref(overrides.items ?? [sampleInvitation()]),
+    pending: ref(overrides.pending ?? false),
+    submitting: ref(overrides.submitting ?? false),
+    error: ref(overrides.error ?? null),
+    loaded: ref(overrides.loaded ?? true),
+    load: vi.fn(async () => {}),
+    revoke: vi.fn(async () => overrides.revokeResult ?? true)
+  }
+
+  invitationsMock.api = state
+
+  return state
+}
+
 async function mountPage() {
   return mountSuspended(MembersPage, { route: '/settings/members' })
 }
@@ -90,6 +134,7 @@ function flush(): Promise<void> {
 describe('settings members page', () => {
   beforeEach(() => {
     authMock.isHouseholdOwner.value = true
+    setupInvitationsState()
     toastMock.add.mockClear()
   })
 
@@ -113,6 +158,8 @@ describe('settings members page', () => {
     expect(wrapper.find('input[type="email"]').exists()).toBe(false)
     expect(wrapper.findAll('button').some(button => button.text() === 'Undang')).toBe(false)
     expect(wrapper.text()).toContain('Owner')
+    // Bagian undangan owner-only tidak dirender untuk member.
+    expect(wrapper.text()).not.toContain('Undangan')
   })
 
   it('email kosong ditolak di klien tanpa memanggil backend', async () => {
@@ -178,7 +225,7 @@ describe('settings members page', () => {
 
     expect(state.invite).toHaveBeenCalledWith('baru@example.com')
     expect(wrapper.text()).toContain('Tautan undangan untuk baru@example.com')
-    expect(wrapper.text()).toContain('belum mengirim email otomatis')
+    expect(wrapper.text()).toContain('konfigurasi email server tersedia')
 
     const linkInput = wrapper.find('input[readonly]')
 
@@ -297,5 +344,134 @@ describe('settings members page', () => {
     expect(text).toContain('Belum ada anggota yang dapat ditampilkan.')
     expect(text).toContain('Aksi terakhir gagal.')
     expect(text).not.toContain('Data anggota belum dapat dimuat.')
+  })
+
+  it('owner melihat undangan beserta status dan siapa pengundangnya', async () => {
+    setupInvitationsState({
+      items: [
+        sampleInvitation(),
+        sampleInvitation({
+          id: 'inv-2',
+          email: 'anton@example.com',
+          status: 'accepted',
+          accepted_at: '2026-10-30T10:00:00.000Z'
+        }),
+        sampleInvitation({ id: 'inv-3', email: 'lina@example.com', status: 'expired' }),
+        sampleInvitation({
+          id: 'inv-4',
+          email: 'rani@example.com',
+          status: 'revoked',
+          revoked_at: '2026-10-31T10:00:00.000Z'
+        })
+      ]
+    })
+
+    const wrapper = await mountPage()
+    const text = wrapper.text()
+
+    expect(text).toContain('Undangan')
+    expect(text).toContain('siti@example.com')
+    expect(text).toContain('Diundang oleh Budi')
+    expect(text).toContain('Menunggu')
+    expect(text).toContain('Diterima')
+    expect(text).toContain('Kedaluwarsa')
+    expect(text).toContain('Dicabut')
+
+    // Hanya undangan pending yang dapat dicabut.
+    const revokeButtons = wrapper.findAll('button').filter(button => button.text() === 'Cabut')
+
+    expect(revokeButtons).toHaveLength(1)
+  })
+
+  it('mencabut undangan butuh konfirmasi dua langkah', async () => {
+    const invitations = setupInvitationsState()
+
+    const wrapper = await mountPage()
+    const revokeButton = wrapper.findAll('button').find(button => button.text() === 'Cabut')!
+
+    await revokeButton.trigger('click')
+    await flush()
+
+    expect(invitations.revoke).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Cabut undangan ini?')
+
+    await wrapper.findAll('button').find(button => button.text() === 'Batal')!.trigger('click')
+    await flush()
+
+    expect(wrapper.text()).not.toContain('Cabut undangan ini?')
+    expect(invitations.revoke).not.toHaveBeenCalled()
+  })
+
+  it('konfirmasi cabut memanggil backend dan menampilkan toast sukses', async () => {
+    const invitations = setupInvitationsState()
+
+    const wrapper = await mountPage()
+    const revokeButton = wrapper.findAll('button').find(button => button.text() === 'Cabut')!
+
+    await revokeButton.trigger('click')
+    await flush()
+    await wrapper.findAll('button').find(button => button.text() === 'Ya, cabut')!.trigger('click')
+    await flush()
+
+    expect(invitations.revoke).toHaveBeenCalledWith('inv-1')
+    expect(toastMock.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Undangan dicabut' })
+    )
+  })
+
+  it('kegagalan cabut menampilkan alert aksi tanpa toast sukses', async () => {
+    const invitations = setupInvitationsState({ revokeResult: false, error: 'Undangan belum dapat dicabut.' })
+
+    const wrapper = await mountPage()
+
+    await wrapper.findAll('button').find(button => button.text() === 'Cabut')!.trigger('click')
+    await flush()
+    await wrapper.findAll('button').find(button => button.text() === 'Ya, cabut')!.trigger('click')
+    await flush()
+
+    expect(invitations.revoke).toHaveBeenCalled()
+    expect(toastMock.add).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Undangan dicabut' })
+    )
+    expect(wrapper.text()).toContain('Aksi undangan terakhir gagal.')
+    expect(wrapper.text()).toContain('Undangan belum dapat dicabut.')
+  })
+
+  it('daftar undangan kosong menampilkan empty state dan aksi muat ulang', async () => {
+    const invitations = setupInvitationsState({ items: [], loaded: true })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('Belum ada undangan.')
+
+    invitations.load.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'Muat ulang')!.trigger('click')
+
+    expect(invitations.load).toHaveBeenCalledWith(true)
+  })
+
+  it('gagal memuat undangan menampilkan retry khusus undangan', async () => {
+    const invitations = setupInvitationsState({ items: [], error: 'Koneksi terputus', loaded: false })
+
+    const wrapper = await mountPage()
+    const section = wrapper.find('section')
+
+    expect(section.text()).toContain('Undangan belum dapat dimuat.')
+    expect(section.text()).toContain('Koneksi terputus')
+
+    invitations.load.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'Coba lagi')!.trigger('click')
+
+    expect(invitations.load).toHaveBeenCalledWith(true)
+  })
+
+  it('memuat undangan saat pemuatan awal menampilkan skeleton', async () => {
+    const invitations = setupInvitationsState({ items: [], pending: true, loaded: false })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.find('[aria-label="Memuat undangan"]').exists()).toBe(true)
+
+    void invitations
   })
 })

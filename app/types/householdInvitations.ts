@@ -19,3 +19,26 @@ export interface CreatedHouseholdInvitation {
   invitation: HouseholdInvitationSummary
   token: string
 }
+
+// Owner-side invitation row. The token hash is never part of this response.
+export type HouseholdInvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
+
+export interface HouseholdInvitationItem {
+  id: string
+  email: string
+  status: HouseholdInvitationStatus
+  expires_at: string
+  created_at: string
+  accepted_at: string | null
+  revoked_at: string | null
+  invited_by: {
+    id: string
+    name: string
+  } | null
+}
+
+export interface RevokedHouseholdInvitation {
+  id: string
+  status: 'revoked'
+  revoked_at: string | null
+}

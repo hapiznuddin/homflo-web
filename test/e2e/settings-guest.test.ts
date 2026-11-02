@@ -73,6 +73,45 @@ describe.skipIf(!hasBuild)('settings API guest contract', () => {
     expect(response.status).toBe(401)
   })
 
+  it('PATCH /api/households/{id} (rename) tanpa session → 401', async () => {
+    const response = await jsonRequest(`/api/households/${householdId}`, 'PATCH')
+
+    expect(response.status).toBe(401)
+  })
+
+  it('POST /api/households/{id}/activate (switch) tanpa session → 401', async () => {
+    const response = await jsonRequest(`/api/households/${householdId}/activate`, 'POST')
+
+    expect(response.status).toBe(401)
+  })
+
+  it('GET /api/households/{id}/invitations tanpa session → 401', async () => {
+    const response = await fetch(`${origin}/api/households/${householdId}/invitations?status=all`)
+
+    expect(response.status).toBe(401)
+  })
+
+  it('POST /api/households/{id}/invitations/{invitation}/revoke tanpa session → 401', async () => {
+    const response = await jsonRequest(
+      `/api/households/${householdId}/invitations/${invitationId}/revoke`,
+      'POST'
+    )
+
+    expect(response.status).toBe(401)
+  })
+
+  it('GET /api/preferences tanpa session → 401', async () => {
+    const response = await fetch(`${origin}/api/preferences`)
+
+    expect(response.status).toBe(401)
+  })
+
+  it('PATCH /api/preferences (theme) tanpa session → 401', async () => {
+    const response = await jsonRequest('/api/preferences', 'PATCH')
+
+    expect(response.status).toBe(401)
+  })
+
   it('POST /api/households/{id}/invitations tanpa session → 401', async () => {
     const response = await jsonRequest(`/api/households/${householdId}/invitations`, 'POST')
 

@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import type { CreatedHouseholdInvitation } from '~/types/householdInvitations'
+import type {
+  CreatedHouseholdInvitation,
+  HouseholdInvitationItem
+} from '~/types/householdInvitations'
 import type { HouseholdMemberItem } from '~/types/householdMembers'
 
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const members = useHouseholdMembers()
+const householdInvitations = useHouseholdInvitations()
 const auth = useAuth()
 const {
   items,
@@ -19,6 +23,15 @@ const {
   remove,
   clearInviteError
 } = members
+const {
+  items: invitationItems,
+  pending: invitationsPending,
+  submitting: invitationsSubmitting,
+  error: invitationsError,
+  loaded: invitationsLoaded,
+  load: loadInvitations,
+  revoke: revokeInvitation
+} = householdInvitations
 const toast = useToast()
 const requestUrl = useRequestURL()
 const inviteEmail = ref('')
@@ -26,6 +39,7 @@ const inviteLocalError = ref<string | null>(null)
 const lastInvite = ref<CreatedHouseholdInvitation | null>(null)
 const copied = ref(false)
 const confirmRemoveId = ref<string | null>(null)
+const confirmRevokeId = ref<string | null>(null)
 const canManage = computed(() => auth.isHouseholdOwner.value)
 const inviteError = computed(() => inviteLocalError.value ?? inviteFieldErrors.value.email ?? null)
 
@@ -52,6 +66,34 @@ function formatExpiry(value: string): string {
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(value))
+}
+
+function invitationStatusLabel(status: HouseholdInvitationItem['status']): string {
+  switch (status) {
+    case 'pending':
+      return 'Menunggu'
+    case 'accepted':
+      return 'Diterima'
+    case 'revoked':
+      return 'Dicabut'
+    case 'expired':
+      return 'Kedaluwarsa'
+  }
+}
+
+function invitationStatusColor(
+  status: HouseholdInvitationItem['status']
+): 'success' | 'warning' | 'error' | 'neutral' {
+  switch (status) {
+    case 'pending':
+      return 'warning'
+    case 'accepted':
+      return 'success'
+    case 'revoked':
+      return 'neutral'
+    case 'expired':
+      return 'error'
+  }
 }
 
 // Validasi bentuk email di klien hanya untuk umpan balik cepat. Aturan
@@ -96,6 +138,7 @@ async function submitInvite(): Promise<void> {
   lastInvite.value = created
   copied.value = false
   inviteEmail.value = ''
+  await loadInvitations(true)
   toast.add({
     title: 'Undangan dibuat',
     description: 'Bagikan tautan undangan kepada anggota yang dituju.',
@@ -137,6 +180,24 @@ function retry(): void {
   void load(true)
 }
 
+function retryInvitations(): void {
+  void loadInvitations(true)
+}
+
+async function revokePendingInvitation(invitation: HouseholdInvitationItem): Promise<void> {
+  if (confirmRevokeId.value !== invitation.id) {
+    confirmRevokeId.value = invitation.id
+
+    return
+  }
+
+  if (await revokeInvitation(invitation.id)) {
+    toast.add({ title: 'Undangan dicabut', color: 'success' })
+  }
+
+  confirmRevokeId.value = null
+}
+
 async function updateRole(member: HouseholdMemberItem, event: Event): Promise<void> {
   const select = event.target as HTMLSelectElement
   const role = select.value as HouseholdMemberItem['role']
@@ -168,6 +229,10 @@ async function removeMember(member: HouseholdMemberItem): Promise<void> {
 }
 
 await load()
+
+if (canManage.value) {
+  await loadInvitations()
+}
 </script>
 
 <template>
@@ -227,8 +292,9 @@ await load()
         <div>
           <p class="text-sm font-medium text-highlighted">Tautan undangan untuk {{ lastInvite.invitation.email }}</p>
           <p class="mt-1 text-xs text-muted">
-            Berlaku sampai {{ formatExpiry(lastInvite.invitation.expires_at) }}. Homflo belum mengirim email otomatis;
-            bagikan tautan ini langsung kepada anggota. Tautan berisi token rahasia dan hanya ditampilkan sekali.
+            Berlaku sampai {{ formatExpiry(lastInvite.invitation.expires_at) }}. Email undangan dikirim bila konfigurasi
+            email server tersedia; tautan ini juga dapat dibagikan langsung. Tautan berisi token rahasia dan hanya
+            ditampilkan sekali.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -246,6 +312,97 @@ await load()
           Buka tautan undangan
         </a>
       </div>
+
+      <section v-if="canManage" class="flex flex-col gap-3" aria-labelledby="pending-invitations-heading">
+        <div>
+          <h2 id="pending-invitations-heading" class="text-sm font-semibold text-highlighted">Undangan</h2>
+          <p class="mt-1 text-xs text-muted">Undangan yang masih menunggu, serta riwayat status terakhirnya.</p>
+        </div>
+
+        <div v-if="invitationsPending && !invitationsLoaded" class="flex flex-col gap-2" aria-label="Memuat undangan">
+          <USkeleton v-for="index in 2" :key="index" class="h-16" />
+        </div>
+
+        <UAlert
+          v-else-if="invitationsError && !invitationsLoaded"
+          color="error"
+          variant="soft"
+          title="Undangan belum dapat dimuat."
+          :description="invitationsError"
+          :actions="[{ label: 'Coba lagi', onClick: retryInvitations }]"
+        />
+
+        <div
+          v-else-if="invitationItems.length === 0"
+          class="rounded-2xl border border-default bg-background px-4 py-8 text-center"
+        >
+          <p class="text-sm font-medium text-highlighted">Belum ada undangan.</p>
+          <p class="mt-1 text-xs text-muted">Undangan yang dibuat akan muncul di sini.</p>
+          <UButton color="neutral" variant="outline" size="sm" class="mt-3" @click="retryInvitations">
+            Muat ulang
+          </UButton>
+        </div>
+
+        <ul
+          v-else
+          class="divide-y divide-default overflow-hidden rounded-2xl border border-default bg-background"
+        >
+          <li
+            v-for="invitation in invitationItems"
+            :key="invitation.id"
+            class="flex flex-wrap items-center gap-3 px-4 py-3"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-highlighted">{{ invitation.email }}</p>
+              <p class="mt-0.5 text-xs text-muted">
+                Berlaku sampai {{ formatExpiry(invitation.expires_at) }}
+              </p>
+              <p v-if="invitation.invited_by" class="mt-0.5 text-xs text-muted">
+                Diundang oleh {{ invitation.invited_by.name }}
+              </p>
+            </div>
+            <UBadge :color="invitationStatusColor(invitation.status)" variant="subtle">
+              {{ invitationStatusLabel(invitation.status) }}
+            </UBadge>
+            <template v-if="invitation.status === 'pending'">
+              <template v-if="confirmRevokeId !== invitation.id">
+                <UButton
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :disabled="invitationsSubmitting"
+                  @click="revokePendingInvitation(invitation)"
+                >
+                  Cabut
+                </UButton>
+              </template>
+              <template v-else>
+                <span class="text-xs text-muted">Cabut undangan ini?</span>
+                <UButton color="neutral" variant="outline" size="xs" @click="confirmRevokeId = null">
+                  Batal
+                </UButton>
+                <UButton
+                  color="error"
+                  size="xs"
+                  :loading="invitationsSubmitting"
+                  :disabled="invitationsSubmitting"
+                  @click="revokePendingInvitation(invitation)"
+                >
+                  Ya, cabut
+                </UButton>
+              </template>
+            </template>
+          </li>
+        </ul>
+
+        <UAlert
+          v-if="invitationsError && invitationsLoaded"
+          color="error"
+          variant="soft"
+          title="Aksi undangan terakhir gagal."
+          :description="invitationsError"
+        />
+      </section>
 
       <div v-if="items.length === 0" class="rounded-2xl border border-default bg-background px-4 py-10 text-center">
         <p class="text-sm font-medium text-highlighted">Belum ada anggota yang dapat ditampilkan.</p>

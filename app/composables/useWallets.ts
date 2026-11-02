@@ -1,5 +1,6 @@
 import type { WalletItem } from '~/types/wallets'
 import { readError } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Read-only daftar dompet: Browser -> Nuxt /api/wallets (pass-through) ->
@@ -10,6 +11,7 @@ import { readError } from '~/composables/useApiError'
 // ---------------------------------------------------------------------------
 
 export function useWallets() {
+  const householdScope = useHouseholdScope()
   const items = useState<WalletItem[]>('wallets-items', () => [])
   const pending = useState<boolean>('wallets-pending', () => false)
   const error = useState<string | null>('wallets-error', () => null)
@@ -49,6 +51,7 @@ export function useWallets() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: WalletItem[] }>('/api/wallets', {
@@ -56,7 +59,7 @@ export function useWallets() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -64,13 +67,13 @@ export function useWallets() {
       // sini. Respons adalah array flat (tanpa pagination/filter).
       items.value = envelope.data
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data dompet belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflight.value = false
       }

@@ -7,6 +7,7 @@ import type {
 } from '~/types/transactions'
 import { readError, readFieldErrors } from '~/composables/useApiError'
 import { normalizeAmountInput } from '~/utils/transactions'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Read-model + mutasi transaksi: Browser -> Nuxt /api/transactions ->
@@ -25,6 +26,7 @@ const EMPTY_META: TransactionListMeta = {
 }
 
 export function useTransactions() {
+  const householdScope = useHouseholdScope()
   const items = useState<TransactionItem[]>('transactions-items', () => [])
   const meta = useState<TransactionListMeta>('transactions-meta', () => ({ ...EMPTY_META }))
   const filters = useState<TransactionFilters>('transactions-filters', () => ({}))
@@ -77,6 +79,7 @@ export function useTransactions() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const params: Record<string, string | number> = {}
@@ -93,7 +96,7 @@ export function useTransactions() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -102,13 +105,13 @@ export function useTransactions() {
       items.value = envelope.data.data
       meta.value = envelope.data.meta
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data transaksi belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflightKey.value = null
       }

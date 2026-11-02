@@ -1,5 +1,6 @@
 import { LIST_ERROR_CODES } from '~/types/lists'
 import { readErrorCode, readFieldErrors } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // Import types
 import type {
@@ -26,6 +27,7 @@ const EMPTY_ITEMS_RESPONSE = (listId: string): ListItemsResponse => ({
 // ---------------------------------------------------------------------------
 
 export function useLists() {
+  const householdScope = useHouseholdScope()
   const lists = useState<ListSummary[]>('lists-items', () => [])
   const selectedList = useState<ListSummary | null>('lists-selected', () => null)
   const selectedItem = useState<ListItem | null>('lists-item-selected', () => null)
@@ -74,6 +76,7 @@ export function useLists() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const params: Record<string, string> = {}
@@ -88,19 +91,19 @@ export function useLists() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       lists.value = envelope.data
     } catch {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = 'Gagal memuat daftar list'
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflightKey.value = null
       }
@@ -139,6 +142,8 @@ export function useLists() {
   }
 
   async function getList(listId: string): Promise<ListSummary> {
+    const requestToken = householdScope.token()
+
     try {
       const envelope = await $fetch<{ success: boolean, data: ListSummary }>(
         `/api/lists/${encodeURIComponent(listId)}`,
@@ -148,6 +153,11 @@ export function useLists() {
         }
       )
 
+      // Ganti rumah tangga di tengah request membuang hasil lama.
+      if (!householdScope.isCurrent(requestToken)) {
+        return {} as ListSummary
+      }
+
       if (envelope.success && envelope.data) {
         selectedList.value = envelope.data
         return envelope.data
@@ -156,12 +166,18 @@ export function useLists() {
       error.value = 'Gagal memuat list'
       return {} as ListSummary
     } catch {
+      if (!householdScope.isCurrent(requestToken)) {
+        return {} as ListSummary
+      }
+
       error.value = 'Gagal memuat list'
       return {} as ListSummary
     }
   }
 
   async function loadListItems(listId: string): Promise<ListItemsResponse> {
+    const requestToken = householdScope.token()
+
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItemsResponse }>(
         `/api/lists/${encodeURIComponent(listId)}/items`,
@@ -170,6 +186,10 @@ export function useLists() {
           headers: requestHeaders()
         }
       )
+
+      if (!householdScope.isCurrent(requestToken)) {
+        return EMPTY_ITEMS_RESPONSE(listId)
+      }
 
       if (envelope.success && envelope.data) {
         // State `items` tetap datar untuk konsumen lama; sumber kebenaran
@@ -181,6 +201,10 @@ export function useLists() {
       items.value = []
       return EMPTY_ITEMS_RESPONSE(listId)
     } catch {
+      if (!householdScope.isCurrent(requestToken)) {
+        return EMPTY_ITEMS_RESPONSE(listId)
+      }
+
       error.value = `Gagal memuat item list ${listId}`
       items.value = []
       return EMPTY_ITEMS_RESPONSE(listId)

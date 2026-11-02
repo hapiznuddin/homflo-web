@@ -28,6 +28,17 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  // Backend preferences are authoritative; this cookie only carries the
+  // server-confirmed theme into the pre-hydration script so the first paint
+  // never flashes the wrong theme. It is overwritten from GET/PATCH
+  // /api/preferences, never read as a preference authority.
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    storage: 'cookie',
+    storageKey: 'homflo-color-mode'
+  },
+
   runtimeConfig: {
     public: {
       apiBase: import.meta.env.NUXT_API_BASE,

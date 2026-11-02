@@ -30,7 +30,7 @@ const sections = computed(() => [
   },
   {
     title: 'Preferensi Aplikasi',
-    description: 'Belum tersedia pada kontrak saat ini.',
+    description: 'Tema terang, gelap, atau mengikuti sistem.',
     icon: 'i-lucide-sliders-horizontal',
     to: '/settings/preferences'
   }

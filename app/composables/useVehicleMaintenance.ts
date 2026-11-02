@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { VehicleMaintenanceFormValues, VehicleMaintenanceItem } from '~/types/vehicleMaintenance'
 import { readError, readErrorCode, readFieldErrors } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Riwayat servis satu kendaraan: Browser -> Nuxt
@@ -63,6 +64,7 @@ function sortVehicleMaintenanceItems(
 }
 
 export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
+  const householdScope = useHouseholdScope()
   const currentId = computed(() => String(toValue(vehicleId) ?? ''))
   const store = useState<Record<string, VehicleMaintenanceState>>('vehicle-maintenance-store', () => ({}))
 
@@ -194,6 +196,7 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
     state.requestSeq += 1
 
     const current = state.requestSeq
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: VehicleMaintenanceItem[] }>(basePath(), {
@@ -201,21 +204,21 @@ export function useVehicleMaintenance(vehicleId: MaybeRefOrGetter<string>) {
         headers: requestHeaders()
       })
 
-      if (current !== state.requestSeq) {
+      if (current !== state.requestSeq || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       // Server route meneruskan envelope Laravel apa adanya; unwrap di sini.
       state.items = envelope.data
     } catch (err) {
-      if (current !== state.requestSeq) {
+      if (current !== state.requestSeq || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       state.error = readError(err, 'Riwayat servis belum dapat dimuat.')
       state.errorCode = readErrorCode(err)
     } finally {
-      if (current === state.requestSeq) {
+      if (current === state.requestSeq && householdScope.isCurrent(requestToken)) {
         state.pending = false
         state.inflight = false
       }

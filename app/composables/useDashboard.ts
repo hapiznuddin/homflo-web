@@ -10,6 +10,7 @@ import type {
 } from '~/utils/dashboardMapper'
 import { mapDashboardFinance, mapDashboardResponse } from '~/utils/dashboardMapper'
 import { readError } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Read-model dashboard: data aktual dari GET /api/dashboard (Nuxt server
@@ -44,6 +45,7 @@ export function periodOptions(count = 13): DashboardPeriod[] {
 }
 
 export function useDashboard() {
+  const householdScope = useHouseholdScope()
   const now = new Date()
   const period = useState<DashboardPeriod>('dashboard-period', () => ({
     key: periodKeyOf(now.getFullYear(), now.getMonth() + 1),
@@ -72,6 +74,7 @@ export function useDashboard() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const [year, month] = period.value.key.split('-').map(Number) as [number, number]
@@ -111,7 +114,7 @@ export function useDashboard() {
         })
       ])
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -126,13 +129,13 @@ export function useDashboard() {
 
       data.value = { ...base, ...finance }
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data dashboard belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflightKey.value = null
       }

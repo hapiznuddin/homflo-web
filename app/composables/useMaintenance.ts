@@ -1,5 +1,6 @@
 import type { MaintenanceFormValues, MaintenanceItem } from '~/types/maintenance'
 import { readError, readFieldErrors } from '~/composables/useApiError'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Katalog maintenance: Browser -> Nuxt /api/maintenance -> Laravel ->
@@ -12,6 +13,7 @@ import { readError, readFieldErrors } from '~/composables/useApiError'
 const EMPTY = ''
 
 export function useMaintenance() {
+  const householdScope = useHouseholdScope()
   const items = useState<MaintenanceItem[]>('maintenance-items', () => [])
   const pending = useState<boolean>('maintenance-pending', () => false)
   const submitting = useState<boolean>('maintenance-submitting', () => false)
@@ -54,6 +56,7 @@ export function useMaintenance() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: MaintenanceItem[] }>('/api/maintenance', {
@@ -61,20 +64,20 @@ export function useMaintenance() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       // Server route meneruskan envelope Laravel apa adanya; unwrap di sini.
       items.value = envelope.data
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data perawatan belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflight.value = false
       }

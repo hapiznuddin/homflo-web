@@ -6,6 +6,7 @@ import type {
 import { readError, readFieldErrors } from '~/composables/useApiError'
 import { normalizeAmountInput } from '~/utils/transactions'
 import { formatMonthLabel } from '~/utils/format'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // ---------------------------------------------------------------------------
 // Target anggaran: Browser -> Nuxt /api/budgets -> Laravel -> PostgreSQL.
@@ -22,6 +23,7 @@ export function currentPeriod(): BudgetPeriod {
 }
 
 export function useBudgets() {
+  const householdScope = useHouseholdScope()
   const items = useState<BudgetItem[]>('budgets-items', () => [])
   const period = useState<BudgetPeriod>('budgets-period', () => currentPeriod())
   const pending = useState<boolean>('budgets-pending', () => false)
@@ -73,6 +75,7 @@ export function useBudgets() {
     requestSeq.value += 1
 
     const current = requestSeq.value
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: BudgetItem[] }>('/api/budgets', {
@@ -81,7 +84,7 @@ export function useBudgets() {
         headers: requestHeaders()
       })
 
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
@@ -89,13 +92,13 @@ export function useBudgets() {
       // me.get.ts); unwrap di sini.
       items.value = envelope.data
     } catch (err) {
-      if (current !== requestSeq.value) {
+      if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
       error.value = readError(err, 'Data anggaran belum dapat dimuat.')
     } finally {
-      if (current === requestSeq.value) {
+      if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
         inflightKey.value = null
       }
