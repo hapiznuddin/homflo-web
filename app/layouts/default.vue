@@ -40,7 +40,8 @@ const items: NavigationMenuItem[][] = [
     },
     {
       label: 'Daftar',
-      icon: 'i-lucide-list'
+      icon: 'i-lucide-list',
+      to: '/lists'
     }
   ],
   [

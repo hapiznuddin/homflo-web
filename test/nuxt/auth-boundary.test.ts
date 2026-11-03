@@ -45,7 +45,7 @@ describe('auth boundary middleware', () => {
     await authMiddleware(fakeRoute('/dashboard'), fakeRoute('/'))
 
     expect(authMock.bootstrap).toHaveBeenCalledTimes(1)
-    expect(navigateToMock).toHaveBeenCalledWith('/login')
+    expect(navigateToMock).toHaveBeenCalledWith({ path: '/login', query: { redirect: '/dashboard' } })
   })
 
   it('authenticated dibiarkan lewat tanpa redirect (dashboard boleh render)', async () => {
@@ -65,7 +65,7 @@ describe('auth boundary middleware', () => {
 
     expect(navigateToMock).toHaveBeenCalledWith({
       path: '/login',
-      query: { offline: '1' }
+      query: { offline: '1', redirect: '/dashboard' }
     })
   })
 
@@ -92,6 +92,6 @@ describe('auth boundary middleware', () => {
 
     await onboardingMiddleware(fakeRoute('/onboarding'), fakeRoute('/'))
 
-    expect(navigateToMock).toHaveBeenCalledWith('/login')
+    expect(navigateToMock).toHaveBeenCalledWith({ path: '/login', query: { redirect: '/onboarding' } })
   })
 })

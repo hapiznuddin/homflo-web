@@ -80,15 +80,14 @@ describe('navigasi Bills', () => {
     expect(tagihan.attributes('aria-disabled')).not.toBe('true')
     expect(tagihan.attributes('disabled')).toBeUndefined()
 
-    // Aksi lain tetap disabled (coming soon) tanpa tujuan.
-    const daftarBelanja = wrapper.findAll('button')
-      .find(button => button.text().includes('Daftar Belanja'))
+    // Aksi Daftar Belanja kini aktif menuju /lists.
+    const daftarBelanja = wrapper.findAll('a[href="/lists"]')
+      .find(link => link.text().includes('Daftar Belanja'))
 
     expect(daftarBelanja).toBeDefined()
-    expect(
-      daftarBelanja!.attributes('disabled') !== undefined
-      || daftarBelanja!.attributes('aria-disabled') === 'true'
-    ).toBe(true)
+    expect(daftarBelanja!.attributes('aria-disabled')).not.toBe('true')
+    expect(daftarBelanja!.attributes('disabled')).toBeUndefined()
+    expect(daftarBelanja!.attributes('title')).not.toBe('Fitur segera hadir')
 
     // Tutup kembali drawer agar pembersihan DOM antar test tidak
     // bertabrakan dengan state dialog yang masih terbuka.
