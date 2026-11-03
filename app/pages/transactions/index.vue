@@ -14,8 +14,8 @@ const categories = useCategories()
 const { items: categoryItems, pending: categoriesPending, error: categoriesError } = categories
 
 // Pilihan dompet aktif untuk form create (read-only API; hanya is_active
-// yang ditawarkan — pola bills page). Tanpa halaman manajemen dompet di
-// web, pengguna tanpa dompet melihat empty state jujur di form.
+// yang ditawarkan — pola bills page). Halaman /wallets menampilkan daftar
+// lengkap termasuk dompet nonaktif, tetapi penawaran posting tetap aktif.
 const wallets = useWallets()
 const { items: walletItems, pending: walletsPending, error: walletsError } = wallets
 
@@ -113,7 +113,8 @@ void wallets.load()
         <h1 class="truncate text-xl font-bold tracking-tight text-highlighted sm:text-2xl">Transaksi</h1>
         <p class="mt-0.5 text-sm text-muted">Arus kas keluar &amp; masuk rumah tangga.</p>
       </div>
-      <div class="flex shrink-0 gap-2">
+      <div class="flex flex-wrap shrink-0 gap-2">
+        <UButton icon="i-lucide-wallet-minimal" color="neutral" variant="outline" to="/wallets">Dompet</UButton>
         <UButton icon="i-lucide-tags" color="neutral" variant="outline" to="/categories">Kelola kategori</UButton>
         <UButton icon="i-lucide-plus" @click="openCreate()">Tambah</UButton>
       </div>

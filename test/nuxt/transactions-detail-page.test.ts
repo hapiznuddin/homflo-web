@@ -128,7 +128,9 @@ function setupTxState(
   return api
 }
 
-function setupAuxState(): void {
+function setupAuxState(
+  overrides: { wallets?: WalletItem[], walletsPending?: boolean, walletsError?: string | null } = {}
+): void {
   catMock.api = {
     items: ref([{ id: 'c1', name: 'Dapur', icon: null }]),
     pending: ref(false),
@@ -138,9 +140,9 @@ function setupAuxState(): void {
   }
 
   walletsMock.api = {
-    items: ref(sampleWallets()),
-    pending: ref(false),
-    error: ref(null),
+    items: ref(overrides.wallets ?? sampleWallets()),
+    pending: ref(overrides.walletsPending ?? false),
+    error: ref(overrides.walletsError ?? null),
     load: vi.fn(async () => {}),
     refresh: vi.fn(async () => {})
   }
@@ -344,6 +346,57 @@ describe('transactions detail page', () => {
     expect(toastMock.add).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Transaksi diubah' })
     )
+  })
+
+  // P1-6: Wallet yang saat ini terhubung tetap tampil meskipun sudah
+  // nonaktif, dan submit diblokir sampai pengguna memilih Wallet aktif.
+  it('edit menampilkan dompet terhubung yang nonaktif dan memblokir Simpan', async () => {
+    const state = setupTxState()
+
+    const inactive = sampleWallets()[0]!
+
+    setupAuxState({ wallets: [{ ...inactive, is_active: false }, sampleWallets()[1]!] })
+
+    const wrapper = await mountDetail()
+
+    const editButton = wrapper.findAll('button').find(button => button.text().includes('Ubah'))
+
+    await editButton!.trigger('click')
+    await flush()
+
+    expect(document.body.textContent).toContain('Kas Tunai (nonaktif)')
+    expect(document.body.textContent).toContain('Dompet ini sudah tidak aktif. Pilih dompet aktif lain untuk menyimpan.')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Simpan')
+
+    expect(submitButton?.disabled).toBe(true)
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.update).not.toHaveBeenCalled()
+  })
+
+  it('edit memblokir Simpan selama daftar dompet masih dimuat', async () => {
+    const state = setupTxState()
+
+    setupAuxState({ walletsPending: true })
+
+    const wrapper = await mountDetail()
+
+    const editButton = wrapper.findAll('button').find(button => button.text().includes('Ubah'))
+
+    await editButton!.trigger('click')
+    await flush()
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Simpan')
+
+    expect(submitButton?.disabled).toBe(true)
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.update).not.toHaveBeenCalled()
   })
 
   it('hapus memakai konfirmasi dua langkah lalu remove() + redirect ke /transactions', async () => {

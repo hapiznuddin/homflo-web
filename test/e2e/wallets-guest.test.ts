@@ -60,4 +60,16 @@ describe.skipIf(!hasBuild)('wallets API guest contract', () => {
 
     expect(response.status).toBe(401)
   })
+
+  it('halaman /wallets untuk tamu tidak membocorkan data dompet', async () => {
+    const response = await fetch(`${origin}/wallets`, { redirect: 'manual' })
+
+    // Middleware auth mengalihkan tamu ke login; yang penting tidak ada
+    // daftar/saldo dompet privat di respons.
+    expect([200, 302]).toContain(response.status)
+
+    const text = await response.text()
+
+    expect(text).not.toContain('Saldo saat ini')
+  })
 })

@@ -16,6 +16,17 @@ vi.mock('#build/fetch.mjs', async (importOriginal) => {
   return { ...original, $fetch: fetchMock }
 })
 
+// Household scope dikendalikan test agar respons lama (household sebelumnya)
+// dapat ditahan dan dibuktikan tidak menimpa data scope baru.
+const scopeMock = vi.hoisted(() => ({ epoch: 0 }))
+
+vi.mock('~/composables/useHouseholdScope', () => ({
+  useHouseholdScope: () => ({
+    token: () => scopeMock.epoch,
+    isCurrent: (value: number) => value === scopeMock.epoch
+  })
+}))
+
 let latest: ReturnType<typeof useWallets> | undefined
 
 const WalletsHarness = defineComponent({
@@ -61,6 +72,7 @@ beforeEach(() => {
   clearNuxtState(STATE_KEYS)
   fetchMock.mockReset()
   fetchMock.mockResolvedValue(envelope())
+  scopeMock.epoch = 0
 })
 
 describe('useWallets', () => {
@@ -107,6 +119,25 @@ describe('useWallets', () => {
     expect(wallets.items.value).toEqual([])
     expect(wallets.error.value).toBe('Sesi berakhir. Silakan login kembali.')
     expect(wallets.pending.value).toBe(false)
+  })
+
+  it('respons household lama tidak menimpa data setelah household berganti', async () => {
+    let release: (value: unknown) => void = () => {}
+
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => {
+      release = resolve
+    }))
+
+    const wallets = await mountWallets()
+    const request = wallets.load()
+
+    // Active household berganti sebelum respons lama kembali.
+    scopeMock.epoch += 1
+
+    release(envelope([walletItem({ name: 'Dompet Household Lama' })]))
+    await request
+
+    expect(wallets.items.value).toEqual([])
   })
 
   it('permukaan API hanya read-only: items/pending/error/load/refresh', async () => {

@@ -45,6 +45,86 @@ const activeWallets = computed(() => props.wallets.filter(wallet => wallet.is_ac
 
 const isTransfer = computed(() => form.type === 'transfer')
 
+// Daftar dompet selesai dimuat tanpa error — tombol submit tidak boleh
+// mengirim request sebelum kondisi ini terpenuhi (wallet_id required di
+// backend, dan menebak dompet dilarang).
+const walletsReady = computed(() => !props.walletsPending && props.walletsError === null)
+
+// Dompet yang saat ini terhubung ke transaksi (edit). Bisa nonaktif:
+// backend menolak posting ke dompet nonaktif, jadi dompet itu ditampilkan
+// agar tidak "hilang" dari form, tetapi submit diblokir sampai pengguna
+// memilih dompet aktif lain.
+const currentSourceWallet = computed(() =>
+  props.wallets.find(wallet => wallet.id === form.wallet_id) ?? null
+)
+
+const currentDestinationWallet = computed(() =>
+  props.wallets.find(wallet => wallet.id === form.destination_wallet_id) ?? null
+)
+
+const sourceWalletInactive = computed(() =>
+  form.wallet_id !== '' && currentSourceWallet.value?.is_active === false
+)
+
+const destinationWalletInactive = computed(() =>
+  form.destination_wallet_id !== '' && currentDestinationWallet.value?.is_active === false
+)
+
+// Nilai terpilih yang tidak ada di daftar server (mis. dompet sudah
+// dihapus) juga tidak boleh dikirim sebagai pilihan valid.
+const sourceWalletUnavailable = computed(() =>
+  walletsReady.value && form.wallet_id !== '' && currentSourceWallet.value === null
+)
+
+const destinationWalletUnavailable = computed(() =>
+  walletsReady.value && form.destination_wallet_id !== '' && currentDestinationWallet.value === null
+)
+
+interface WalletOption { label: string, value: string }
+
+// Opsi select: dompet aktif + dompet terpilih saat ini bila nonaktif,
+// supaya Wallet yang saat ini terhubung tetap tampil saat edit.
+function walletOptions(
+  current: WalletItem | null,
+  currentId: string
+): WalletOption[] {
+  const options: WalletOption[] = activeWallets.value.map(wallet => ({
+    label: wallet.name,
+    value: wallet.id
+  }))
+
+  if (currentId !== '' && current !== null && !current.is_active) {
+    options.unshift({ label: `${current.name} (nonaktif)`, value: current.id })
+  }
+
+  return options
+}
+
+const sourceWalletOptions = computed(() => walletOptions(currentSourceWallet.value, form.wallet_id))
+const destinationWalletOptions = computed(() =>
+  walletOptions(currentDestinationWallet.value, form.destination_wallet_id)
+)
+
+// Blokir submit sampai Wallet yang valid tersedia dan terpilih. Ini murni
+// UX: backend tetap memvalidasi kepemilikan, keaktifan, dan saldo.
+const walletBlocked = computed(() => {
+  if (!walletsReady.value || form.wallet_id === '') {
+    return true
+  }
+
+  if (sourceWalletInactive.value || sourceWalletUnavailable.value) {
+    return true
+  }
+
+  if (!isTransfer.value) {
+    return false
+  }
+
+  return form.destination_wallet_id === ''
+    || destinationWalletInactive.value
+    || destinationWalletUnavailable.value
+})
+
 // Nama dompet terpilih — dikirim ke kolom legacy `wallet` agar tampilan
 // daftar tetap menampilkan nama dompet; identifier posting tetap wallet_id.
 const selectedWalletName = computed(() =>
@@ -66,6 +146,7 @@ const form = reactive<TransactionFormValues>({
 // required_if, dan validasi saldo semuanya di server). Hanya untuk UX
 // agar pengguna tidak menerima 422 aneh tanpa pola pesan.
 const transferGuard = ref<string | null>(null)
+const walletGuard = ref<string | null>(null)
 
 // Tipe saat form dibuka — reset kategori hanya saat pengguna MENGUBAH
 // tipe (re-pairing kategori), bukan saat prefill edit berjalan.
@@ -95,6 +176,7 @@ function resetForm(): void {
   // kembali ke '' (tanpa kategori) saat submit.
   form.category_id = props.editing?.category?.id ?? 'none'
   transferGuard.value = null
+  walletGuard.value = null
 }
 
 watch(() => [props.open, props.editing] as const, ([open]) => {
@@ -116,6 +198,7 @@ watch(
   () => [form.type, form.wallet_id, form.destination_wallet_id] as const,
   () => {
     transferGuard.value = null
+    walletGuard.value = null
   }
 )
 
@@ -124,9 +207,48 @@ function close(): void {
 }
 
 function onSubmit(): void {
+  walletGuard.value = null
+
+  // Daftar dompet belum siap: jangan pernah menebak/mengirim tanpa Wallet.
+  if (!walletsReady.value) {
+    walletGuard.value = 'Daftar dompet belum selesai dimuat. Tunggu sebentar atau coba lagi.'
+
+    return
+  }
+
+  if (form.wallet_id === '') {
+    walletGuard.value = 'Pilih dompet terlebih dahulu.'
+
+    return
+  }
+
+  if (sourceWalletInactive.value) {
+    walletGuard.value = 'Dompet ini sudah tidak aktif. Pilih dompet aktif lain.'
+
+    return
+  }
+
+  if (sourceWalletUnavailable.value) {
+    walletGuard.value = 'Dompet saat ini tidak tersedia. Pilih dompet aktif lain.'
+
+    return
+  }
+
   if (isTransfer.value) {
     if (form.destination_wallet_id === '') {
       transferGuard.value = 'Pilih dompet tujuan terlebih dahulu.'
+
+      return
+    }
+
+    if (destinationWalletInactive.value) {
+      transferGuard.value = 'Dompet tujuan sudah tidak aktif. Pilih dompet aktif lain.'
+
+      return
+    }
+
+    if (destinationWalletUnavailable.value) {
+      transferGuard.value = 'Dompet tujuan tidak tersedia. Pilih dompet aktif lain.'
 
       return
     }
@@ -137,7 +259,6 @@ function onSubmit(): void {
       return
     }
   }
-
   emit('submit', {
     ...form,
     // Nama dompet terpilih untuk kolom legacy tampilan (ID posting
@@ -212,7 +333,7 @@ function onSubmit(): void {
           <USelect
             id="tx-wallet"
             v-model="form.wallet_id"
-            :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
+            :items="sourceWalletOptions"
             value-key="value"
             class="w-full"
             :loading="props.walletsPending"
@@ -226,6 +347,16 @@ function onSubmit(): void {
           <p v-else-if="!props.walletsPending && activeWallets.length === 0" class="mt-1 text-xs text-muted">
             Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.
           </p>
+          <p v-else-if="sourceWalletInactive" class="mt-1 text-xs text-error">
+            Dompet ini sudah tidak aktif. Pilih dompet aktif lain untuk menyimpan.
+          </p>
+          <p v-else-if="sourceWalletUnavailable" class="mt-1 text-xs text-error">
+            Dompet saat ini tidak tersedia. Pilih dompet aktif lain.
+          </p>
+          <p v-else-if="walletsReady && form.wallet_id === ''" class="mt-1 text-xs text-muted">
+            Pilih dompet terlebih dahulu.
+          </p>
+          <p v-if="walletGuard" class="mt-1 text-xs text-error">{{ walletGuard }}</p>
           <p v-if="props.fieldErrors.wallet_id" class="mt-1 text-xs text-error">{{ props.fieldErrors.wallet_id }}</p>
         </div>
 
@@ -237,13 +368,19 @@ function onSubmit(): void {
           <USelect
             id="tx-destination"
             v-model="form.destination_wallet_id"
-            :items="activeWallets.map(wallet => ({ label: wallet.name, value: wallet.id }))"
+            :items="destinationWalletOptions"
             value-key="value"
             class="w-full"
             :loading="props.walletsPending"
             :disabled="props.walletsPending || props.walletsError !== null || activeWallets.length === 0"
             placeholder="Pilih dompet tujuan"
           />
+          <p v-if="destinationWalletInactive" class="mt-1 text-xs text-error">
+            Dompet tujuan sudah tidak aktif. Pilih dompet aktif lain.
+          </p>
+          <p v-else-if="destinationWalletUnavailable" class="mt-1 text-xs text-error">
+            Dompet tujuan tidak tersedia. Pilih dompet aktif lain.
+          </p>
           <p v-if="transferGuard" class="mt-1 text-xs text-error">{{ transferGuard }}</p>
           <p v-if="props.fieldErrors.destination_wallet_id" class="mt-1 text-xs text-error">
             {{ props.fieldErrors.destination_wallet_id }}
@@ -284,7 +421,7 @@ function onSubmit(): void {
 
         <div class="flex gap-2">
           <UButton type="button" color="neutral" variant="outline" block @click="close">Batal</UButton>
-          <UButton type="submit" block :loading="props.submitting" :disabled="props.submitting">
+          <UButton type="submit" block :loading="props.submitting" :disabled="props.submitting || walletBlocked">
             {{ props.editing ? 'Simpan' : 'Tambah' }}
           </UButton>
         </div>

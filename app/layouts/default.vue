@@ -19,13 +19,18 @@ const items: NavigationMenuItem[][] = [
       to: '/transactions'
     },
     {
+      label: 'Dompet',
+      icon: 'i-lucide-wallet-minimal',
+      to: '/wallets'
+    },
+    {
       label: 'Kategori',
       icon: 'i-lucide-tags',
       to: '/categories'
     },
     {
       label: 'Anggaran',
-      icon: 'i-lucide-wallet',
+      icon: 'i-lucide-target',
       to: '/budgets'
     },
     {

@@ -1,4 +1,6 @@
-export default defineNuxtRouteMiddleware(async () => {
+import { safeRedirectPath } from '~/utils/redirect'
+
+export default defineNuxtRouteMiddleware(async (to) => {
   const auth = useAuth()
   const status = await auth.bootstrap()
 
@@ -6,9 +8,20 @@ export default defineNuxtRouteMiddleware(async () => {
     return
   }
 
+  const fullPath = to.fullPath || to.path
+  const redirect = safeRedirectPath(fullPath)
+
   if (status === 'error') {
-    return navigateTo({ path: '/login', query: { offline: '1' } })
+    const query: Record<string, string> = { offline: '1' }
+    if (redirect) {
+      query.redirect = redirect
+    }
+    return navigateTo({ path: '/login', query })
   }
 
-  return navigateTo('/login')
+  const query: Record<string, string> = {}
+  if (redirect) {
+    query.redirect = redirect
+  }
+  return navigateTo({ path: '/login', query })
 })

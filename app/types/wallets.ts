@@ -1,13 +1,15 @@
 // Kontrak Wallets API (mirror presenter backend WalletController::
-// presentWallet). Phase 14.3.4: READ-ONLY — hanya dipakai pemilih dompet
-// pada form pembayaran bill; tidak ada proxy write Wallet dan tidak ada
-// operasi tulis di UI.
+// presentWallet). READ-ONLY di web: hanya daftar (halaman Dompet, pemilih
+// dompet transaksi, pembayaran bill). Tidak ada proxy write Wallet dan
+// tidak ada operasi tulis di UI.
+
+export type WalletType = 'cash' | 'bank' | 'e-wallet'
 
 export interface WalletItem {
   id: string
   household_id: string
   name: string
-  type: string
+  type: WalletType
   opening_balance: string
   is_active: boolean
   /** String desimal saldo saat ini — TAMPILAN SAJA; validasi saldo tetap backend. */

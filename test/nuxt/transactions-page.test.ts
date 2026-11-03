@@ -469,6 +469,7 @@ describe('transactions page', () => {
     // Urutan select form: jenis, dompet, kategori.
     expect(modalSelects).toHaveLength(3)
 
+    modalSelects[1]!.vm.$emit('update:modelValue', 'w1')
     modalSelects[2]!.vm.$emit('update:modelValue', 'c1')
 
     const amountInput = document.body.querySelector('#tx-amount')
@@ -481,7 +482,7 @@ describe('transactions page', () => {
     await new DOMWrapper(submitButton as Element).trigger('click')
 
     expect(state.create).toHaveBeenCalledWith(
-      expect.objectContaining({ category_id: 'c1', amount: '50000' })
+      expect.objectContaining({ category_id: 'c1', amount: '50000', wallet_id: 'w1' })
     )
   })
 
@@ -502,6 +503,10 @@ describe('transactions page', () => {
 
     await addButton!.trigger('click')
     await flush()
+
+    // Wallet wajib dipilih sebelum submit diizinkan (P1-6).
+    wrapper.findComponent(TransactionFormModal).findAllComponents(USelect)[1]!
+      .vm.$emit('update:modelValue', 'w1')
 
     const amountInput = document.body.querySelector('#tx-amount')
 
@@ -545,6 +550,58 @@ describe('transactions page', () => {
 
     expect(bodyText()).toContain('Belum ada dompet aktif. Tambahkan dompet terlebih dahulu.')
     expect(bodyText()).toContain('Pilih dompet')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    expect(submitButton?.disabled).toBe(true)
+  })
+
+  // P1-6: submit tidak boleh mengirim transaksi tanpa Wallet yang valid.
+  it('submit diblokir selama daftar dompet belum selesai dimuat', async () => {
+    const state = setupTransactionsState()
+
+    setupWalletsState({ pending: true })
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    await new DOMWrapper(document.body.querySelector('#tx-amount') as Element).setValue('50000')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    expect(submitButton?.disabled).toBe(true)
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.create).not.toHaveBeenCalled()
+  })
+
+  it('submit diblokir bila belum ada dompet dipilih (tanpa menebak dompet)', async () => {
+    const state = setupTransactionsState()
+
+    const wrapper = await mountPage()
+    const addButton = wrapper.findAll('button').find(button => button.text().includes('Tambah'))
+
+    await addButton!.trigger('click')
+    await flush()
+
+    await new DOMWrapper(document.body.querySelector('#tx-amount') as Element).setValue('50000')
+
+    expect(bodyText()).toContain('Pilih dompet terlebih dahulu.')
+
+    const submitButton = Array.from(document.body.querySelectorAll('button'))
+      .find(button => (button.textContent ?? '').trim() === 'Tambah')
+
+    expect(submitButton?.disabled).toBe(true)
+
+    await new DOMWrapper(submitButton as Element).trigger('click')
+
+    expect(state.create).not.toHaveBeenCalled()
   })
 
   it('kegagalan memuat dompet menampilkan pesan + Coba lagi yang memanggil refresh', async () => {
