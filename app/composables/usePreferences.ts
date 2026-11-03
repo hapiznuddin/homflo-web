@@ -24,15 +24,16 @@ export function usePreferences() {
   const loaded = useState<boolean>('preferences-loaded', () => false)
   const inflight = useState<boolean>('preferences-inflight', () => false)
 
+  // Captured here, while the Nuxt instance is guaranteed to exist. `load()`
+  // runs after an `await` when called from `useAuth().bootstrap()`, and
+  // `useRequestHeaders()` at that point throws NUXT_E1001 on the server.
+  const requestCookie = import.meta.server ? useRequestHeaders(['cookie']).cookie : undefined
+
   function requestHeaders(): Record<string, string> {
     const headers: Record<string, string> = { Accept: 'application/json' }
 
-    if (import.meta.server) {
-      const { cookie } = useRequestHeaders(['cookie'])
-
-      if (cookie) {
-        headers.Cookie = cookie
-      }
+    if (requestCookie) {
+      headers.Cookie = requestCookie
     }
 
     return headers
