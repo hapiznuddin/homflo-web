@@ -68,6 +68,19 @@ export interface ListItemFormValues {
   estimated_price?: string | null
 }
 
+/**
+ * PATCH item. `actual_price` hanya diterima backend untuk item completed dan
+ * ditolak (409 LIST_ITEM_PRICE_LOCKED) bila Expense sudah ada.
+ */
+export type ListItemUpdateInput = Partial<ListItemFormValues> & {
+  actual_price?: string | null
+}
+
+export interface ListItemCompleteInput {
+  /** Omit to retain the current snapshot; explicit null clears it. */
+  actual_price?: string | null
+}
+
 export interface ListCreateFormValues {
   name: string
   /** Required by POST /api/lists; immutable after create. */
@@ -141,7 +154,8 @@ export const LIST_ERROR_CODES = {
   NOT_COMPLETED: 'LIST_ITEM_NOT_COMPLETED',
   PRICE_LOCKED: 'LIST_ITEM_PRICE_LOCKED',
   ACTUAL_PRICE_REQUIRED: 'LIST_ITEM_ACTUAL_PRICE_REQUIRED',
-  EXPENSE_LOCKED: 'LIST_EXPENSE_LOCKED'
+  EXPENSE_LOCKED: 'LIST_EXPENSE_LOCKED',
+  DEFAULT_LIST_REQUIRED: 'DEFAULT_LIST_REQUIRED'
 } as const
 
 export type ListErrorCode = typeof LIST_ERROR_CODES[keyof typeof LIST_ERROR_CODES]

@@ -51,7 +51,17 @@ const CODE_MESSAGES: Record<string, string> = {
   INSUFFICIENT_FUNDS: 'Saldo dompet tidak cukup.',
   WALLET_NOT_FOUND: 'Dompet tidak ditemukan atau tidak aktif.',
   TRANSACTION_INVALID: 'Transaksi tidak valid. Periksa jenis, kategori, dan dompet.',
-  CATEGORY_TYPE_MISMATCH: 'Kategori harus berjenis pengeluaran.'
+  CATEGORY_TYPE_MISMATCH: 'Kategori harus berjenis pengeluaran.',
+  LIST_ARCHIVED: 'List sudah diarsipkan; item tidak dapat diubah.',
+  LIST_NOT_FOUND: 'List tidak ditemukan.',
+  LIST_ITEM_NOT_FOUND: 'Item list tidak ditemukan.',
+  LIST_ITEM_HAS_EXPENSE: 'Item sudah memiliki Expense sehingga tidak dapat dihapus.',
+  LIST_ITEM_ALREADY_COMPLETED: 'Item sudah completed.',
+  LIST_ITEM_NOT_COMPLETED: 'Item belum completed.',
+  LIST_ITEM_PRICE_LOCKED: 'Harga aktual terkunci karena Expense sudah dibuat.',
+  LIST_ITEM_ACTUAL_PRICE_REQUIRED: 'Harga aktual wajib diisi dan lebih dari 0.',
+  LIST_EXPENSE_LOCKED: 'Expense dari item list tidak dapat diubah atau dihapus.',
+  DEFAULT_LIST_REQUIRED: 'Rumah tangga ini belum memiliki default list.'
 }
 
 // Exact English backend messages mapped to Indonesian.
@@ -92,6 +102,10 @@ const FIELD_LABELS: Record<string, string> = {
   per_page: 'jumlah per halaman',
   page: 'halaman',
   title: 'judul',
+  quantity: 'jumlah',
+  unit: 'satuan',
+  estimated_price: 'harga perkiraan',
+  actual_price: 'harga aktual',
   notes: 'catatan',
   due_date: 'tanggal jatuh tempo',
   due_day: 'tanggal jatuh tempo',
@@ -169,6 +183,12 @@ function extractMessage(body: ApiErrorBody | null | undefined): string | undefin
   const raw = firstFieldError ?? body.error?.message ?? body.message
 
   return raw ? translateMessage(raw) : undefined
+}
+
+// Pesan untuk satu error code envelope (dipakai composables untuk memetakan
+// code yang diketahui tanpa menggandakan tabel CODE_MESSAGES).
+export function codeMessage(code: string | null | undefined): string | null {
+  return code ? (CODE_MESSAGES[code] ?? null) : null
 }
 
 // Error code dari envelope Laravel (mis. VEHICLE_HAS_MAINTENANCE_HISTORY),

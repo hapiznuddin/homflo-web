@@ -54,6 +54,7 @@ const HOUSEHOLD_STATE_KEYS = [
   'lists-pending',
   'lists-submitting',
   'lists-error',
+  'lists-error-code',
   'lists-field-errors',
   'lists-filters',
   'lists-default',

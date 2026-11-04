@@ -1,5 +1,5 @@
 import { LIST_ERROR_CODES } from '~/types/lists'
-import { readErrorCode, readFieldErrors } from '~/composables/useApiError'
+import { codeMessage, readError, readErrorCode, readFieldErrors } from '~/composables/useApiError'
 import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // Import types
@@ -8,10 +8,11 @@ import type {
   ListItem,
   ListItemFormValues,
   ListCreateFormValues,
+  ListItemUpdateInput,
+  ListItemCompleteInput,
   ListItemExpenseInput,
   ListItemExpenseResponse,
-  ListItemsResponse,
-  ListErrorCode
+  ListItemsResponse
 } from '~/types/lists'
 
 const EMPTY_ITEMS_RESPONSE = (listId: string): ListItemsResponse => ({
@@ -34,6 +35,7 @@ export function useLists() {
   const pending = useState<boolean>('lists-pending', () => false)
   const submitting = useState<boolean>('lists-submitting', () => false)
   const error = useState<string | null>('lists-error', () => null)
+  const errorCode = useState<string | null>('lists-error-code', () => null)
   const fieldErrors = useState<Record<string, string>>('lists-field-errors', () => ({}))
   const filters = useState<{ include_archived?: boolean }>('lists-filters', () => ({}))
   const defaultList = useState<ListSummary | null>('lists-default', () => null)
@@ -72,6 +74,7 @@ export function useLists() {
     inflightKey.value = key
     pending.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
     requestSeq.value += 1
 
@@ -96,12 +99,13 @@ export function useLists() {
       }
 
       lists.value = envelope.data
-    } catch {
+    } catch (err) {
       if (current !== requestSeq.value || !householdScope.isCurrent(requestToken)) {
         return
       }
 
-      error.value = 'Gagal memuat daftar list'
+      error.value = readError(err, 'Gagal memuat daftar list')
+      errorCode.value = readErrorCode(err)
     } finally {
       if (current === requestSeq.value && householdScope.isCurrent(requestToken)) {
         pending.value = false
@@ -130,9 +134,10 @@ export function useLists() {
       error.value = 'Gagal memuat default list'
       return null
     } catch (err) {
-      if (readErrorCode(err) === 'DEFAULT_LIST_REQUIRED') {
+      if (readErrorCode(err) === LIST_ERROR_CODES.DEFAULT_LIST_REQUIRED) {
         defaultList.value = null
-        error.value = 'List ini diarsipkan; aksi tidak diperbolehkan.'
+        error.value = mapErrorCode(LIST_ERROR_CODES.DEFAULT_LIST_REQUIRED)
+        errorCode.value = LIST_ERROR_CODES.DEFAULT_LIST_REQUIRED
         return null
       }
 
@@ -141,7 +146,7 @@ export function useLists() {
     }
   }
 
-  async function getList(listId: string): Promise<ListSummary> {
+  async function getList(listId: string): Promise<ListSummary | null> {
     const requestToken = householdScope.token()
 
     try {
@@ -155,7 +160,7 @@ export function useLists() {
 
       // Ganti rumah tangga di tengah request membuang hasil lama.
       if (!householdScope.isCurrent(requestToken)) {
-        return {} as ListSummary
+        return null
       }
 
       if (envelope.success && envelope.data) {
@@ -164,14 +169,15 @@ export function useLists() {
       }
 
       error.value = 'Gagal memuat list'
-      return {} as ListSummary
-    } catch {
+      return null
+    } catch (err) {
       if (!householdScope.isCurrent(requestToken)) {
-        return {} as ListSummary
+        return null
       }
 
-      error.value = 'Gagal memuat list'
-      return {} as ListSummary
+      error.value = readError(err, 'Gagal memuat list')
+      errorCode.value = readErrorCode(err)
+      return null
     }
   }
 
@@ -200,12 +206,13 @@ export function useLists() {
 
       items.value = []
       return EMPTY_ITEMS_RESPONSE(listId)
-    } catch {
+    } catch (err) {
       if (!householdScope.isCurrent(requestToken)) {
         return EMPTY_ITEMS_RESPONSE(listId)
       }
 
-      error.value = `Gagal memuat item list ${listId}`
+      error.value = readError(err, `Gagal memuat item list ${listId}`)
+      errorCode.value = readErrorCode(err)
       items.value = []
       return EMPTY_ITEMS_RESPONSE(listId)
     }
@@ -336,6 +343,12 @@ export function useLists() {
     }
   }
 
+  function setMutationError(err: unknown, fallback: string): void {
+    error.value = readError(err, fallback)
+    errorCode.value = readErrorCode(err)
+    fieldErrors.value = readFieldErrors(err)
+  }
+
   async function createListItem(listId: string, values: ListItemFormValues): Promise<ListItem | null> {
     if (submitting.value) {
       return null
@@ -343,7 +356,9 @@ export function useLists() {
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItem }>(
@@ -356,12 +371,19 @@ export function useLists() {
         }
       )
 
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
       await loadListItems(listId)
 
       return envelope.data
     } catch (err) {
-      error.value = 'Gagal membuat item list'
-      fieldErrors.value = readFieldErrors(err)
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
+      setMutationError(err, 'Gagal membuat item list')
       return null
     } finally {
       submitting.value = false
@@ -389,7 +411,7 @@ export function useLists() {
   async function updateListItem(
     listId: string,
     itemId: string,
-    values: Partial<ListItemFormValues>
+    values: ListItemUpdateInput
   ): Promise<ListItem | null> {
     if (submitting.value) {
       return null
@@ -397,7 +419,9 @@ export function useLists() {
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItem }>(
@@ -410,43 +434,64 @@ export function useLists() {
         }
       )
 
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
       await loadListItems(listId)
 
       return envelope.data
     } catch (err) {
-      error.value = 'Gagal memperbarui item list'
-      fieldErrors.value = readFieldErrors(err)
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
+      setMutationError(err, 'Gagal memperbarui item list')
       return null
     } finally {
       submitting.value = false
     }
   }
 
-  async function completeListItem(listId: string, itemId: string): Promise<ListItem | null> {
+  async function completeListItem(
+    listId: string,
+    itemId: string,
+    input: ListItemCompleteInput = {}
+  ): Promise<ListItem | null> {
     if (submitting.value) {
       return null
     }
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItem }>(
         `/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/complete`,
         {
           method: 'POST',
+          body: input,
           credentials: 'include',
           headers: requestHeaders()
         }
       )
 
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
       await loadListItems(listId)
 
       return envelope.data
     } catch (err) {
-      error.value = 'Gagal menyelesaikan item'
-      fieldErrors.value = readFieldErrors(err)
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
+      setMutationError(err, 'Gagal menyelesaikan item')
       return null
     } finally {
       submitting.value = false
@@ -460,7 +505,9 @@ export function useLists() {
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItem }>(
@@ -472,13 +519,60 @@ export function useLists() {
         }
       )
 
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
       await loadListItems(listId)
 
       return envelope.data
     } catch (err) {
-      error.value = 'Gagal membatalkan completion item'
-      fieldErrors.value = readFieldErrors(err)
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
+      setMutationError(err, 'Gagal membatalkan completion item')
       return null
+    } finally {
+      submitting.value = false
+    }
+  }
+
+  async function deleteListItem(listId: string, itemId: string): Promise<boolean> {
+    if (submitting.value) {
+      return false
+    }
+
+    submitting.value = true
+    error.value = null
+    errorCode.value = null
+    fieldErrors.value = {}
+    const requestToken = householdScope.token()
+
+    try {
+      await $fetch(
+        `/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: requestHeaders()
+        }
+      )
+
+      if (!householdScope.isCurrent(requestToken)) {
+        return false
+      }
+
+      await loadListItems(listId)
+
+      return true
+    } catch (err) {
+      if (!householdScope.isCurrent(requestToken)) {
+        return false
+      }
+
+      setMutationError(err, 'Gagal menghapus item list')
+      return false
     } finally {
       submitting.value = false
     }
@@ -495,7 +589,9 @@ export function useLists() {
 
     submitting.value = true
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
+    const requestToken = householdScope.token()
 
     try {
       const envelope = await $fetch<{ success: boolean, data: ListItemExpenseResponse }>(
@@ -508,12 +604,19 @@ export function useLists() {
         }
       )
 
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
       await loadListItems(listId)
 
       return envelope.data
     } catch (err) {
-      error.value = 'Gagal membuat expense untuk item'
-      fieldErrors.value = readFieldErrors(err)
+      if (!householdScope.isCurrent(requestToken)) {
+        return null
+      }
+
+      setMutationError(err, 'Gagal membuat expense untuk item')
       return null
     } finally {
       submitting.value = false
@@ -521,22 +624,12 @@ export function useLists() {
   }
 
   function mapErrorCode(code?: string): string {
-    const messages: Record<ListErrorCode, string> = {
-      [LIST_ERROR_CODES.ARCHIVED]: 'List ini diarsipkan; aksi tidak diperbolehkan.',
-      [LIST_ERROR_CODES.NOT_FOUND]: 'List tidak ditemukan.',
-      [LIST_ERROR_CODES.ITEM_NOT_FOUND]: 'Item list tidak ditemukan.',
-      [LIST_ERROR_CODES.ITEM_HAS_EXPENSE]: 'Item memiliki Expense dan tidak dapat dihapus.',
-      [LIST_ERROR_CODES.ALREADY_COMPLETED]: 'Item sudah completed.',
-      [LIST_ERROR_CODES.NOT_COMPLETED]: 'Item belum completed.',
-      [LIST_ERROR_CODES.PRICE_LOCKED]: 'Harga actual dikunci; Expense sudah ada.',
-      [LIST_ERROR_CODES.ACTUAL_PRICE_REQUIRED]: 'Actual price wajib diisi dan > 0.',
-      [LIST_ERROR_CODES.EXPENSE_LOCKED]: 'Expense dari item list tidak dapat diubah atau dihapus.'
-    }
-    return (code ? messages[code as ListErrorCode] : undefined) ?? 'Terjadi kesalahan.'
+    return codeMessage(code) ?? 'Terjadi kesalahan.'
   }
 
   function clearError(): void {
     error.value = null
+    errorCode.value = null
     fieldErrors.value = {}
   }
 
@@ -547,6 +640,7 @@ export function useLists() {
     pending,
     submitting,
     error,
+    errorCode,
     fieldErrors,
     loadLists,
     refreshLists,
@@ -562,6 +656,7 @@ export function useLists() {
     updateListItem,
     completeListItem,
     uncompleteListItem,
+    deleteListItem,
     createListItemExpense,
     clearError,
     LIST_ERROR_CODES,

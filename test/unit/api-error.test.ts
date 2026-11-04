@@ -179,3 +179,46 @@ describe('readError/readErrorCode kode property (Phase 16.5.4.1)', () => {
     )
   })
 })
+
+describe('readError/readErrorCode kode Lists (Phase 3 item CRUD)', () => {
+  it('memetakan semua kode domain List ke pesan Indonesia', () => {
+    const cases: Array<[string, string]> = [
+      ['LIST_ARCHIVED', 'List sudah diarsipkan; item tidak dapat diubah.'],
+      ['LIST_NOT_FOUND', 'List tidak ditemukan.'],
+      ['LIST_ITEM_NOT_FOUND', 'Item list tidak ditemukan.'],
+      ['LIST_ITEM_HAS_EXPENSE', 'Item sudah memiliki Expense sehingga tidak dapat dihapus.'],
+      ['LIST_ITEM_ALREADY_COMPLETED', 'Item sudah completed.'],
+      ['LIST_ITEM_NOT_COMPLETED', 'Item belum completed.'],
+      ['LIST_ITEM_PRICE_LOCKED', 'Harga aktual terkunci karena Expense sudah dibuat.'],
+      ['LIST_ITEM_ACTUAL_PRICE_REQUIRED', 'Harga aktual wajib diisi dan lebih dari 0.'],
+      ['LIST_EXPENSE_LOCKED', 'Expense dari item list tidak dapat diubah atau dihapus.'],
+      ['DEFAULT_LIST_REQUIRED', 'Rumah tangga ini belum memiliki default list.']
+    ]
+
+    for (const [code, expected] of cases) {
+      expect(readError({ data: { data: { success: false, error: { code } } } }, 'x')).toBe(expected)
+      expect(readErrorCode({ data: { data: { success: false, error: { code } } } })).toBe(code)
+    }
+  })
+
+  it('memetakan label field item list', () => {
+    expect(translateMessage('The quantity must be a number.')).toBe('Kolom jumlah harus berupa angka.')
+    expect(translateMessage('The unit field is required.')).toBe('Kolom satuan wajib diisi.')
+    expect(translateMessage('The estimated_price must be a number.')).toBe('Kolom harga perkiraan harus berupa angka.')
+    expect(translateMessage('The actual_price must be a number.')).toBe('Kolom harga aktual harus berupa angka.')
+    expect(translateMessage('The title field is required.')).toBe('Kolom judul wajib diisi.')
+    expect(translateMessage('The wallet_id field is required.')).toBe('Kolom dompet wajib diisi.')
+  })
+
+  it('tetap memetakan kode integrasi Expense (kategori, dompet, saldo)', () => {
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'CATEGORY_TYPE_MISMATCH' } } } }, 'x')
+    ).toBe('Kategori harus berjenis pengeluaran.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'WALLET_NOT_FOUND' } } } }, 'x')
+    ).toBe('Dompet tidak ditemukan atau tidak aktif.')
+    expect(
+      readError({ data: { data: { success: false, error: { code: 'INSUFFICIENT_FUNDS' } } } }, 'x')
+    ).toBe('Saldo dompet tidak cukup.')
+  })
+})

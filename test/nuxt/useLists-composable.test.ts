@@ -4,6 +4,7 @@ import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ListItem, ListItemsResponse, ListSummary } from '~/types/lists'
 import { useLists } from '~/composables/useLists'
+import { useHouseholdScope } from '~/composables/useHouseholdScope'
 
 // $fetch auto-import Nuxt berasal dari #build/fetch.mjs (bukan global),
 // sehingga vi.stubGlobal tidak mempan. Mock modulnya langsung; runtime
@@ -19,13 +20,16 @@ vi.mock('#build/fetch.mjs', async (importOriginal) => {
 // useState hanya valid di dalam konteks app Nuxt, jadi komposable dijalankan
 // lewar harness yang di-mount suspended.
 let latest: ReturnType<typeof useLists> | undefined
+let latestScope: ReturnType<typeof useHouseholdScope> | undefined
 
 const ListsHarness = defineComponent({
   name: 'ListsHarness',
   setup() {
     const api = useLists()
+    const scope = useHouseholdScope()
 
     latest = api
+    latestScope = scope
 
     return api
   },
@@ -125,6 +129,7 @@ function expenseEnvelope(created = true): { success: boolean, data: unknown } {
 const STATE_KEYS = [
   'lists-pending',
   'lists-error',
+  'lists-error-code',
   'lists-items',
   'lists-filters',
   'lists-submitting',
@@ -214,7 +219,8 @@ describe('useLists', () => {
     await lists.loadDefaultList()
 
     expect(lists.defaultList.value).toBeNull()
-    expect(lists.error.value).toBe('List ini diarsipkan; aksi tidak diperbolehkan.')
+    expect(lists.error.value).toBe('Rumah tangga ini belum memiliki default list.')
+    expect(lists.errorCode.value).toBe('DEFAULT_LIST_REQUIRED')
   })
 
   it('loadDefaultList() sukses ketika default list ada', async () => {
@@ -278,7 +284,10 @@ describe('useLists', () => {
     expect(response.counts).toEqual({ active: 0, completed: 0 })
     expect(response.active).toEqual([])
     expect(response.completed).toEqual([])
-    expect(lists.error.value).toBe('Gagal memuat item list 01JLIST00000000000000000001')
+    // readError menjatuhkan pesan Error plain apa adanya karena tidak ada
+    // envelope Laravel; fallback hanya untuk error tanpa pesan sama sekali.
+    expect(lists.error.value).toBe('network')
+    expect(lists.errorCode.value).toBeNull()
   })
 
   it('createList() POST ke /api/lists dengan body valid', async () => {
@@ -493,5 +502,132 @@ describe('useLists', () => {
     const [, options] = fetchMock.mock.calls[0] as [string, { body: Record<string, unknown> }]
     expect(options.body).toEqual({ wallet_id: '01JWALLET0000000000000001' })
     expect(result?.created).toBe(false)
+  })
+
+  it('deleteListItem() DELETE ke /api/lists/{id}/items/{itemId} lalu reload', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: { id: '01JLISTITEM00000000000000000001' } })
+      .mockResolvedValueOnce(itemsEnvelope([], []))
+
+    const lists = await mountLists()
+
+    const deleted = await lists.deleteListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001')
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string }]
+    expect(url).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001')
+    expect(options.method).toBe('DELETE')
+    expect(deleted).toBe(true)
+    expect(lists.error.value).toBeNull()
+    expect(lists.errorCode.value).toBeNull()
+  })
+
+  it('deleteListItem() 409 LIST_ITEM_HAS_EXPENSE disimpan sebagai error + code', async () => {
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 409,
+      data: { data: { error: { code: 'LIST_ITEM_HAS_EXPENSE', message: 'Item has an Expense; deletion is disallowed.' } } }
+    })
+
+    const lists = await mountLists()
+
+    const deleted = await lists.deleteListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001')
+
+    expect(deleted).toBe(false)
+    expect(lists.errorCode.value).toBe('LIST_ITEM_HAS_EXPENSE')
+    expect(lists.error.value).toBe('Item sudah memiliki Expense sehingga tidak dapat dihapus.')
+  })
+
+  it('updateListItem() mengirim actual_price untuk item completed', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture({ status: 'completed', actual_price: '12500.00' }) })
+      .mockResolvedValueOnce(itemsEnvelope([], [itemFixture({ status: 'completed', actual_price: '12500.00' })]))
+
+    const lists = await mountLists()
+
+    await lists.updateListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', {
+      actual_price: '12500'
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+    expect(url).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001')
+    expect(options.method).toBe('PATCH')
+    expect(options.body).toEqual({ actual_price: '12500' })
+  })
+
+  it('updateListItem() 409 LIST_ITEM_PRICE_LOCKED memetakan code + pesan', async () => {
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 409,
+      data: { data: { error: { code: 'LIST_ITEM_PRICE_LOCKED', message: 'Actual price locked; Expense already exists.' } } }
+    })
+
+    const lists = await mountLists()
+
+    const saved = await lists.updateListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', {
+      actual_price: '12500'
+    })
+
+    expect(saved).toBeNull()
+    expect(lists.errorCode.value).toBe('LIST_ITEM_PRICE_LOCKED')
+    expect(lists.error.value).toBe('Harga aktual terkunci karena Expense sudah dibuat.')
+  })
+
+  it('completeListItem() mengirim actual_price opsional di body', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ success: true, data: itemFixture({ status: 'completed', actual_price: '9000' }) })
+      .mockResolvedValueOnce(itemsEnvelope([], [itemFixture({ status: 'completed', actual_price: '9000' })]))
+
+    const lists = await mountLists()
+
+    await lists.completeListItem('01JLIST00000000000000000001', '01JLISTITEM00000000000000000001', {
+      actual_price: '9000'
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, { method: string, body: Record<string, unknown> }]
+    expect(url).toBe('/api/lists/01JLIST00000000000000000001/items/01JLISTITEM00000000000000000001/complete')
+    expect(options.method).toBe('POST')
+    expect(options.body).toEqual({ actual_price: '9000' })
+  })
+
+  it('submit ganda saat mutasi berjalan ditolak (guard double click)', async () => {
+    let release!: (value: unknown) => void
+    const gate = new Promise((resolve) => {
+      release = resolve as (value: unknown) => void
+    })
+
+    fetchMock.mockReturnValueOnce(gate)
+
+    const lists = await mountLists()
+
+    const first = lists.createListItem('01JLIST00000000000000000001', { title: 'Pertama' })
+    const second = await lists.createListItem('01JLIST00000000000000000001', { title: 'Kedua' })
+
+    release({ success: true, data: itemFixture() })
+    const firstResult = await first
+
+    expect(second).toBeNull()
+    expect(firstResult).not.toBeNull()
+    // 1 create + 1 reload items setelah sukses; klik kedua tidak fetch.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect((fetchMock.mock.calls[1] as [string])[0]).toBe('/api/lists/01JLIST00000000000000000001/items')
+  })
+
+  it('mutasi yang selesai setelah pergantian household dibuang (stale guard)', async () => {
+    let release!: (value: unknown) => void
+    const gate = new Promise((resolve) => {
+      release = resolve as (value: unknown) => void
+    })
+
+    fetchMock.mockReturnValueOnce(gate)
+
+    const lists = await mountLists()
+
+    const pending = lists.createListItem('01JLIST00000000000000000001', { title: 'Stale' })
+
+    latestScope?.invalidate()
+    release({ success: true, data: itemFixture() })
+
+    const result = await pending
+
+    expect(result).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
