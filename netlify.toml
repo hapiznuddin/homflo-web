@@ -1,0 +1,18 @@
+# Netlify configuration — Homflo Web (Nuxt 4 SSR via Nitro).
+
+[build]
+  command = "pnpm run build"
+  publish = ".output/public"
+  environment = { NODE_VERSION = "22" }
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[context.production.environment]
+  NUXT_API_BASE = "https://api.homflo.example.com/api/"
+  NUXT_PUBLIC_SITE_URL = "https://homflo.example.com"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.homflo.example.com/api/:splat"
+  status = 307

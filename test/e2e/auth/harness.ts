@@ -71,6 +71,12 @@ export interface E2ETestClient {
   postJson: <T = unknown>(path: string, body?: unknown) => Promise<HttpResult<T>>
   patchJson: <T = unknown>(path: string, body?: unknown) => Promise<HttpResult<T>>
   deleteJson: <T = unknown>(path: string) => Promise<HttpResult<T>>
+  /**
+   * Direct Laravel call for test bootstrap only (wallet seeding; the web
+   * boundary deliberately proxies no Wallet writes). Same session/CSRF
+   * mechanism as login above.
+   */
+  postLaravelJson: <T = unknown>(path: string, body?: unknown) => Promise<HttpResult<T>>
 }
 
 export interface LoginAttempt {
@@ -279,6 +285,34 @@ class HttpTestClient implements E2ETestClient {
 
   async deleteJson<T = unknown>(path: string): Promise<HttpResult<T>> {
     return this.requestNuxt<T>(path, { method: 'DELETE' })
+  }
+
+  async postLaravelJson<T = unknown>(path: string, body?: unknown): Promise<HttpResult<T>> {
+    const csrf = await this.requestLaravel('/sanctum/csrf-cookie')
+
+    if (csrf.status !== 204 && csrf.status !== 200) {
+      throw new Error(`CSRF bootstrap failed: HTTP ${csrf.status}`)
+    }
+
+    const rawToken = this.jar.get('XSRF-TOKEN')
+
+    if (!rawToken) {
+      throw new Error('CSRF bootstrap did not return an XSRF-TOKEN cookie.')
+    }
+
+    let token = rawToken
+
+    try {
+      token = decodeURIComponent(rawToken)
+    } catch {
+      // Keep the raw cookie value when it is not percent-encoded.
+    }
+
+    return this.requestLaravel<T>(path, {
+      method: 'POST',
+      body,
+      headers: { 'X-XSRF-TOKEN': token }
+    })
   }
 
   async attemptLogin(email: string, password: string): Promise<LoginAttempt> {

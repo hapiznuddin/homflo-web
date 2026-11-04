@@ -2,15 +2,12 @@
 definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 const toast = useToast()
-const auth = useAuth()
 const listsApi = useLists()
 const { lists, pending, submitting, error } = listsApi
 
 const load = listsApi.load ?? listsApi.loadLists
 const refresh = listsApi.refresh ?? listsApi.refreshLists
 const create = listsApi.create ?? listsApi.createList
-
-const isOwner = computed(() => auth.isHouseholdOwner?.value ?? false)
 
 const tab = ref<'active' | 'archived'>('active')
 const formOpen = ref(false)
@@ -86,14 +83,13 @@ await load()
         <p class="mt-0.5 text-sm text-muted">Beberapa list belanja untuk rumah tangga Anda.</p>
       </div>
 
-      <UButton v-if="isOwner" icon="i-lucide-plus" @click="openCreate()">
+      <UButton icon="i-lucide-plus" @click="openCreate()">
         Tambah List
       </UButton>
     </div>
 
     <!-- Status tabs -->
     <div
-      v-if="isOwner"
       class="flex flex-wrap items-center gap-2"
       role="tablist"
       aria-label="Filter list"
@@ -110,12 +106,6 @@ await load()
         {{ item === 'active' ? 'Aktif' : 'Arsip' }}
       </UButton>
       <span class="text-xs text-muted">Tab Arsip menampilkan list yang sudah diarsipkan.</span>
-    </div>
-
-    <div v-else class="flex flex-col gap-2">
-      <p class="text-sm text-muted">
-        Anda anggota rumah tangga — pengelolaan list dilakukan pemilik.
-      </p>
     </div>
 
     <!-- Loading skeleton -->
@@ -141,7 +131,6 @@ await load()
         </p>
 
         <UButton
-          v-if="isOwner"
           color="neutral"
           variant="outline"
           size="sm"

@@ -225,13 +225,16 @@ it('tombol Tambah membuka form dan submit memanggil create()', async () => {
   expect(toastMock.add).toHaveBeenCalledWith(expect.objectContaining({ title: 'List ditambah' }))
 })
 
-it('non-owner: CTA tambah disembunyikan; baris tetap terbuka sebagai anchor (render-only)', async () => {
+it('non-owner (member): tetap melihat CTA tambah dan tab arsip (Phase 3.1 kontrak backend)', async () => {
   setupListsState()
   authMock.isHouseholdOwner.value = false
 
   const wrapper = await mountPage()
 
-  expect(wrapper.text()).not.toContain('Tambah List')
+  // Backend: semua anggota boleh membuat list dan mengelola item; hanya
+  // Expense (halaman detail) yang owner-only.
+  expect(wrapper.text()).toContain('Tambah List')
+  expect(wrapper.text()).not.toContain('pengelolaan list dilakukan pemilik')
   expect(wrapper.find('ul a[href="/lists/01J0LIST00000000000000001"]').exists()).toBe(true)
 })
 
