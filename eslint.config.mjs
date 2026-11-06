@@ -5,6 +5,8 @@ import { getDefaultAttributes } from 'eslint-plugin-better-tailwindcss/api/defau
 
 export default withNuxt(betterTailwindcss.configs['correctness-error'], {
   rules: {
+    // Landing page uses a namespaced CSS layer (lp-*) next to Tailwind.
+    'better-tailwindcss/no-unknown-classes': ['error', { ignore: ['^lp-'] }],
     'vue/singleline-html-element-content-newline': 'off',
     '@stylistic/operator-linebreak': 'off',
     'vue/max-attributes-per-line': 'off',
