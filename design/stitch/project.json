@@ -1,0 +1,61 @@
+{
+  "name": "projects/6962871343899208061",
+  "title": "Homflo Landing Page Design",
+  "visibility": "PUBLIC",
+  "createTime": "2026-11-06T16:15:02.797836Z",
+  "updateTime": "2026-11-08T12:25:44.985781Z",
+  "projectType": "TEXT_TO_UI_PRO",
+  "origin": "WEB",
+  "deviceType": "DESKTOP",
+  "metadata": {
+    "userRole": "OWNER"
+  },
+  "screens": [
+    {
+      "id": "0e81a9800ae24c50ab1bf9038bd62d4b",
+      "sourceScreen": "projects/6962871343899208061/screens/0e81a9800ae24c50ab1bf9038bd62d4b",
+      "x": 1237,
+      "y": -1841,
+      "width": 1280,
+      "height": 10523,
+      "label": "Homflo — Laman Landas Pengelolaan Rumah & Keuangan (Versi Bahasa Indonesia)"
+    },
+    {
+      "id": "64947497747640d1ba85255e1d9f13b3",
+      "sourceScreen": "projects/6962871343899208061/screens/64947497747640d1ba85255e1d9f13b3",
+      "x": 3035,
+      "y": -1841,
+      "width": 1280,
+      "height": 1024,
+      "label": "Homflo Household & Finance Management",
+      "hidden": true
+    },
+    {
+      "id": "77c51117b7474e9ca80f0699e29238e2",
+      "sourceScreen": "projects/6962871343899208061/screens/77c51117b7474e9ca80f0699e29238e2",
+      "x": 2581,
+      "y": -1841,
+      "width": 390,
+      "height": 8585,
+      "label": "Homflo — Laman Landas Mobile (Bahasa Indonesia)"
+    },
+    {
+      "id": "assets_c104686d13354aa1a05f6b665cc0f9ca",
+      "x": 213,
+      "y": -1841,
+      "width": 960,
+      "height": 540,
+      "sourceAsset": "assets/c104686d13354aa1a05f6b665cc0f9ca",
+      "type": "DESIGN_SYSTEM_INSTANCE"
+    },
+    {
+      "id": "fd9aece794e04009bf3a2dc675138193",
+      "sourceScreen": "projects/6962871343899208061/screens/fd9aece794e04009bf3a2dc675138193",
+      "x": 1024,
+      "width": 1280,
+      "height": 9894,
+      "label": "Homflo — Premium Household & Money Management Landing Page",
+      "hidden": true
+    }
+  ]
+}

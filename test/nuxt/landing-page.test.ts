@@ -1,5 +1,6 @@
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LandingPage from '~/pages/index.vue'
 import LandingNav from '~/components/landing/Nav.vue'
 import LandingPreview from '~/components/landing/Preview.vue'
@@ -10,6 +11,17 @@ const authMock = vi.hoisted(() => ({
 
 mockNuxtImport('useAuth', () => () => authMock)
 
+interface ColorModeMock {
+  value: 'light' | 'dark'
+  preference: 'system' | 'light' | 'dark'
+}
+
+const colorModeMock = vi.hoisted(() => ({
+  api: undefined as unknown as ColorModeMock
+}))
+
+mockNuxtImport('useColorMode', () => () => colorModeMock.api)
+
 async function flush(): Promise<void> {
   for (let index = 0; index < 4; index++) {
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -17,16 +29,41 @@ async function flush(): Promise<void> {
 }
 
 describe('landing page', () => {
+  beforeEach(() => {
+    colorModeMock.api = reactive<ColorModeMock>({ value: 'light', preference: 'system' })
+  })
+
   it('menampilkan headline, CTA nyata, dan tanpa id ganda', async () => {
     const wrapper = await mountSuspended(LandingPage, { route: '/' })
     await flush()
 
-    expect(wrapper.find('h1').text()).toBe('Rumah dan uang, satu tempat.')
+    expect(wrapper.find('h1').text()).toBe('Rumah dan uang, satu catatan.')
     expect(wrapper.find('a[href="/register"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/login"]').exists()).toBe(true)
 
     const ids = wrapper.findAll('[id]').map((node) => node.attributes('id'))
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('menampilkan enam domain, rumah tangga, dan batas kolaborasi', async () => {
+    const wrapper = await mountSuspended(LandingPage, { route: '/' })
+    await flush()
+
+    expect(
+      wrapper.findAll('nav[aria-label="Area produk Homflo"] > a')
+    ).toHaveLength(6)
+    expect(wrapper.find('#rumah-tangga').exists()).toBe(true)
+    expect(wrapper.find('#rumah-tangga').text()).toContain('Belum ada kolaborasi real-time')
+    expect(wrapper.find('#rumah-tangga').text()).toContain('Undangan lewat email')
+  })
+
+  it('memakai FAQ native, enam pertanyaan, dan footer tanpa heading', async () => {
+    const wrapper = await mountSuspended(LandingPage, { route: '/' })
+    await flush()
+
+    expect(wrapper.findAll('#faq details')).toHaveLength(6)
+    expect(wrapper.findAll('footer h2')).toHaveLength(0)
+    expect(wrapper.text()).toContain('Pratinjau memakai data contoh')
   })
 
   it('pratinjau berpindah tab dan memakai satu set id unik', async () => {
@@ -57,5 +94,19 @@ describe('landing page', () => {
 
     await toggle.trigger('click')
     expect(toggle.attributes('aria-expanded')).toBe('false')
+  })
+
+  it('tombol tema mengganti preferensi terang dan gelap', async () => {
+    const wrapper = await mountSuspended(LandingNav, { route: false })
+
+    const toggle = wrapper.find('button[aria-label="Ubah tema terang atau gelap"]')
+    expect(toggle.exists()).toBe(true)
+
+    await toggle.trigger('click')
+    expect(colorModeMock.api.preference).toBe('dark')
+
+    colorModeMock.api.value = 'dark'
+    await toggle.trigger('click')
+    expect(colorModeMock.api.preference).toBe('light')
   })
 })

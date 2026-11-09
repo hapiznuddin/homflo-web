@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://homflo.example.com/sitemap.xml
