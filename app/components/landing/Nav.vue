@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  btnOutline,
-  btnPrimary,
-  btnPrimarySmall,
-  container,
-  linkAction
-} from '~/components/landing/ui'
+import { container } from '~/components/landing/ui'
 
 const open = ref(false)
 
@@ -34,7 +28,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <div
       :class="[
         container,
-        'grid min-h-[62px] grid-cols-[1fr_auto] items-center gap-6 min-[900px]:min-h-[68px] min-[900px]:grid-cols-[1fr_auto_1fr]'
+        'relative z-50 grid min-h-16 grid-cols-[1fr_auto] items-center gap-6 md:min-h-17 md:grid-cols-[1fr_auto_1fr]'
       ]"
     >
       <NuxtLink
@@ -48,14 +42,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           alt="Homflo"
           width="100%"
           height="100%"
-          class="h-auto w-32 dark:hidden min-[900px]:w-33"
+          class="h-auto w-32 md:w-33 dark:hidden"
         />
         <NuxtImg
           src="/img/homflo-dark-horizontal.webp"
           alt=""
           width="100%"
           height="100%"
-          class="hidden h-auto w-32 dark:hidden min-[900px]:w-33"
+          class="hidden h-auto w-32 md:w-33 dark:block"
           aria-hidden="true"
         />
       </NuxtLink>
@@ -68,50 +62,62 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           v-for="link in links"
           :key="link.href"
           :href="link.href"
-          class="text-[0.9375rem] font-medium text-muted-foreground no-underline transition-colors duration-[160ms] hover:text-foreground focus-ring"
+          class="text-[0.9375rem] font-medium text-muted-foreground no-underline transition-colors duration-160 hover:text-foreground focus-ring"
           >{{ link.label }}</a
         >
       </nav>
 
-      <div class="hidden items-center gap-2.5 justify-self-end min-[900px]:flex">
+      <div class="hidden items-center gap-2.5 justify-self-end md:flex">
         <LandingThemeToggle />
-        <NuxtLink to="/login" :class="linkAction">Masuk</NuxtLink>
-        <NuxtLink to="/register" :class="btnPrimarySmall">Daftar</NuxtLink>
+        <UButton to="/login" variant="soft">Masuk</UButton>
+        <UButton to="/register">Daftar</UButton>
       </div>
 
-      <div class="flex items-center gap-2 justify-self-end min-[900px]:hidden">
+      <div class="flex items-center gap-2 justify-self-end md:hidden">
         <LandingThemeToggle />
-        <button
-          type="button"
-          class="inline-flex size-11 cursor-pointer items-center justify-center rounded-lg border border-border bg-transparent text-foreground focus-ring"
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="rounded-lg p-2 border border-border"
           :aria-expanded="open"
           aria-controls="landing-mobile-menu"
           :aria-label="open ? 'Tutup menu' : 'Buka menu'"
           @click="open = !open"
         >
           <UIcon :name="open ? 'i-lucide-x' : 'i-lucide-menu'" class="size-5" aria-hidden="true" />
-        </button>
+        </UButton>
       </div>
     </div>
 
     <Transition name="landing-menu">
-      <div v-show="open" id="landing-mobile-menu" class="border-t border-rule bg-background">
+      <div
+        v-show="open"
+        id="landing-mobile-menu"
+        class="absolute inset-x-0 z-40 border-t border-rule bg-background shadow-md"
+      >
         <nav :class="[container, 'flex flex-col gap-0.5 py-4 pb-6']" aria-label="Navigasi seluler">
           <a
             v-for="link in links"
             :key="link.href"
             :href="link.href"
-            class="border-b border-rule py-3 text-base font-medium text-foreground no-underline"
+            class="border-b border-rule py-3 text-base font-medium text-foreground no-underline hover:bg-stone-200/30 dark:hover:bg-stone-700/30 focus-ring px-3"
             @click="close"
           >
             {{ link.label }}
           </a>
           <div class="mt-4 grid grid-cols-2 gap-2.5">
-            <NuxtLink to="/login" :class="btnOutline" @click="close">Masuk</NuxtLink>
-            <NuxtLink to="/register" :class="btnPrimary" @click="close">Daftar</NuxtLink>
+            <UButton to="/login" variant="soft" @click="close">Masuk</UButton>
+            <UButton to="/register" @click="close">Daftar</UButton>
           </div>
         </nav>
       </div>
     </Transition>
   </header>
+  <button
+    v-if="open"
+    type="button"
+    class="fixed inset-0 z-10 cursor-default bg-black/20 dark:bg-background/80"
+    aria-label="Tutup menu"
+    @click="close"
+  />
 </template>

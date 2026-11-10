@@ -1,9 +1,8 @@
 <template>
   <UColorModeButton
-    variant="outline"
+    variant="ghost"
     color="neutral"
-    square
     aria-label="Ubah tema terang atau gelap"
-    class="size-11 rounded-lg border-border"
+    class="rounded-full cursor-pointer hover:bg-stone-100 dark:hover:bg-stone-700"
   />
 </template>
