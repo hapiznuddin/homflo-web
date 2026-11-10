@@ -73,6 +73,7 @@
     color: var(--foreground);
     /* Landing guard: decorative offsets never create a horizontal scrollbar. */
     overflow-x: clip;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -195,6 +196,8 @@
   --text-ledger: clamp(1.75rem, 4vw, 2.5rem);
   --text-ledger--line-height: 1.1;
   --text-ledger--letter-spacing: -0.035em;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Shared focus ring for landing interactions: matches the approved 3px offset. */
@@ -247,6 +250,135 @@
       color-mix(in oklab, var(--primary-foreground) 8%, transparent) 0%,
       transparent 60%
     );
+}
+
+/* Landing motion: one first-viewport sequence plus state continuity.
+   Spatial motion is disabled when the visitor asks for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-menu-enter-active,
+  .landing-menu-leave-active {
+    transition:
+      opacity 180ms var(--ease-out-expo),
+      transform 180ms var(--ease-out-expo);
+  }
+
+  .landing-menu-enter-from,
+  .landing-menu-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  .preview-panel-enter-active {
+    transition:
+      opacity 180ms var(--ease-out-expo),
+      transform 180ms var(--ease-out-expo);
+  }
+
+  .preview-panel-leave-active {
+    transition:
+      opacity 120ms ease-in,
+      transform 120ms ease-in;
+  }
+
+  .preview-panel-enter-from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  .preview-panel-leave-to {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+
+  #faq details[open] > p {
+    animation: landing-faq-in 200ms var(--ease-out-expo) both;
+  }
+}
+
+@keyframes landing-faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Scroll reveal: komponen landing muncul saat masuk viewport.
+   Satu gaya untuk semua section, transform/opacity saja, dan mati pada
+   prefers-reduced-motion. Konten tetap terlihat default (fallback). */
+.lp-scroll-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms var(--ease-out-expo),
+    transform 600ms var(--ease-out-expo);
+  transition-delay: var(--srv-delay, 0ms);
+}
+.lp-scroll-reveal.lp-is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Anak yang muncul bertahap dalam satu daftar (kartu domain, langkah). */
+.lp-scroll-reveal-child {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 500ms var(--ease-out-expo),
+    transform 500ms var(--ease-out-expo);
+  transition-delay: var(--srv-delay, 0ms);
+}
+.lp-scroll-reveal-child.lp-is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Parallax: visual bergeser halus mengikuti scroll. Scroll-driven animation
+   berjalan off-main-thread; tanpa dukungan atau saat reduced-motion, visual
+   diam di posisi alami (decorative, jadi fallback statis sudah cukup). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-parallax {
+      animation: lp-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+    .lp-parallax-hero {
+      animation-name: lp-parallax-hero;
+    }
+    @keyframes lp-parallax {
+      from {
+        translate: 0 var(--lp-parallax, 24px);
+      }
+      to {
+        translate: 0 calc(var(--lp-parallax, 24px) * -1);
+      }
+    }
+    @keyframes lp-parallax-hero {
+      from {
+        translate: 0 var(--lp-parallax, 24px);
+        scale: 1;
+      }
+      to {
+        translate: 0 calc(var(--lp-parallax, 24px) * -1);
+        scale: 0.97;
+      }
+    }
+  }
+}
+
+/* Stage pratinjau fitur: pada viewport pendek, kecilkan sedikit agar pratinjau
+   sticky tetap muat penuh tanpa terpotong. Dekoratif, jadi fallback tanpa zoom
+   hanya berarti sedikit terpotong. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .lp-feature-stage {
+    zoom: 0.84;
+  }
 }
 
 .dark {

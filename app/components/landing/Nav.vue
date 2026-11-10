@@ -46,16 +46,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <NuxtImg
           src="/img/homflo-light-horizontal.webp"
           alt="Homflo"
-          width="132"
-          height="28"
-          class="h-auto w-[116px] dark:hidden min-[900px]:w-[132px]"
+          width="100%"
+          height="100%"
+          class="h-auto w-32 dark:hidden min-[900px]:w-33"
         />
         <NuxtImg
           src="/img/homflo-dark-horizontal.webp"
           alt=""
-          width="132"
-          height="28"
-          class="hidden h-auto w-[116px] dark:block min-[900px]:w-[132px]"
+          width="100%"
+          height="100%"
+          class="hidden h-auto w-32 dark:hidden min-[900px]:w-33"
           aria-hidden="true"
         />
       </NuxtLink>
@@ -89,31 +89,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           :aria-label="open ? 'Tutup menu' : 'Buka menu'"
           @click="open = !open"
         >
-          <UIcon
-            :name="open ? 'i-lucide-x' : 'i-lucide-menu'"
-            class="size-5"
-            aria-hidden="true"
-          />
+          <UIcon :name="open ? 'i-lucide-x' : 'i-lucide-menu'" class="size-5" aria-hidden="true" />
         </button>
       </div>
     </div>
 
-    <div v-show="open" id="landing-mobile-menu" class="border-t border-rule bg-background">
-      <nav :class="[container, 'flex flex-col gap-0.5 py-4 pb-6']" aria-label="Navigasi seluler">
-        <a
-          v-for="link in links"
-          :key="link.href"
-          :href="link.href"
-          class="border-b border-rule py-3 text-base font-medium text-foreground no-underline"
-          @click="close"
-        >
-          {{ link.label }}
-        </a>
-        <div class="mt-4 grid grid-cols-2 gap-2.5">
-          <NuxtLink to="/login" :class="btnOutline" @click="close">Masuk</NuxtLink>
-          <NuxtLink to="/register" :class="btnPrimary" @click="close">Daftar</NuxtLink>
-        </div>
-      </nav>
-    </div>
+    <Transition name="landing-menu">
+      <div v-show="open" id="landing-mobile-menu" class="border-t border-rule bg-background">
+        <nav :class="[container, 'flex flex-col gap-0.5 py-4 pb-6']" aria-label="Navigasi seluler">
+          <a
+            v-for="link in links"
+            :key="link.href"
+            :href="link.href"
+            class="border-b border-rule py-3 text-base font-medium text-foreground no-underline"
+            @click="close"
+          >
+            {{ link.label }}
+          </a>
+          <div class="mt-4 grid grid-cols-2 gap-2.5">
+            <NuxtLink to="/login" :class="btnOutline" @click="close">Masuk</NuxtLink>
+            <NuxtLink to="/register" :class="btnPrimary" @click="close">Daftar</NuxtLink>
+          </div>
+        </nav>
+      </div>
+    </Transition>
   </header>
 </template>

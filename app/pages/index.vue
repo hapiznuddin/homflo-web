@@ -3,7 +3,7 @@ import LandingNav from '~/components/landing/Nav.vue'
 import LandingPreview from '~/components/landing/Preview.vue'
 import LandingHeroDashboard from '~/components/landing/HeroDashboard.vue'
 import LandingHeroLedger from '~/components/landing/HeroLedger.vue'
-import LandingShowcaseSection from '~/components/landing/ShowcaseSection.vue'
+import LandingFeatureStory from '~/components/landing/FeatureStory.vue'
 import LandingDomainList from '~/components/landing/DomainList.vue'
 import {
   actionButton,
@@ -145,6 +145,49 @@ const moneyPoints = [
   { label: 'Dompet', text: 'Saldo per dompet.' }
 ]
 
+const householdPoints = [
+  {
+    label: 'Undangan lewat email',
+    text: 'Kirim undangan, lalu anggota menerima dengan akun sendiri.'
+  },
+  { label: 'Peran pemilik dan anggota', text: 'Pemilik mengelola anggota dan undangan.' },
+  { label: 'Data terpisah per rumah tangga', text: 'Akses dibatasi ke rumah tangga aktif.' }
+]
+
+const featureStories = [
+  {
+    id: 'uang',
+    title: 'Uang masuk dan keluar, tercatat.',
+    lede: 'Catat pemasukan, pengeluaran, dan transfer. Lihat anggaran dan tagihan tanpa pindah aplikasi.',
+    points: moneyPoints
+  },
+  {
+    id: 'rumah',
+    title: 'Rumah punya catatan.',
+    lede: 'Simpan properti, aset, dan riwayat perawatan. Tahu apa yang dimiliki dan kapan dirawat.',
+    points: homePoints
+  },
+  {
+    id: 'kendaraan',
+    title: 'Kendaraan tidak hanya soal servis.',
+    lede: 'Catat kendaraan, jadwal dan riwayat servis, serta kewajiban administratif.',
+    points: vehiclePoints
+  },
+  {
+    id: 'daftar',
+    title: 'Belanja rumah, tanpa daftar yang hilang.',
+    lede: 'Buat daftar, tambah item, centang yang sudah dibeli, lalu catat pengeluarannya.',
+    points: listPoints
+  },
+  {
+    id: 'rumah-tangga',
+    title: 'Satu rumah tangga, satu lingkup data.',
+    lede: 'Undang anggota ke rumah tangga. Setiap anggota memakai akun sendiri, dan data dibatasi ke rumah tangga aktif.',
+    points: householdPoints,
+    note: 'Belum ada kolaborasi real-time atau izin per anggota.'
+  }
+]
+
 const steps = [
   {
     icon: 'i-lucide-user-plus',
@@ -231,32 +274,43 @@ const faqs = [
         class="landing-glow scroll-mt-20 pb-[clamp(32px,5vw,56px)] pt-[clamp(40px,7vw,80px)]"
       >
         <div :class="[container, 'flex flex-col items-center text-center']">
-          <h1 class="m-0 min-w-0 max-w-[18ch] text-display font-semibold break-words text-balance">
+          <h1
+            class="m-0 min-w-0 max-w-[18ch] animate-in text-display font-semibold break-words text-balance fade-in fill-mode-both slide-in-from-bottom-3 duration-500 ease-out-expo"
+          >
             Rumah dan uang, satu catatan.
           </h1>
-          <p class="mt-5 mb-0 max-w-[54ch] text-hero-sub text-muted-foreground text-pretty">
+          <p
+            class="mt-5 mb-0 max-w-[54ch] animate-in text-hero-sub text-muted-foreground text-pretty fade-in fill-mode-both slide-in-from-bottom-3 delay-75 duration-500 ease-out-expo"
+          >
             Catat uang, tagihan, rumah, kendaraan, dan daftar belanja rumah tangga di satu tempat.
             Tanpa menghubungkan rekening bank.
           </p>
           <div
-            class="mt-7 flex w-full max-w-[460px] flex-col gap-2.5 min-[480px]:flex-row min-[480px]:justify-center"
+            class="mt-7 flex w-full max-w-[460px] animate-in flex-col gap-2.5 fade-in fill-mode-both slide-in-from-bottom-3 delay-150 duration-500 ease-out-expo min-[480px]:flex-row min-[480px]:justify-center"
           >
             <NuxtLink to="/register" :class="[btnPrimary, actionButton]"
               >Buat rumah tangga</NuxtLink
             >
             <a href="#fitur" :class="[btnOutline, actionButton]">Lihat isi Homflo</a>
           </div>
-          <p class="mt-3.5 mb-0 text-[0.8125rem] leading-[1.5] text-muted-foreground">
+          <p
+            class="mt-3.5 mb-0 animate-in text-[0.8125rem] leading-[1.5] text-muted-foreground fade-in fill-mode-both slide-in-from-bottom-2 delay-200 duration-500 ease-out-expo"
+          >
             Masuk dengan email atau Google. Pratinjau memakai data contoh.
           </p>
         </div>
 
-        <div :class="[container, 'mt-10 lg:mt-14']">
+        <div
+          :class="[
+            container,
+            'mt-10 animate-in delay-250 duration-700 ease-out-expo fill-mode-both fade-in slide-in-from-bottom-4 zoom-in-98 lg:mt-14'
+          ]"
+        >
           <LandingHeroDashboard />
         </div>
       </section>
 
-      <section class="py-[clamp(48px,7vw,96px)]">
+      <section v-scroll-reveal class="py-[clamp(48px,7vw,96px)] lp-scroll-reveal">
         <div
           :class="[
             container,
@@ -296,7 +350,7 @@ const faqs = [
         </div>
       </section>
 
-      <section id="fitur" :class="section">
+      <section id="fitur" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
         <div :class="container">
           <div :class="sectionHead">
             <h2 :class="[heading2, 'max-w-[22ch]']">Enam area, satu rumah tangga.</h2>
@@ -310,403 +364,286 @@ const faqs = [
         </div>
       </section>
 
-      <section id="uang" class="scroll-mt-20 py-[clamp(24px,3.5vw,48px)]">
-        <div :class="container">
-          <div
-            class="landing-panel-glow grid grid-cols-1 items-center gap-8 rounded-[32px] border border-rule bg-soft p-[clamp(20px,4vw,48px)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-[clamp(40px,6vw,72px)]"
-          >
-            <div class="flex min-w-0 flex-col">
-              <h2 :class="heading2">Uang masuk dan keluar, tercatat.</h2>
-              <p :class="[ledeText, 'mt-4']">
-                Catat pemasukan, pengeluaran, dan transfer. Lihat anggaran dan tagihan tanpa pindah
-                aplikasi.
-              </p>
-              <ul
-                class="m-0 mt-6 grid list-none grid-cols-1 gap-x-6 border-t border-border p-0 sm:grid-cols-2"
-              >
-                <li
-                  v-for="point in moneyPoints"
-                  :key="point.label"
-                  class="border-b border-rule py-3"
-                >
-                  <strong class="mb-0.5 block text-sm font-semibold">{{ point.label }}</strong>
-                  <span
-                    class="block text-[0.8125rem] leading-[1.4] text-muted-foreground text-pretty"
-                    >{{ point.text }}</span
-                  >
-                </li>
-              </ul>
-            </div>
-
-            <div class="min-w-0">
-              <LandingPreview />
-              <p class="mt-2.5 mb-0 text-end text-xs text-muted-foreground">
-                Pratinjau area Uang · data contoh
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <LandingShowcaseSection
-        id="rumah"
-        title="Rumah punya catatan."
-        lede="Simpan properti, aset, dan riwayat perawatan. Tahu apa yang dimiliki dan kapan dirawat."
-        :points="homePoints"
-        tone="soft"
-      >
-        <template #visual>
-          <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p class="m-0 text-[0.8125rem] leading-[1.4] text-muted-foreground">Properti</p>
-                <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">Rumah Utama</p>
-                <p class="mt-[3px] mb-0 text-[0.8125rem] text-muted-foreground">
-                  Rumah tinggal, milik sendiri, Bandung
-                </p>
-              </div>
-              <span
-                class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
-                >Aktif</span
-              >
-            </div>
-
-            <div class="mt-3.5 border-t border-rule pt-3.5">
-              <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Aset rumah</p>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <span
-                  class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-package" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">AC Kamar Utama</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Ruang keluarga</p>
-                </div>
-              </div>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <span
-                  class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-package" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Kulkas Dapur</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Dapur</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-3.5 border-t border-rule pt-3.5">
-              <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">
-                Perawatan berikutnya
-              </p>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <div
-                  class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
-                >
-                  12 Nov
-                </div>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Servis AC</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
-                </div>
-              </div>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <div
-                  class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
-                >
-                  20 Nov
-                </div>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Ganti filter air</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <LandingFeatureStory :features="featureStories">
+        <template #preview-uang>
+  <div class="min-w-0">
+    <LandingPreview />
+    <p class="mt-2.5 mb-0 text-end text-xs text-muted-foreground">
+      Pratinjau area Uang · data contoh
+    </p>
+  </div>
         </template>
-      </LandingShowcaseSection>
 
-      <LandingShowcaseSection
-        id="kendaraan"
-        title="Kendaraan tidak hanya soal servis."
-        lede="Catat kendaraan, jadwal dan riwayat servis, serta kewajiban administratif."
-        :points="vehiclePoints"
-        reverse
-        tone="plain"
+        <template #preview-rumah>
+  <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="m-0 text-[0.8125rem] leading-[1.4] text-muted-foreground">Properti</p>
+        <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">Rumah Utama</p>
+        <p class="mt-[3px] mb-0 text-[0.8125rem] text-muted-foreground">
+          Rumah tinggal, milik sendiri, Bandung
+        </p>
+      </div>
+      <span
+        class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
+        >Aktif</span
       >
-        <template #visual>
-          <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p class="m-0 text-[0.8125rem] leading-[1.4] text-muted-foreground">Kendaraan</p>
-                <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">Mobil Keluarga</p>
-                <p class="mt-[3px] mb-0 text-[0.8125rem] text-muted-foreground">
-                  Toyota Avanza 2021, B 1234 XYZ
-                </p>
-              </div>
-              <span
-                class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
-                >Aktif</span
-              >
-            </div>
+    </div>
 
-            <div class="mt-3.5 border-t border-rule pt-3.5">
-              <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Jadwal servis</p>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <div
-                  class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
-                >
-                  18 Nov
-                </div>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">
-                    Servis rutin 10.000 km
-                  </p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Odometer 42.500 km</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-3.5 border-t border-rule pt-3.5">
-              <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Kewajiban</p>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <span
-                  class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-file-text" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Pajak Kendaraan</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aktif</p>
-                </div>
-              </div>
-              <div
-                class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-              >
-                <span
-                  class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-file-text" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">STNK / Registrasi</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aktif</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </LandingShowcaseSection>
-
-      <LandingShowcaseSection
-        id="daftar"
-        title="Belanja rumah, tanpa daftar yang hilang."
-        lede="Buat daftar, tambah item, centang yang sudah dibeli, lalu catat pengeluarannya."
-        :points="listPoints"
-        tone="soft"
+    <div class="mt-3.5 border-t border-rule pt-3.5">
+      <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Aset rumah</p>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
       >
-        <template #visual>
-          <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
-            <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
-              <div>
-                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Daftar belanja</p>
-                <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
-                  Belanja mingguan
-                </p>
-              </div>
-              <span class="text-xs leading-[1.35] text-muted-foreground">4 item</span>
-            </div>
-
-            <div class="border-t border-rule">
-              <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
-                <span
-                  class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-primary bg-primary text-primary-foreground"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-check" class="size-3.5" />
-                </span>
-                <span class="min-w-0 flex-auto text-muted-foreground line-through">Beras 5 kg</span>
-                <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 72.000</span>
-              </div>
-              <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
-                <span
-                  class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
-                  aria-hidden="true"
-                />
-                <span class="min-w-0 flex-auto">Telur 1 kg</span>
-                <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 32.000</span>
-              </div>
-              <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
-                <span
-                  class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
-                  aria-hidden="true"
-                />
-                <span class="min-w-0 flex-auto">Sabun cuci 2 pcs</span>
-                <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 46.000</span>
-              </div>
-              <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
-                <span
-                  class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
-                  aria-hidden="true"
-                />
-                <span class="min-w-0 flex-auto">Minyak goreng 2 L</span>
-                <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 38.000</span>
-              </div>
-            </div>
-
-            <div class="flex items-baseline justify-between gap-3 pt-2.5 text-xs">
-              <span>Estimasi total</span>
-              <strong class="text-[0.9375rem] tabular-nums">Rp 188.000</strong>
-            </div>
-          </div>
-        </template>
-      </LandingShowcaseSection>
-
-      <section id="rumah-tangga" :class="section">
-        <div
-          :class="[
-            container,
-            'grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center lg:gap-[clamp(40px,6vw,80px)]'
-          ]"
+        <span
+          class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+          aria-hidden="true"
         >
-          <div class="flex flex-col gap-[18px]">
-            <h2 :class="heading2">Satu rumah tangga, satu lingkup data.</h2>
-            <p :class="ledeText">
-              Undang anggota ke rumah tangga. Setiap anggota memakai akun sendiri, dan data dibatasi
-              ke rumah tangga aktif.
-            </p>
-            <ul class="m-0 flex list-none flex-col border-t border-border p-0">
-              <li class="grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-b border-rule py-[13px]">
-                <UIcon
-                  name="i-lucide-check"
-                  class="mt-0.5 size-4 text-primary"
-                  aria-hidden="true"
-                />
-                <div>
-                  <strong class="block text-[0.9375rem] font-semibold">Undangan lewat email</strong>
-                  <span class="mt-px block text-sm leading-[1.45] text-muted-foreground text-pretty"
-                    >Kirim undangan, lalu anggota menerima dengan akun sendiri.</span
-                  >
-                </div>
-              </li>
-              <li class="grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-b border-rule py-[13px]">
-                <UIcon
-                  name="i-lucide-check"
-                  class="mt-0.5 size-4 text-primary"
-                  aria-hidden="true"
-                />
-                <div>
-                  <strong class="block text-[0.9375rem] font-semibold"
-                    >Peran pemilik dan anggota</strong
-                  >
-                  <span class="mt-px block text-sm leading-[1.45] text-muted-foreground text-pretty"
-                    >Pemilik mengelola anggota dan undangan.</span
-                  >
-                </div>
-              </li>
-              <li class="grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-b border-rule py-[13px]">
-                <UIcon
-                  name="i-lucide-check"
-                  class="mt-0.5 size-4 text-primary"
-                  aria-hidden="true"
-                />
-                <div>
-                  <strong class="block text-[0.9375rem] font-semibold"
-                    >Data terpisah per rumah tangga</strong
-                  >
-                  <span class="mt-px block text-sm leading-[1.45] text-muted-foreground text-pretty"
-                    >Akses dibatasi ke rumah tangga aktif.</span
-                  >
-                </div>
-              </li>
-            </ul>
-            <p
-              class="m-0 border-t border-rule pt-3 text-[0.8125rem] leading-[1.5] text-muted-foreground text-pretty"
-            >
-              Belum ada kolaborasi real-time atau izin per anggota.
-            </p>
-          </div>
-
-          <div class="rounded-[28px] border border-rule bg-soft p-3 sm:p-4">
-            <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
-              <div class="flex items-start justify-between gap-3 border-b border-rule pb-3.5">
-                <div>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Rumah tangga</p>
-                  <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">
-                    Rumah Tangga Budi
-                  </p>
-                </div>
-                <span
-                  class="shrink-0 rounded-full border border-border px-2 py-[3px] text-xs leading-[1.4] text-muted-foreground"
-                  >Data contoh</span
-                >
-              </div>
-
-              <div
-                class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
-              >
-                <span
-                  class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold text-primary-foreground"
-                  >B</span
-                >
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-sm font-medium leading-[1.35]">Budi</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">budi@email.com</p>
-                </div>
-                <span class="shrink-0 text-xs text-muted-foreground">Pemilik</span>
-              </div>
-              <div
-                class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
-              >
-                <span
-                  class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-soft-strong text-[0.625rem] font-semibold text-primary"
-                  >S</span
-                >
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-sm font-medium leading-[1.35]">Sari</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">sari@email.com</p>
-                </div>
-                <span class="shrink-0 text-xs text-muted-foreground">Anggota</span>
-              </div>
-              <div
-                class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
-              >
-                <span
-                  class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full border border-border bg-transparent text-[0.625rem] font-semibold text-muted-foreground"
-                  aria-hidden="true"
-                >
-                  <UIcon name="i-lucide-mail" class="size-3.5" />
-                </span>
-                <div class="min-w-0 flex-auto">
-                  <p class="m-0 text-sm font-medium leading-[1.35]">anggota@email.com</p>
-                  <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Undangan menunggu</p>
-                </div>
-                <span class="shrink-0 text-xs text-muted-foreground">Menunggu</span>
-              </div>
-            </div>
-          </div>
+          <UIcon name="i-lucide-package" class="size-4" />
+        </span>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">AC Kamar Utama</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Ruang keluarga</p>
         </div>
-      </section>
+      </div>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <span
+          class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+          aria-hidden="true"
+        >
+          <UIcon name="i-lucide-package" class="size-4" />
+        </span>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Kulkas Dapur</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Dapur</p>
+        </div>
+      </div>
+    </div>
 
-      <section id="cara-kerja" :class="section">
+    <div class="mt-3.5 border-t border-rule pt-3.5">
+      <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">
+        Perawatan berikutnya
+      </p>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <div
+          class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
+        >
+          12 Nov
+        </div>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Servis AC</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <div
+          class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
+        >
+          20 Nov
+        </div>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Ganti filter air</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
+        </div>
+      </div>
+    </div>
+  </div>
+        </template>
+
+        <template #preview-kendaraan>
+  <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="m-0 text-[0.8125rem] leading-[1.4] text-muted-foreground">Kendaraan</p>
+        <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">Mobil Keluarga</p>
+        <p class="mt-[3px] mb-0 text-[0.8125rem] text-muted-foreground">
+          Toyota Avanza 2021, B 1234 XYZ
+        </p>
+      </div>
+      <span
+        class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
+        >Aktif</span
+      >
+    </div>
+
+    <div class="mt-3.5 border-t border-rule pt-3.5">
+      <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Jadwal servis</p>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <div
+          class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
+        >
+          18 Nov
+        </div>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">
+            Servis rutin 10.000 km
+          </p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Odometer 42.500 km</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3.5 border-t border-rule pt-3.5">
+      <p class="mb-1.5 text-xs leading-[1.35] text-muted-foreground">Kewajiban</p>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <span
+          class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+          aria-hidden="true"
+        >
+          <UIcon name="i-lucide-file-text" class="size-4" />
+        </span>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">Pajak Kendaraan</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aktif</p>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+      >
+        <span
+          class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+          aria-hidden="true"
+        >
+          <UIcon name="i-lucide-file-text" class="size-4" />
+        </span>
+        <div class="min-w-0 flex-auto">
+          <p class="m-0 text-[0.8125rem] font-medium leading-[1.35]">STNK / Registrasi</p>
+          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aktif</p>
+        </div>
+      </div>
+    </div>
+  </div>
+        </template>
+
+        <template #preview-daftar>
+  <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
+    <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
+      <div>
+        <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Daftar belanja</p>
+        <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
+          Belanja mingguan
+        </p>
+      </div>
+      <span class="text-xs leading-[1.35] text-muted-foreground">4 item</span>
+    </div>
+
+    <div class="border-t border-rule">
+      <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
+        <span
+          class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-primary bg-primary text-primary-foreground"
+          aria-hidden="true"
+        >
+          <UIcon name="i-lucide-check" class="size-3.5" />
+        </span>
+        <span class="min-w-0 flex-auto text-muted-foreground line-through">Beras 5 kg</span>
+        <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 72.000</span>
+      </div>
+      <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
+        <span
+          class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
+          aria-hidden="true"
+        />
+        <span class="min-w-0 flex-auto">Telur 1 kg</span>
+        <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 32.000</span>
+      </div>
+      <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
+        <span
+          class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
+          aria-hidden="true"
+        />
+        <span class="min-w-0 flex-auto">Sabun cuci 2 pcs</span>
+        <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 46.000</span>
+      </div>
+      <div class="flex items-center gap-2.5 border-b border-rule py-[9px]">
+        <span
+          class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border border-border text-primary-foreground"
+          aria-hidden="true"
+        />
+        <span class="min-w-0 flex-auto">Minyak goreng 2 L</span>
+        <span class="shrink-0 text-xs font-semibold tabular-nums">Rp 38.000</span>
+      </div>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-3 pt-2.5 text-xs">
+      <span>Estimasi total</span>
+      <strong class="text-[0.9375rem] tabular-nums">Rp 188.000</strong>
+    </div>
+  </div>
+        </template>
+
+        <template #preview-rumah-tangga>
+          <div class="rounded-[28px] border border-rule bg-soft p-3 sm:p-4">
+      <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
+        <div class="flex items-start justify-between gap-3 border-b border-rule pb-3.5">
+          <div>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Rumah tangga</p>
+            <p class="mt-1 mb-0 text-lg font-semibold tracking-[-0.025em]">
+              Rumah Tangga Budi
+            </p>
+          </div>
+          <span
+            class="shrink-0 rounded-full border border-border px-2 py-[3px] text-xs leading-[1.4] text-muted-foreground"
+            >Data contoh</span
+          >
+        </div>
+
+        <div
+          class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
+        >
+          <span
+            class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold text-primary-foreground"
+            >B</span
+          >
+          <div class="min-w-0 flex-auto">
+            <p class="m-0 text-sm font-medium leading-[1.35]">Budi</p>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">budi@email.com</p>
+          </div>
+          <span class="shrink-0 text-xs text-muted-foreground">Pemilik</span>
+        </div>
+        <div
+          class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
+        >
+          <span
+            class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-soft-strong text-[0.625rem] font-semibold text-primary"
+            >S</span
+          >
+          <div class="min-w-0 flex-auto">
+            <p class="m-0 text-sm font-medium leading-[1.35]">Sari</p>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">sari@email.com</p>
+          </div>
+          <span class="shrink-0 text-xs text-muted-foreground">Anggota</span>
+        </div>
+        <div
+          class="flex items-center gap-2.5 border-b border-rule py-3 last:border-b-0 last:pb-0"
+        >
+          <span
+            class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full border border-border bg-transparent text-[0.625rem] font-semibold text-muted-foreground"
+            aria-hidden="true"
+          >
+            <UIcon name="i-lucide-mail" class="size-3.5" />
+          </span>
+          <div class="min-w-0 flex-auto">
+            <p class="m-0 text-sm font-medium leading-[1.35]">anggota@email.com</p>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Undangan menunggu</p>
+          </div>
+          <span class="shrink-0 text-xs text-muted-foreground">Menunggu</span>
+        </div>
+      </div>
+    </div>
+        </template>
+      </LandingFeatureStory>
+
+      <section id="cara-kerja" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
         <div :class="container">
           <div :class="sectionHead">
             <h2 :class="heading2">Mulai dalam tiga langkah.</h2>
@@ -721,7 +658,8 @@ const faqs = [
             <li
               v-for="(step, index) in steps"
               :key="step.title"
-              class="border-b border-rule py-[22px] md:border-b-0 md:py-[26px] md:pe-[clamp(16px,2.4vw,32px)] md:pb-0 md:[&:not(:first-child)]:border-s md:[&:not(:first-child)]:border-rule md:[&:not(:first-child)]:ps-[clamp(16px,2.4vw,32px)]"
+              v-scroll-reveal="{ delay: Math.min(index * 90, 240) }"
+              class="border-b border-rule py-[22px] md:border-b-0 md:py-[26px] md:pe-[clamp(16px,2.4vw,32px)] md:pb-0 md:[&:not(:first-child)]:border-s md:[&:not(:first-child)]:border-rule md:[&:not(:first-child)]:ps-[clamp(16px,2.4vw,32px)] lp-scroll-reveal-child"
             >
               <div class="flex items-center gap-3">
                 <span :class="iconTile" aria-hidden="true">
@@ -752,7 +690,7 @@ const faqs = [
         </div>
       </section>
 
-      <section id="privasi" :class="section">
+      <section id="privasi" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
         <div :class="container">
           <div
             class="landing-panel-glow grid grid-cols-1 items-start gap-8 rounded-[32px] border border-rule bg-soft p-[clamp(20px,4vw,48px)] lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-[clamp(40px,6vw,72px)]"
@@ -781,7 +719,7 @@ const faqs = [
         </div>
       </section>
 
-      <section id="faq" :class="section">
+      <section id="faq" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
         <div :class="container">
           <div :class="sectionHead">
             <h2 :class="heading2">Pertanyaan yang sering muncul.</h2>
@@ -810,7 +748,7 @@ const faqs = [
         </div>
       </section>
 
-      <section class="py-[clamp(48px,7vw,96px)]">
+      <section v-scroll-reveal class="py-[clamp(48px,7vw,96px)] lp-scroll-reveal">
         <div :class="container">
           <div
             id="cta-panel"
@@ -835,7 +773,10 @@ const faqs = [
       </section>
     </main>
 
-    <footer class="border-t border-rule py-[clamp(40px,5vw,64px)] pb-7">
+    <footer
+      v-scroll-reveal
+      class="border-t border-rule py-[clamp(40px,5vw,64px)] pb-7 lp-scroll-reveal"
+    >
       <div :class="container">
         <div
           class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
@@ -845,15 +786,15 @@ const faqs = [
               <NuxtImg
                 src="/img/homflo-light-horizontal.webp"
                 alt="Homflo"
-                width="132"
-                height="28"
+                width="100%"
+                height="100%"
                 class="h-auto w-[116px] dark:hidden min-[900px]:w-[132px]"
               />
               <NuxtImg
                 src="/img/homflo-dark-horizontal.webp"
                 alt=""
-                width="132"
-                height="28"
+                width="100%"
+                height="100%"
                 class="hidden h-auto w-[116px] dark:block min-[900px]:w-[132px]"
                 aria-hidden="true"
               />

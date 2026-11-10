@@ -124,301 +124,319 @@ function onTabKey(event: KeyboardEvent, index: number): void {
       </button>
     </div>
 
-    <div
-      v-if="active === 'uang'"
-      :id="`preview-panel-${uid}-uang`"
-      class="flex flex-col gap-3 p-3.5"
-      role="tabpanel"
-      :aria-labelledby="`preview-tab-${uid}-uang`"
-    >
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div class="rounded-lg border border-rule bg-background p-2.5">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pendapatan</p>
-          <p class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums">
-            {{ formatRupiah(12400000) }}
-          </p>
-        </div>
-        <div class="rounded-lg border border-rule bg-background p-2.5">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pengeluaran</p>
-          <p class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums">
-            {{ formatRupiah(7850000) }}
-          </p>
-        </div>
-        <div class="rounded-lg border border-rule bg-background p-2.5">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Arus kas</p>
-          <p
-            class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums text-success"
-          >
-            {{ formatRupiah(4550000, true) }}
-          </p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
-          <div class="mb-2 flex items-center justify-between gap-2">
-            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Anggaran bulan ini</p>
-            <span class="text-xs leading-[1.35] text-muted-foreground">3 kategori</span>
-          </div>
-          <div v-for="budget in budgets" :key="budget.label" class="mb-[9px] last:mb-0">
-            <div
-              class="flex items-baseline justify-between gap-2.5 text-xs leading-[1.35] [&>span:last-child]:tabular-nums [&>span:last-child]:text-muted-foreground"
+    <Transition name="preview-panel" mode="out-in">
+      <div
+        v-if="active === 'uang'"
+        :id="`preview-panel-${uid}-uang`"
+        class="flex flex-col gap-3 p-3.5"
+        role="tabpanel"
+        :aria-labelledby="`preview-tab-${uid}-uang`"
+      >
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pendapatan</p>
+            <p
+              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
             >
-              <span>{{ budget.label }}</span>
-              <span>{{ budget.used }}%</span>
+              {{ formatRupiah(12400000) }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-rule bg-background p-2.5">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pengeluaran</p>
+            <p
+              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+            >
+              {{ formatRupiah(7850000) }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-rule bg-background p-2.5">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Arus kas</p>
+            <p
+              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums text-success"
+            >
+              {{ formatRupiah(4550000, true) }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Anggaran bulan ini</p>
+              <span class="text-xs leading-[1.35] text-muted-foreground">3 kategori</span>
             </div>
-            <div class="my-[5px] h-1 overflow-hidden rounded-full bg-soft-strong" aria-hidden="true">
-              <span class="block h-full rounded-[inherit] bg-primary" :style="{ width: `${budget.used}%` }" />
+            <div v-for="budget in budgets" :key="budget.label" class="mb-[9px] last:mb-0">
+              <div
+                class="flex items-baseline justify-between gap-2.5 text-xs leading-[1.35] [&>span:last-child]:tabular-nums [&>span:last-child]:text-muted-foreground"
+              >
+                <span>{{ budget.label }}</span>
+                <span>{{ budget.used }}%</span>
+              </div>
+              <div
+                class="my-[5px] h-1 overflow-hidden rounded-full bg-soft-strong"
+                aria-hidden="true"
+              >
+                <span
+                  class="block h-full rounded-[inherit] bg-primary"
+                  :style="{ width: `${budget.used}%` }"
+                />
+              </div>
+              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ budget.amount }}</p>
             </div>
-            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ budget.amount }}</p>
+          </div>
+
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Tagihan terdekat</p>
+              <span class="text-xs leading-[1.35] text-muted-foreground">2 tagihan</span>
+            </div>
+            <div
+              v-for="bill in bills"
+              :key="bill.label"
+              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            >
+              <span
+                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                aria-hidden="true"
+              >
+                <UIcon
+                  :name="bill.state === 'paid' ? 'i-lucide-check' : 'i-lucide-receipt'"
+                  class="size-4"
+                />
+              </span>
+              <div class="min-w-0 flex-auto">
+                <p class="m-0 text-xs font-medium leading-[1.35]">{{ bill.label }}</p>
+                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ bill.due }}</p>
+              </div>
+              <p class="m-0 shrink-0 text-xs font-semibold tabular-nums">
+                {{ formatRupiah(bill.amount) }}
+              </p>
+            </div>
           </div>
         </div>
 
         <div class="rounded-lg border border-rule bg-background p-[11px]">
           <div class="mb-2 flex items-center justify-between gap-2">
-            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Tagihan terdekat</p>
-            <span class="text-xs leading-[1.35] text-muted-foreground">2 tagihan</span>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Transaksi terbaru</p>
+            <span class="text-xs leading-[1.35] text-muted-foreground">Contoh</span>
           </div>
           <div
-            v-for="bill in bills"
-            :key="bill.label"
+            v-for="transaction in transactions"
+            :key="transaction.label"
             class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
           >
-            <span
-              class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-              aria-hidden="true"
-            >
-              <UIcon
-                :name="bill.state === 'paid' ? 'i-lucide-check' : 'i-lucide-receipt'"
-                class="size-4"
-              />
-            </span>
             <div class="min-w-0 flex-auto">
-              <p class="m-0 text-xs font-medium leading-[1.35]">{{ bill.label }}</p>
-              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ bill.due }}</p>
+              <p class="m-0 text-xs font-medium leading-[1.35]">{{ transaction.label }}</p>
+              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ transaction.meta }}</p>
             </div>
-            <p class="m-0 shrink-0 text-xs font-semibold tabular-nums">
-              {{ formatRupiah(bill.amount) }}
+            <p
+              class="m-0 shrink-0 text-xs font-semibold tabular-nums"
+              :class="transaction.amount > 0 ? 'text-success' : ''"
+            >
+              {{
+                transaction.amount > 0
+                  ? formatRupiah(transaction.amount, true)
+                  : formatRupiah(transaction.amount)
+              }}
             </p>
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg border border-rule bg-background p-[11px]">
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Transaksi terbaru</p>
-          <span class="text-xs leading-[1.35] text-muted-foreground">Contoh</span>
-        </div>
-        <div
-          v-for="transaction in transactions"
-          :key="transaction.label"
-          class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-        >
-          <div class="min-w-0 flex-auto">
-            <p class="m-0 text-xs font-medium leading-[1.35]">{{ transaction.label }}</p>
-            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ transaction.meta }}</p>
+      <div
+        v-else-if="active === 'rumah'"
+        :id="`preview-panel-${uid}-rumah`"
+        class="flex flex-col gap-3 p-3.5"
+        role="tabpanel"
+        :aria-labelledby="`preview-tab-${uid}-rumah`"
+      >
+        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
+          <div>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Properti</p>
+            <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">Rumah Utama</p>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">
+              Rumah tinggal · Milik sendiri
+            </p>
           </div>
-          <p
-            class="m-0 shrink-0 text-xs font-semibold tabular-nums"
-            :class="transaction.amount > 0 ? 'text-success' : ''"
-          >
-            {{
-              transaction.amount > 0
-                ? formatRupiah(transaction.amount, true)
-                : formatRupiah(transaction.amount)
-            }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div
-      v-else-if="active === 'rumah'"
-      :id="`preview-panel-${uid}-rumah`"
-      class="flex flex-col gap-3 p-3.5"
-      role="tabpanel"
-      :aria-labelledby="`preview-tab-${uid}-rumah`"
-    >
-      <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
-        <div>
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Properti</p>
-          <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">Rumah Utama</p>
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">
-            Rumah tinggal · Milik sendiri
-          </p>
-        </div>
-        <span
-          class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
-          >Aktif</span
-        >
-      </div>
-
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aset rumah</p>
-          <div
-            v-for="asset in assets"
-            :key="asset.label"
-            class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-          >
-            <span
-              class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-              aria-hidden="true"
-            >
-              <UIcon name="i-lucide-package" class="size-4" />
-            </span>
-            <div class="min-w-0 flex-auto">
-              <p class="m-0 text-xs font-medium leading-[1.35]">{{ asset.label }}</p>
-              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ asset.meta }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Perawatan berikutnya</p>
-          <div
-            v-for="item in maintenance"
-            :key="item.label"
-            class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-          >
-            <div
-              class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
-            >
-              {{ item.date }}
-            </div>
-            <div class="min-w-0 flex-auto">
-              <p class="m-0 text-xs font-medium leading-[1.35]">{{ item.label }}</p>
-              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ item.state }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
-        Properti dapat dihubungkan dengan aset dan riwayat perawatan.
-      </p>
-    </div>
-
-    <div
-      v-else-if="active === 'kendaraan'"
-      :id="`preview-panel-${uid}-kendaraan`"
-      class="flex flex-col gap-3 p-3.5"
-      role="tabpanel"
-      :aria-labelledby="`preview-tab-${uid}-kendaraan`"
-    >
-      <div class="flex items-center justify-start gap-3 rounded-lg bg-soft p-[13px]">
-        <span
-          class="inline-flex size-[38px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-          aria-hidden="true"
-        >
-          <UIcon name="i-lucide-car" class="size-6" />
-        </span>
-        <div>
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Kendaraan</p>
-          <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
-            Mobil Keluarga
-          </p>
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">
-            Toyota Avanza 2021, B 1234 XYZ
-          </p>
-        </div>
-        <div class="ms-auto text-end">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Odometer</p>
-          <p class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums">
-            42.500 km
-          </p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Jadwal servis</p>
-          <div class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0">
-            <div
-              class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
-            >
-              18 Nov
-            </div>
-            <div class="min-w-0 flex-auto">
-              <p class="m-0 text-xs font-medium leading-[1.35]">Servis rutin 10.000 km</p>
-              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
-            </div>
-          </div>
-          <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
-            Riwayat servis tersimpan di kendaraan yang sama.
-          </p>
-        </div>
-
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Kewajiban</p>
-          <div
-            v-for="item in obligations"
-            :key="item.label"
-            class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
-          >
-            <span
-              class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
-              aria-hidden="true"
-            >
-              <UIcon name="i-lucide-file-text" class="size-4" />
-            </span>
-            <div class="min-w-0 flex-auto">
-              <p class="m-0 text-xs font-medium leading-[1.35]">{{ item.label }}</p>
-              <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ item.state }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div
-      v-else
-      :id="`preview-panel-${uid}-daftar`"
-      class="flex flex-col gap-3 p-3.5"
-      role="tabpanel"
-      :aria-labelledby="`preview-tab-${uid}-daftar`"
-    >
-      <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
-        <div>
-          <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Daftar belanja</p>
-          <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
-            Belanja mingguan
-          </p>
-        </div>
-        <span class="text-xs leading-[1.35] text-muted-foreground">4 item</span>
-      </div>
-
-      <div class="border-t border-rule">
-        <div
-          v-for="item in shopping"
-          :key="item.label"
-          class="flex items-center gap-2.5 border-b border-rule py-[9px]"
-        >
           <span
-            class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border text-primary-foreground"
-            :class="item.done ? 'border-primary bg-primary' : 'border-border'"
+            class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
+            >Aktif</span
+          >
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aset rumah</p>
+            <div
+              v-for="asset in assets"
+              :key="asset.label"
+              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            >
+              <span
+                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                aria-hidden="true"
+              >
+                <UIcon name="i-lucide-package" class="size-4" />
+              </span>
+              <div class="min-w-0 flex-auto">
+                <p class="m-0 text-xs font-medium leading-[1.35]">{{ asset.label }}</p>
+                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ asset.meta }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Perawatan berikutnya</p>
+            <div
+              v-for="item in maintenance"
+              :key="item.label"
+              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            >
+              <div
+                class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
+              >
+                {{ item.date }}
+              </div>
+              <div class="min-w-0 flex-auto">
+                <p class="m-0 text-xs font-medium leading-[1.35]">{{ item.label }}</p>
+                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ item.state }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+          Properti dapat dihubungkan dengan aset dan riwayat perawatan.
+        </p>
+      </div>
+
+      <div
+        v-else-if="active === 'kendaraan'"
+        :id="`preview-panel-${uid}-kendaraan`"
+        class="flex flex-col gap-3 p-3.5"
+        role="tabpanel"
+        :aria-labelledby="`preview-tab-${uid}-kendaraan`"
+      >
+        <div class="flex items-center justify-start gap-3 rounded-lg bg-soft p-[13px]">
+          <span
+            class="inline-flex size-[38px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
             aria-hidden="true"
           >
-            <UIcon v-if="item.done" name="i-lucide-check" class="size-3.5" />
+            <UIcon name="i-lucide-car" class="size-6" />
           </span>
-          <span
-            class="min-w-0 flex-auto"
-            :class="item.done ? 'text-muted-foreground line-through' : ''"
-            >{{ item.label }}</span
-          >
-          <span class="shrink-0 text-xs font-semibold tabular-nums">{{ formatRupiah(item.price) }}</span>
+          <div>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Kendaraan</p>
+            <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
+              Mobil Keluarga
+            </p>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">
+              Toyota Avanza 2021, B 1234 XYZ
+            </p>
+          </div>
+          <div class="ms-auto text-end">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Odometer</p>
+            <p
+              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+            >
+              42.500 km
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Jadwal servis</p>
+            <div
+              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            >
+              <div
+                class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
+              >
+                18 Nov
+              </div>
+              <div class="min-w-0 flex-auto">
+                <p class="m-0 text-xs font-medium leading-[1.35]">Servis rutin 10.000 km</p>
+                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
+              </div>
+            </div>
+            <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+              Riwayat servis tersimpan di kendaraan yang sama.
+            </p>
+          </div>
+
+          <div class="rounded-lg border border-rule bg-background p-[11px]">
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Kewajiban</p>
+            <div
+              v-for="item in obligations"
+              :key="item.label"
+              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            >
+              <span
+                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                aria-hidden="true"
+              >
+                <UIcon name="i-lucide-file-text" class="size-4" />
+              </span>
+              <div class="min-w-0 flex-auto">
+                <p class="m-0 text-xs font-medium leading-[1.35]">{{ item.label }}</p>
+                <p class="m-0 text-xs leading-[1.35] text-muted-foreground">{{ item.state }}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-baseline justify-between gap-3 pt-2.5 text-xs">
-        <span>Estimasi total</span>
-        <strong class="text-[0.9375rem] tabular-nums">{{ formatRupiah(188000) }}</strong>
-      </div>
+      <div
+        v-else
+        :id="`preview-panel-${uid}-daftar`"
+        class="flex flex-col gap-3 p-3.5"
+        role="tabpanel"
+        :aria-labelledby="`preview-tab-${uid}-daftar`"
+      >
+        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
+          <div>
+            <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Daftar belanja</p>
+            <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
+              Belanja mingguan
+            </p>
+          </div>
+          <span class="text-xs leading-[1.35] text-muted-foreground">4 item</span>
+        </div>
 
-      <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
-        Item yang selesai dapat dicatat sebagai pengeluaran.
-      </p>
-    </div>
+        <div class="border-t border-rule">
+          <div
+            v-for="item in shopping"
+            :key="item.label"
+            class="flex items-center gap-2.5 border-b border-rule py-[9px]"
+          >
+            <span
+              class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border text-primary-foreground"
+              :class="item.done ? 'border-primary bg-primary' : 'border-border'"
+              aria-hidden="true"
+            >
+              <UIcon v-if="item.done" name="i-lucide-check" class="size-3.5" />
+            </span>
+            <span
+              class="min-w-0 flex-auto"
+              :class="item.done ? 'text-muted-foreground line-through' : ''"
+              >{{ item.label }}</span
+            >
+            <span class="shrink-0 text-xs font-semibold tabular-nums">{{
+              formatRupiah(item.price)
+            }}</span>
+          </div>
+        </div>
+
+        <div class="flex items-baseline justify-between gap-3 pt-2.5 text-xs">
+          <span>Estimasi total</span>
+          <strong class="text-[0.9375rem] tabular-nums">{{ formatRupiah(188000) }}</strong>
+        </div>
+
+        <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+          Item yang selesai dapat dicatat sebagai pengeluaran.
+        </p>
+      </div>
+    </Transition>
 
     <p
       class="m-0 border-t border-rule px-3.5 pt-2 pb-[11px] text-xs leading-[1.4] text-muted-foreground text-pretty"

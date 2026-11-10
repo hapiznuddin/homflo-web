@@ -43,7 +43,8 @@ const shopping = [
 
 <template>
   <div
-    class="landing-panel-glow overflow-hidden rounded-[28px] border border-rule bg-soft p-2 sm:p-3"
+    class="lp-parallax lp-parallax-hero landing-panel-glow overflow-hidden rounded-[28px] border border-rule bg-soft p-2 sm:p-3"
+    style="--lp-parallax: 36px"
   >
     <div class="overflow-hidden rounded-2xl border border-border bg-card text-foreground">
       <div class="flex items-center justify-between gap-3 border-b border-rule px-4 py-3.5 sm:px-5">

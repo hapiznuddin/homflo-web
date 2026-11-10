@@ -17,10 +17,11 @@ defineProps<{
     aria-label="Area produk Homflo"
   >
     <a
-      v-for="domain in domains"
+      v-for="(domain, index) in domains"
       :key="domain.href"
+      v-scroll-reveal="{ delay: Math.min(index * 70, 280) }"
       :href="domain.href"
-      class="group flex flex-col rounded-2xl border p-5 text-inherit no-underline transition-[background-color,border-color,color] duration-[180ms] ease-out hover:border-primary/40 focus-ring sm:p-6"
+      class="group flex flex-col rounded-2xl border p-5 text-inherit no-underline transition-[background-color,border-color,color] duration-[180ms] ease-out hover:border-primary/40 focus-ring sm:p-6 lp-scroll-reveal-child"
       :class="
         domain.featured
           ? 'border-rule bg-soft sm:col-span-2 lg:col-span-6'
