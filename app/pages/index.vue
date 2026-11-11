@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import LandingNav from '~/components/landing/Nav.vue'
 import LandingPreview from '~/components/landing/Preview.vue'
+import LandingBackgroundRipple from '~/components/landing/BackgroundRipple.vue'
 import LandingHeroDashboard from '~/components/landing/HeroDashboard.vue'
 import LandingHeroLedger from '~/components/landing/HeroLedger.vue'
 import LandingFeatureStory from '~/components/landing/FeatureStory.vue'
@@ -258,7 +258,7 @@ const faqs = [
 
 <template>
   <div
-    class="overflow-x-clip bg-background font-sans text-foreground [&_*::selection]:bg-primary/22 [&_*::selection]:text-foreground [&_*:focus-visible]:outline-2 [&_*:focus-visible]:outline-offset-[3px] [&_*:focus-visible]:outline-ring motion-reduce:[&_*]:animate-none motion-reduce:[&_*]:transition-none"
+    class="overflow-x-clip bg-background font-sans text-foreground [&_*::selection]:bg-primary/22 [&_*::selection]:text-foreground [&_*:focus-visible]:outline-2 [&_*:focus-visible]:outline-offset-[3px] [&_*:focus-visible]:outline-ring motion-reduce:**:animate-none motion-reduce:**:transition-none"
   >
     <a
       href="#main"
@@ -266,45 +266,45 @@ const faqs = [
       >Lewati ke konten</a
     >
 
-    <LandingNav />
-
     <main id="main">
       <section
         id="ringkasan"
-        class="landing-glow scroll-mt-20 pb-[clamp(32px,5vw,56px)] pt-[clamp(40px,7vw,80px)]"
+        class="landing-hero-bg relative isolate -mt-20 scroll-mt-24 pb-[clamp(32px,5vw,56px)] pt-[clamp(56px,8vw,104px)] md:-mt-[92px]"
       >
+        <LandingBackgroundRipple />
+        <div class="h-20 md:h-[92px]" aria-hidden="true" />
         <div :class="[container, 'flex flex-col items-center text-center']">
           <h1
-            class="m-0 min-w-0 max-w-[18ch] animate-in text-display font-semibold break-words text-balance fade-in fill-mode-both slide-in-from-bottom-3 duration-500 ease-out-expo"
+            class="m-0 min-w-0 max-w-[18ch] animate-in text-display font-semibold break-words text-balance fade-in fill-mode-both slide-in-from-bottom-3 duration-600 ease-out-expo lg:max-w-[16ch]"
           >
             Rumah dan uang, satu catatan.
           </h1>
           <p
-            class="mt-5 mb-0 max-w-[54ch] animate-in text-hero-sub text-muted-foreground text-pretty fade-in fill-mode-both slide-in-from-bottom-3 delay-75 duration-500 ease-out-expo"
+            class="mt-5 mb-0 max-w-[54ch] animate-in text-hero-sub text-muted-foreground text-pretty fade-in fill-mode-both slide-in-from-bottom-3 delay-75 duration-600 ease-out-expo"
           >
             Catat uang, tagihan, rumah, kendaraan, dan daftar belanja rumah tangga di satu tempat.
             Tanpa menghubungkan rekening bank.
           </p>
           <div
-            class="mt-7 flex w-full max-w-[460px] animate-in flex-col gap-2.5 fade-in fill-mode-both slide-in-from-bottom-3 delay-150 duration-500 ease-out-expo min-[480px]:flex-row min-[480px]:justify-center"
+            class="mt-8 flex w-full max-w-[460px] animate-in flex-col gap-2.5 fade-in fill-mode-both slide-in-from-bottom-3 delay-150 duration-600 ease-out-expo min-[480px]:flex-row min-[480px]:justify-center"
           >
-            <NuxtLink to="/register" :class="[btnPrimary, actionButton]"
-              >Buat rumah tangga</NuxtLink
+            <NuxtLink to="/register" :class="[btnPrimary, actionButton, 'min-h-12 rounded-full! px-6']"
+              >Buat rumah tangga
+              <UIcon name="i-lucide-arrow-right" class="size-4" aria-hidden="true" />
+            </NuxtLink>
+            <a href="#fitur" :class="[btnOutline, actionButton, 'min-h-12 rounded-full! px-6']"
+              >Lihat isi Homflo</a
             >
-            <a href="#fitur" :class="[btnOutline, actionButton]">Lihat isi Homflo</a>
           </div>
           <p
-            class="mt-3.5 mb-0 animate-in text-[0.8125rem] leading-[1.5] text-muted-foreground fade-in fill-mode-both slide-in-from-bottom-2 delay-200 duration-500 ease-out-expo"
+            class="mt-4 mb-0 animate-in text-[0.8125rem] leading-[1.5] text-muted-foreground fade-in fill-mode-both slide-in-from-bottom-2 delay-200 duration-500 ease-out-expo"
           >
             Masuk dengan email atau Google. Pratinjau memakai data contoh.
           </p>
         </div>
 
         <div
-          :class="[
-            container,
-            'mt-10 animate-in delay-250 duration-700 ease-out-expo fill-mode-both fade-in slide-in-from-bottom-4 zoom-in-98 lg:mt-14'
-          ]"
+          class="mx-auto mt-6 w-[calc(100%-40px)] max-w-[1320px] animate-in delay-250 duration-800 ease-out-expo fill-mode-both fade-in slide-in-from-bottom-6 zoom-in-95 [perspective:1400px] lg:mt-0"
         >
           <LandingHeroDashboard />
         </div>
@@ -772,117 +772,5 @@ const faqs = [
         </div>
       </section>
     </main>
-
-    <footer
-      v-scroll-reveal
-      class="border-t border-rule py-[clamp(40px,5vw,64px)] pb-7 lp-scroll-reveal"
-    >
-      <div :class="container">
-        <div
-          class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
-        >
-          <div class="sm:col-span-2 lg:col-span-1">
-            <NuxtLink to="/" class="inline-flex shrink-0 items-center" aria-label="Homflo, beranda">
-              <NuxtImg
-                src="/img/homflo-light-horizontal.webp"
-                alt="Homflo"
-                width="100%"
-                height="100%"
-                class="h-auto w-[116px] dark:hidden min-[900px]:w-[132px]"
-              />
-              <NuxtImg
-                src="/img/homflo-dark-horizontal.webp"
-                alt=""
-                width="100%"
-                height="100%"
-                class="hidden h-auto w-[116px] dark:block min-[900px]:w-[132px]"
-                aria-hidden="true"
-              />
-            </NuxtLink>
-            <p
-              class="mt-3.5 mb-0 max-w-[34ch] text-sm leading-[1.55] text-muted-foreground text-pretty"
-            >
-              Aplikasi rumah tangga untuk mencatat uang, tagihan, aset, kendaraan, dan belanja.
-            </p>
-          </div>
-
-          <div>
-            <p class="m-0 mb-2.5 text-xs font-medium leading-[1.4] text-muted-foreground">Produk</p>
-            <ul class="m-0 flex list-none flex-col gap-2 p-0">
-              <li>
-                <a href="#fitur" class="text-sm text-foreground no-underline hover:text-primary"
-                  >Fitur</a
-                >
-              </li>
-              <li>
-                <a
-                  href="#cara-kerja"
-                  class="text-sm text-foreground no-underline hover:text-primary"
-                  >Cara kerja</a
-                >
-              </li>
-              <li>
-                <a href="#faq" class="text-sm text-foreground no-underline hover:text-primary"
-                  >FAQ</a
-                >
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <p class="m-0 mb-2.5 text-xs font-medium leading-[1.4] text-muted-foreground">Area</p>
-            <ul class="m-0 flex list-none flex-col gap-2 p-0">
-              <li>
-                <a href="#uang" class="text-sm text-foreground no-underline hover:text-primary"
-                  >Uang</a
-                >
-              </li>
-              <li>
-                <a href="#rumah" class="text-sm text-foreground no-underline hover:text-primary"
-                  >Rumah</a
-                >
-              </li>
-              <li>
-                <a href="#kendaraan" class="text-sm text-foreground no-underline hover:text-primary"
-                  >Kendaraan</a
-                >
-              </li>
-              <li>
-                <a href="#daftar" class="text-sm text-foreground no-underline hover:text-primary"
-                  >Daftar</a
-                >
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <p class="m-0 mb-2.5 text-xs font-medium leading-[1.4] text-muted-foreground">Akun</p>
-            <ul class="m-0 flex list-none flex-col gap-2 p-0">
-              <li>
-                <NuxtLink
-                  to="/login"
-                  class="text-sm text-foreground no-underline hover:text-primary"
-                  >Masuk</NuxtLink
-                >
-              </li>
-              <li>
-                <NuxtLink
-                  to="/register"
-                  class="text-sm text-foreground no-underline hover:text-primary"
-                  >Daftar</NuxtLink
-                >
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div
-          class="mt-8 flex flex-wrap justify-between gap-3 border-t border-rule pt-[18px] text-xs text-muted-foreground"
-        >
-          <span>© 2026 Homflo</span>
-          <span>Dibuat untuk rumah tangga.</span>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>

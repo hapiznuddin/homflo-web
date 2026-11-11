@@ -180,7 +180,7 @@
 
   --container-landing: 1200px;
 
-  --text-display: clamp(2.6rem, 7vw, 5rem);
+  --text-display: clamp(2.75rem, 7vw, 5rem);
   --text-display--line-height: 0.96;
   --text-display--letter-spacing: -0.04em;
   --text-h2: clamp(2rem, 4.2vw, 3.4rem);
@@ -198,6 +198,21 @@
   --text-ledger--letter-spacing: -0.035em;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Aceternity ripple timing: distance-staggered cell opacity pulse. */
+  --animate-cell-ripple: cell-ripple var(--duration, 200ms) ease-out none 1 var(--delay, 0ms);
+
+  @keyframes cell-ripple {
+    0% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
 }
 
 /* Shared focus ring for landing interactions: matches the approved 3px offset. */
@@ -206,6 +221,44 @@
     outline: 2px solid var(--ring);
     outline-offset: 3px;
   }
+}
+
+/* Hero backdrop: full-bleed brand wash behind the nav and first viewport.
+   Derived from --primary so both themes stay in the approved palette. */
+@utility landing-hero-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      88% 68% at 50% -12%,
+      color-mix(in oklab, var(--primary) 26%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      52% 44% at 84% 6%,
+      color-mix(in oklab, var(--primary) 12%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--primary) 8%, var(--background)) 0%,
+      var(--background) 56%
+    );
+}
+
+/* Ripple grid: brand-tinted cells, low contrast in both themes. */
+@utility landing-ripple {
+  --cell-border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  --cell-fill-color: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+/* Fades the ripple grid toward the bottom and sides. */
+@utility landing-ripple-mask {
+  mask-image: radial-gradient(
+    ellipse 150% 100% at 50% 0%,
+    #000 0%,
+    rgb(0 0 0 / 0.55) 42%,
+    transparent 76%
+  );
 }
 
 /* Soft brand glow behind the hero and feature panels. Derived from --primary. */
@@ -338,6 +391,17 @@
   transform: none;
 }
 
+/* Mobile feature story: satu fitur (teks + pratinjau) masuk sebagai satu blok
+   dengan slide yang lebih terasa. Desktop tetap memakai reveal halus. */
+@media (max-width: 1023px) {
+  .lp-feature-reveal {
+    transform: translateY(32px);
+  }
+  .lp-feature-reveal.lp-is-visible {
+    transform: none;
+  }
+}
+
 /* Parallax: visual bergeser halus mengikuti scroll. Scroll-driven animation
    berjalan off-main-thread; tanpa dukungan atau saat reduced-motion, visual
    diam di posisi alami (decorative, jadi fallback statis sudah cukup). */
@@ -367,6 +431,31 @@
       to {
         translate: 0 calc(var(--lp-parallax, 24px) * -1);
         scale: 0.97;
+      }
+    }
+
+    /* Dashboard depth: top-down tilt that settles as the hero scrolls.
+       Runs on the same element as the parallax (document scrollport), so both
+       animations are declared together; each keeps its own range. Tilt is
+       desktop-only: on phones the preview stays flat and legible. */
+    @media (min-width: 768px) {
+      .lp-depth {
+        animation:
+          lp-parallax-hero linear both,
+          lp-depth linear both;
+        animation-timeline: view(), view();
+        animation-range:
+          cover 0% cover 100%,
+          cover 0% cover 60%;
+        transform-origin: 50% 0%;
+      }
+      @keyframes lp-depth {
+        from {
+          rotate: x 16deg;
+        }
+        to {
+          rotate: x 0deg;
+        }
       }
     }
   }

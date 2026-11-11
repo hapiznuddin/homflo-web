@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LandingNav from '~/components/landing/Nav.vue'
+import LandingFooter from '~/components/landing/Footer.vue'
 // Tanpa JavaScript, animasi scroll tidak bisa berjalan. Paksa konten
 // reveal tetap terlihat agar tidak ada section yang tersembunyi.
 useHead({
@@ -13,6 +15,8 @@ useHead({
 
 <template>
   <div>
+  <LandingNav />
     <slot />
+  <LandingFooter />
   </div>
 </template>

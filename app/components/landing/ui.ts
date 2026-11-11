@@ -3,7 +3,7 @@
 
 export const container = 'mx-auto w-full max-w-landing px-[clamp(20px,4.5vw,48px)]'
 
-export const section = 'scroll-mt-20 py-[clamp(56px,8vw,104px)]'
+export const section = 'scroll-mt-24 py-[clamp(56px,8vw,104px)]'
 
 export const sectionHead = 'mx-auto flex max-w-[720px] flex-col items-center gap-3.5 text-center'
 

@@ -42,15 +42,14 @@ const shopping = [
 </script>
 
 <template>
-  <div
-    class="lp-parallax lp-parallax-hero landing-panel-glow overflow-hidden rounded-[28px] border border-rule bg-soft p-2 sm:p-3"
-    style="--lp-parallax: 36px"
-  >
-    <div class="overflow-hidden rounded-2xl border border-border bg-card text-foreground">
+  <div class="lp-parallax lp-parallax-hero lp-depth" style="--lp-parallax: 36px">
+    <div
+      class="overflow-hidden rounded-[18px] w-full max-w-6xl mx-auto border border-rule bg-card text-foreground shadow-[0_36px_90px_-45px_rgba(0,0,0,0.5)] sm:rounded-[24px]"
+    >
       <div class="flex items-center justify-between gap-3 border-b border-rule px-4 py-3.5 sm:px-5">
         <div class="flex min-w-0 items-center gap-2.5">
           <span
-            class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+            class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
             aria-hidden="true"
           >
             <UIcon name="i-lucide-house" class="size-4" />
@@ -61,7 +60,7 @@ const shopping = [
           </div>
         </div>
         <span
-          class="shrink-0 rounded-full border border-border px-2 py-[3px] text-xs leading-[1.4] text-muted-foreground"
+          class="shrink-0 rounded-full border border-border px-2 py-1 text-xs leading-[1.4] text-muted-foreground"
           >Data contoh</span
         >
       </div>
@@ -79,7 +78,7 @@ const shopping = [
                 <UIcon :name="kpi.icon" class="size-3.5 text-muted-foreground" aria-hidden="true" />
               </div>
               <p
-                class="mt-1.5 mb-0 truncate text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+                class="mt-1.5 mb-0 truncate text-base font-semibold leading-tight tracking-[-0.02em] tabular-nums"
                 :class="kpi.tone"
               >
                 {{ kpi.value }}

@@ -68,7 +68,10 @@ onBeforeUnmount(() => {
           :class="index === activeIndex ? 'lg:border-primary' : 'lg:border-rule'"
           :aria-current="index === activeIndex ? 'true' : undefined"
         >
-          <div v-scroll-reveal="{ threshold: 0.05 }" class="flex flex-col gap-[18px] lp-scroll-reveal">
+          <div
+            v-scroll-reveal="{ threshold: 0.05 }"
+            class="flex flex-col gap-[18px] lp-scroll-reveal lp-feature-reveal"
+          >
             <div>
               <p
                 class="m-0 text-xs font-semibold tracking-[0.12em] tabular-nums transition-colors duration-200 ease-out"
@@ -118,7 +121,11 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Mobile: pratinjau mengikuti urutan baca, tanpa panel sticky. -->
-          <div class="mt-7 lg:hidden" data-feature-preview-inline>
+          <div
+            v-scroll-reveal="{ threshold: 0.1 }"
+            class="mt-7 lp-scroll-reveal lp-feature-reveal lg:hidden"
+            data-feature-preview-inline
+          >
             <slot :name="`preview-${feature.id}`" />
           </div>
         </div>
