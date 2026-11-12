@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
-import { container, heading2, ledeText } from '~/components/landing/ui'
+import type { FeatureStoryItem } from './featureStories'
+import { container, heading2, ledeText } from '~/components/landingPage/ui'
 
 interface FeatureStoryItem {
   id: string

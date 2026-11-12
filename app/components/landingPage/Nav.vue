@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { container } from '~/components/landing/ui'
+import { container } from '~/components/landingPage/ui'
+import LandingThemeToggle from '~/components/landingPage/ThemeToggle.vue'
 
 const open = ref(false)
 const scrolled = ref(false)
@@ -84,7 +85,7 @@ onBeforeUnmount(() => {
         </NuxtLink>
 
         <nav
-          class="hidden items-center gap-[clamp(16px,2.4vw,30px)] justify-self-center min-[900px]:flex"
+          class="hidden items-center gap-[clamp(16px,2.4vw,30px)] justify-self-center md:flex"
           aria-label="Navigasi utama"
         >
           <a
@@ -98,7 +99,7 @@ onBeforeUnmount(() => {
 
         <div class="hidden items-center gap-2.5 justify-self-end md:flex">
           <LandingThemeToggle />
-          <UButton to="/login" variant="soft">Masuk</UButton>
+          <UButton to="/login" variant="outline" class="bg-[#d5dfd9] hover:bg-[#c2cfc6] dark:bg-[#29352d] dark:hover:bg-[#202e25]">Masuk</UButton>
           <UButton to="/register">Daftar</UButton>
         </div>
 
@@ -107,7 +108,7 @@ onBeforeUnmount(() => {
           <UButton
             variant="ghost"
             size="sm"
-            class="rounded-lg p-2 border border-border"
+            class="rounded-full p-2.5 dark:text-white hover:bg-primary/20 dark:hover:bg-primary/30"
             :aria-expanded="open"
             aria-controls="landing-mobile-menu"
             :aria-label="open ? 'Tutup menu' : 'Buka menu'"

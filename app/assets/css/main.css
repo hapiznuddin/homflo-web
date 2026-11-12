@@ -254,7 +254,7 @@
 /* Fades the ripple grid toward the bottom and sides. */
 @utility landing-ripple-mask {
   mask-image: radial-gradient(
-    ellipse 150% 100% at 50% 0%,
+    ellipse 100% 60% at 50% 0%,
     #000 0%,
     rgb(0 0 0 / 0.55) 42%,
     transparent 76%

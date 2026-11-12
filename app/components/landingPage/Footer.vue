@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { container } from '~/components/landing/ui'
+import { container } from '~/components/landingPage/ui'
 </script>
 
 <template>

@@ -1,14 +1,5 @@
 <script setup lang="ts">
-defineProps<{
-  domains: {
-    name: string
-    desc: string
-    href: string
-    icon: string
-    items?: string[]
-    featured?: boolean
-  }[]
-}>()
+import { domains } from './domain'
 </script>
 
 <template>
