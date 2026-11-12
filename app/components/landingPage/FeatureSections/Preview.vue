@@ -86,7 +86,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
     <div class="flex items-center justify-between gap-3 border-b border-rule px-4 py-3.5">
       <div class="flex min-w-0 items-center gap-2.5">
         <span
-          class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+          class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
           aria-hidden="true"
         >
           <UIcon name="i-lucide-house" class="size-4" />
@@ -97,7 +97,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         </div>
       </div>
       <span
-        class="shrink-0 rounded-full border border-border px-2 py-[3px] text-xs leading-[1.4] text-muted-foreground"
+        class="shrink-0 rounded-full border border-border px-2 py-1 text-xs leading-[1.4] text-muted-foreground"
         >Data contoh</span
       >
     </div>
@@ -116,7 +116,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         :aria-selected="active === tab.id"
         :aria-controls="`preview-panel-${uid}-${tab.id}`"
         :tabindex="active === tab.id ? 0 : -1"
-        class="shrink-0 cursor-pointer rounded-lg border-0 bg-transparent px-[11px] py-[7px] text-[0.8125rem] font-medium text-muted-foreground transition-[background-color,color] duration-[160ms] hover:text-foreground aria-selected:bg-soft-strong aria-selected:text-primary"
+        class="shrink-0 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-[background-color,color] duration-160 hover:text-foreground aria-selected:bg-soft-strong aria-selected:text-primary"
         @click="active = tab.id"
         @keydown="onTabKey($event, index)"
       >
@@ -136,7 +136,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pendapatan</p>
             <p
-              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+              class="mt-1 mb-0 text-base font-semibold leading-tight tracking-[-0.02em] tabular-nums"
             >
               {{ formatRupiah(12400000) }}
             </p>
@@ -144,7 +144,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Pengeluaran</p>
             <p
-              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+              class="mt-1 mb-0 text-base font-semibold leading-tight tracking-[-0.02em] tabular-nums"
             >
               {{ formatRupiah(7850000) }}
             </p>
@@ -152,7 +152,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Arus kas</p>
             <p
-              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums text-success"
+              class="mt-1 mb-0 text-base font-semibold leading-tight tracking-[-0.02em] tabular-nums text-success"
             >
               {{ formatRupiah(4550000, true) }}
             </p>
@@ -160,12 +160,12 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         </div>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-3">
             <div class="mb-2 flex items-center justify-between gap-2">
               <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Anggaran bulan ini</p>
               <span class="text-xs leading-[1.35] text-muted-foreground">3 kategori</span>
             </div>
-            <div v-for="budget in budgets" :key="budget.label" class="mb-[9px] last:mb-0">
+            <div v-for="budget in budgets" :key="budget.label" class="mb-2 last:mb-0">
               <div
                 class="flex items-baseline justify-between gap-2.5 text-xs leading-[1.35] [&>span:last-child]:tabular-nums [&>span:last-child]:text-muted-foreground"
               >
@@ -173,7 +173,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
                 <span>{{ budget.used }}%</span>
               </div>
               <div
-                class="my-[5px] h-1 overflow-hidden rounded-full bg-soft-strong"
+                class="my-1.5 h-1 overflow-hidden rounded-full bg-soft-strong"
                 aria-hidden="true"
               >
                 <span
@@ -185,7 +185,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
             </div>
           </div>
 
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
             <div class="mb-2 flex items-center justify-between gap-2">
               <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Tagihan terdekat</p>
               <span class="text-xs leading-[1.35] text-muted-foreground">2 tagihan</span>
@@ -193,10 +193,10 @@ function onTabKey(event: KeyboardEvent, index: number): void {
             <div
               v-for="bill in bills"
               :key="bill.label"
-              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+              class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
             >
               <span
-                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                class="inline-flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
                 aria-hidden="true"
               >
                 <UIcon
@@ -215,7 +215,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           </div>
         </div>
 
-        <div class="rounded-lg border border-rule bg-background p-[11px]">
+        <div class="rounded-lg border border-rule bg-background p-2.5">
           <div class="mb-2 flex items-center justify-between gap-2">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Transaksi terbaru</p>
             <span class="text-xs leading-[1.35] text-muted-foreground">Contoh</span>
@@ -223,7 +223,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div
             v-for="transaction in transactions"
             :key="transaction.label"
-            class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+            class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
           >
             <div class="min-w-0 flex-auto">
               <p class="m-0 text-xs font-medium leading-[1.35]">{{ transaction.label }}</p>
@@ -250,7 +250,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         role="tabpanel"
         :aria-labelledby="`preview-tab-${uid}-rumah`"
       >
-        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
+        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-3">
           <div>
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Properti</p>
             <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">Rumah Utama</p>
@@ -259,21 +259,21 @@ function onTabKey(event: KeyboardEvent, index: number): void {
             </p>
           </div>
           <span
-            class="shrink-0 rounded-full border border-success/40 px-2 py-[3px] text-xs leading-[1.4] text-success"
+            class="shrink-0 rounded-full border border-success/40 px-2 py-1 text-xs leading-[1.4] text-success"
             >Aktif</span
           >
         </div>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Aset rumah</p>
             <div
               v-for="asset in assets"
               :key="asset.label"
-              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+              class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
             >
               <span
-                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                class="inline-flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
                 aria-hidden="true"
               >
                 <UIcon name="i-lucide-package" class="size-4" />
@@ -285,12 +285,12 @@ function onTabKey(event: KeyboardEvent, index: number): void {
             </div>
           </div>
 
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Perawatan berikutnya</p>
             <div
               v-for="item in maintenance"
               :key="item.label"
-              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+              class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
             >
               <div
                 class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
@@ -305,7 +305,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           </div>
         </div>
 
-        <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+        <p class="m-0 text-xs leading-normal text-muted-foreground">
           Properti dapat dihubungkan dengan aset dan riwayat perawatan.
         </p>
       </div>
@@ -317,9 +317,9 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         role="tabpanel"
         :aria-labelledby="`preview-tab-${uid}-kendaraan`"
       >
-        <div class="flex items-center justify-start gap-3 rounded-lg bg-soft p-[13px]">
+        <div class="flex items-center justify-start gap-3 rounded-lg bg-soft p-3">
           <span
-            class="inline-flex size-[38px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+            class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
             aria-hidden="true"
           >
             <UIcon name="i-lucide-car" class="size-6" />
@@ -336,7 +336,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div class="ms-auto text-end">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Odometer</p>
             <p
-              class="mt-[3px] mb-0 text-base font-semibold leading-[1.25] tracking-[-0.02em] tabular-nums"
+              class="mt-1 mb-0 text-base font-semibold leading-tight tracking-[-0.02em] tabular-nums"
             >
               42.500 km
             </p>
@@ -344,10 +344,10 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         </div>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Jadwal servis</p>
             <div
-              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+              class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
             >
               <div
                 class="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md bg-soft px-1.5 py-1 text-xs font-semibold text-primary"
@@ -359,20 +359,20 @@ function onTabKey(event: KeyboardEvent, index: number): void {
                 <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Terjadwal</p>
               </div>
             </div>
-            <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+            <p class="m-0 text-xs leading-normal text-muted-foreground">
               Riwayat servis tersimpan di kendaraan yang sama.
             </p>
           </div>
 
-          <div class="rounded-lg border border-rule bg-background p-[11px]">
+          <div class="rounded-lg border border-rule bg-background p-2.5">
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Kewajiban</p>
             <div
               v-for="item in obligations"
               :key="item.label"
-              class="flex items-center gap-2 border-t border-rule py-[7px] first-of-type:border-t-0"
+              class="flex items-center gap-2 border-t border-rule py-1.5 first-of-type:border-t-0"
             >
               <span
-                class="inline-flex size-[26px] shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
+                class="inline-flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-soft text-primary"
                 aria-hidden="true"
               >
                 <UIcon name="i-lucide-file-text" class="size-4" />
@@ -393,7 +393,7 @@ function onTabKey(event: KeyboardEvent, index: number): void {
         role="tabpanel"
         :aria-labelledby="`preview-tab-${uid}-daftar`"
       >
-        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-[13px]">
+        <div class="flex items-center justify-between gap-3 rounded-lg bg-soft p-3">
           <div>
             <p class="m-0 text-xs leading-[1.35] text-muted-foreground">Daftar belanja</p>
             <p class="mt-0.5 mb-0 text-[0.9375rem] font-semibold tracking-[-0.02em]">
@@ -407,10 +407,10 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <div
             v-for="item in shopping"
             :key="item.label"
-            class="flex items-center gap-2.5 border-b border-rule py-[9px]"
+            class="flex items-center gap-2.5 border-b border-rule py-2"
           >
             <span
-              class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border text-primary-foreground"
+              class="inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] border text-primary-foreground"
               :class="item.done ? 'border-primary bg-primary' : 'border-border'"
               aria-hidden="true"
             >
@@ -432,14 +432,14 @@ function onTabKey(event: KeyboardEvent, index: number): void {
           <strong class="text-[0.9375rem] tabular-nums">{{ formatRupiah(188000) }}</strong>
         </div>
 
-        <p class="m-0 text-xs leading-[1.5] text-muted-foreground">
+        <p class="m-0 text-xs leading-normal text-muted-foreground">
           Item yang selesai dapat dicatat sebagai pengeluaran.
         </p>
       </div>
     </Transition>
 
     <p
-      class="m-0 border-t border-rule px-3.5 pt-2 pb-[11px] text-xs leading-[1.4] text-muted-foreground text-pretty"
+      class="m-0 border-t border-rule px-3.5 pt-2 pb-2.5 text-xs leading-normal text-muted-foreground text-pretty"
     >
       Pratinjau antarmuka dengan data sintetis. Bukan tangkapan layar akun pengguna.
     </p>

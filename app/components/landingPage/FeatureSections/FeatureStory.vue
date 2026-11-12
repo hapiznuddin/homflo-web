@@ -1,6 +1,7 @@
+<!-- eslint-disable @stylistic/indent -->
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
-import type { FeatureStoryItem } from './featureStories'
+import { FeatureStoryItem } from './featureStories'
 import { container, heading2, ledeText } from '~/components/landingPage/ui'
 
 interface FeatureStoryItem {
@@ -11,17 +12,15 @@ interface FeatureStoryItem {
   note?: string
 }
 
-defineProps<{ features: FeatureStoryItem[] }>()
-
 const activeIndex = ref(0)
 const rows: HTMLElement[] = []
 let observer: IntersectionObserver | null = null
 
 const rowRef =
   (index: number) =>
-    (el: Element | ComponentPublicInstance | null): void => {
-      if (el instanceof HTMLElement) rows[index] = el
-    }
+  (el: Element | ComponentPublicInstance | null): void => {
+    if (el instanceof HTMLElement) rows[index] = el
+  }
 
 // Satu sumber kebenaran untuk daftar fitur dan pratinjau: baris yang melewati
 // pita tengah viewport menentukan indeks aktif. IntersectionObserver, bukan
@@ -50,16 +49,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section
-    :class="[container, 'pb-[clamp(48px,7vw,96px)] pt-[clamp(24px,4vw,48px)]']"
-    data-feature-story
-  >
+  <section :class="[container, 'pt-[clamp(90px,4vw,48px)]']" data-feature-story>
     <div
       class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-[clamp(40px,6vw,80px)]"
     >
       <div>
         <div
-          v-for="(feature, index) in features"
+          v-for="(feature, index) in FeatureStoryItem"
           :id="feature.id"
           :key="feature.id"
           :ref="rowRef(index)"
@@ -71,7 +67,7 @@ onBeforeUnmount(() => {
         >
           <div
             v-scroll-reveal="{ threshold: 0.05 }"
-            class="flex flex-col gap-[18px] lp-scroll-reveal lp-feature-reveal"
+            class="flex flex-col gap-4 lp-scroll-reveal lp-feature-reveal"
           >
             <div>
               <p
@@ -96,7 +92,7 @@ onBeforeUnmount(() => {
               <li
                 v-for="point in feature.points"
                 :key="point.label"
-                class="grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-b border-rule py-[13px]"
+                class="grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-b border-rule py-3"
               >
                 <UIcon
                   name="i-lucide-check"
@@ -115,7 +111,7 @@ onBeforeUnmount(() => {
 
             <p
               v-if="feature.note"
-              class="m-0 border-t border-rule pt-3 text-[0.8125rem] leading-[1.5] text-muted-foreground text-pretty"
+              class="m-0 border-t border-rule pt-3 text-[0.8125rem] leading-normal text-muted-foreground text-pretty"
             >
               {{ feature.note }}
             </p>
@@ -137,9 +133,9 @@ onBeforeUnmount(() => {
         <div class="lg:sticky lg:top-24 lp-feature-stage">
           <div class="grid">
             <div
-              v-for="(feature, index) in features"
+              v-for="(feature, index) in FeatureStoryItem"
               :key="feature.id"
-              class="col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-[var(--ease-out-expo)] motion-reduce:transition-opacity"
+              class="col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-(--ease-out-expo) motion-reduce:transition-opacity"
               data-feature-preview
               :class="
                 index === activeIndex

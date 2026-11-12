@@ -12,7 +12,7 @@ import { domains } from './domain'
       :key="domain.href"
       v-scroll-reveal="{ delay: Math.min(index * 70, 280) }"
       :href="domain.href"
-      class="group flex flex-col rounded-2xl border p-5 text-inherit no-underline transition-[background-color,border-color,color] duration-[180ms] ease-out hover:border-primary/40 focus-ring sm:p-6 lp-scroll-reveal-child"
+      class="group flex flex-col rounded-2xl border p-5 text-inherit no-underline transition-[background-color,border-color,color] duration-180 ease-out hover:border-primary/40 focus-ring sm:p-6 lp-scroll-reveal-child"
       :class="
         domain.featured
           ? 'border-rule bg-soft sm:col-span-2 lg:col-span-6'
@@ -29,7 +29,7 @@ import { domains } from './domain'
         </span>
         <UIcon
           name="i-lucide-arrow-up-right"
-          class="size-4 shrink-0 text-muted-foreground transition-[color,transform] duration-[180ms] ease-out group-hover:-translate-y-0.5 group-hover:text-primary"
+          class="size-4 shrink-0 text-muted-foreground transition-[color,transform] duration-180 ease-out group-hover:-translate-y-0.5 group-hover:text-primary"
           aria-hidden="true"
         />
       </div>
@@ -38,7 +38,7 @@ import { domains } from './domain'
         <p class="m-0 text-[1.0625rem] font-semibold leading-[1.3] tracking-[-0.02em]">
           {{ domain.name }}
         </p>
-        <p class="mt-1 mb-0 max-w-[42ch] text-sm leading-[1.5] text-muted-foreground text-pretty">
+        <p class="mt-1 mb-0 max-w-[42ch] text-sm leading-normal text-muted-foreground text-pretty">
           {{ domain.desc }}
         </p>
       </div>
