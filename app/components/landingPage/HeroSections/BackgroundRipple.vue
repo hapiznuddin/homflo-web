@@ -11,30 +11,41 @@ const props = withDefaults(
 type Cell = { row: number; col: number }
 type CellStyle = CSSProperties & { '--delay'?: string; '--duration'?: string }
 
-const clickedCell = ref<Cell | null>(null)
-const hoveredCell = ref<Cell | null>(null)
-const rippleKey = ref(0)
 const root = ref<HTMLElement | null>(null)
-const grid = ref<HTMLElement | null>(null)
-const size = ref({ width: 0, height: 0 })
+const hoveredCell = ref<Cell | null>(null)
+const clickedCell = ref<Cell | null>(null)
+const rippleKey = ref(0)
+// Cell elements exist only after the first ripple; the static grid is CSS.
+const active = ref(false)
+const dims = ref({ cols: 1, rows: 1 })
 
-const cols = computed(() => Math.max(1, Math.ceil(size.value.width / props.cellSize)))
-const rows = computed(() => Math.max(1, Math.ceil(size.value.height / props.cellSize)))
-
-const cells = computed<Cell[]>(() =>
-  Array.from({ length: rows.value * cols.value }, (_, index) => ({
-    row: Math.floor(index / cols.value),
-    col: index % cols.value
+const cells = computed<Cell[]>(() => {
+  if (!active.value) return []
+  return Array.from({ length: dims.value.rows * dims.value.cols }, (_, index) => ({
+    row: Math.floor(index / dims.value.cols),
+    col: index % dims.value.cols
   }))
-)
+})
 
 const gridStyle = computed<CSSProperties>(() => ({
   display: 'grid',
-  gridTemplateColumns: `repeat(${cols.value}, ${props.cellSize}px)`,
-  gridTemplateRows: `repeat(${rows.value}, ${props.cellSize}px)`,
-  width: `${cols.value * props.cellSize}px`,
-  height: `${rows.value * props.cellSize}px`
+  gridTemplateColumns: `repeat(${dims.value.cols}, ${props.cellSize}px)`,
+  gridTemplateRows: `repeat(${dims.value.rows}, ${props.cellSize}px)`,
+  width: `${dims.value.cols * props.cellSize}px`,
+  height: `${dims.value.rows * props.cellSize}px`
 }))
+
+const hoverStyle = computed<CSSProperties | undefined>(() => {
+  const cell = hoveredCell.value
+  if (!cell) return undefined
+  return {
+    transform: `translate3d(${cell.col * props.cellSize}px, ${cell.row * props.cellSize}px, 0)`,
+    width: `${props.cellSize}px`,
+    height: `${props.cellSize}px`,
+    backgroundColor: 'var(--cell-hover-fill-color)',
+    borderColor: 'var(--cell-hover-border-color)'
+  }
+})
 
 // Aceternity's ripple: every cell animates opacity, staggered by its distance
 // from the clicked cell. Kept as-is; only the tint comes from Homflo tokens.
@@ -53,22 +64,29 @@ function cellStyle(cell: Cell): CellStyle {
 
 const interactiveSelector = 'a, button, input, select, textarea, [role="button"]'
 
+function measure(): { rect: DOMRect; cols: number; rows: number } | null {
+  const el = root.value
+  if (!el) return null
+  const rect = el.getBoundingClientRect()
+  return {
+    rect,
+    cols: Math.max(1, Math.ceil(rect.width / props.cellSize)),
+    rows: Math.max(1, Math.ceil(rect.height / props.cellSize))
+  }
+}
+
 // The layer never receives pointer events itself, so hover and click are
 // derived from the hero's own events. Returns the cell under the pointer, or
 // null outside the hero/grid or over an interactive element.
-function cellAt(event: PointerEvent): Cell | null {
-  if (!root.value || !grid.value) return null
-
-  const hero = root.value.parentElement
+function cellAt(event: PointerEvent, rect: DOMRect, cols: number, rows: number): Cell | null {
   const target = event.target as Element | null
-  if (!hero?.contains(target) || target?.closest(interactiveSelector)) return null
+  if (!root.value?.parentElement?.contains(target) || target?.closest(interactiveSelector)) {
+    return null
+  }
 
-  // Measure the grid, not the layer: the grid is wider than the viewport and
-  // centered, so the layer's left edge is not the first cell's left edge.
-  const rect = grid.value.getBoundingClientRect()
   const col = Math.floor((event.clientX - rect.left) / props.cellSize)
   const row = Math.floor((event.clientY - rect.top) / props.cellSize)
-  if (row < 0 || col < 0 || row >= rows.value || col >= cols.value) return null
+  if (row < 0 || col < 0 || row >= rows || col >= cols) return null
 
   return { row, col }
 }
@@ -76,9 +94,13 @@ function cellAt(event: PointerEvent): Cell | null {
 function onPointerDown(event: PointerEvent): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-  const cell = cellAt(event)
+  const measured = measure()
+  if (!measured) return
+  const cell = cellAt(event, measured.rect, measured.cols, measured.rows)
   if (!cell) return
 
+  dims.value = { cols: measured.cols, rows: measured.rows }
+  active.value = true
   clickedCell.value = cell
   rippleKey.value += 1
 }
@@ -90,7 +112,9 @@ let hoverEvent: PointerEvent | null = null
 
 function updateHover(): void {
   hoverFrame = 0
-  const next = hoverEvent ? cellAt(hoverEvent) : null
+  const measured = measure()
+  const next =
+    measured && hoverEvent ? cellAt(hoverEvent, measured.rect, measured.cols, measured.rows) : null
   if (next?.row === hoveredCell.value?.row && next?.col === hoveredCell.value?.col) return
   hoveredCell.value = next
 }
@@ -108,74 +132,38 @@ function clearHover(): void {
   hoveredCell.value = null
 }
 
-// The grid must cover the whole hero at every viewport, so its row/column
-// count is derived from the layer's measured size instead of a fixed 8 × 27.
-let observer: ResizeObserver | null = null
-
-function measure(element: HTMLElement | null): void {
-  if (!element) return
-  const rect = element.getBoundingClientRect()
-  if (rect.width === size.value.width && rect.height === size.value.height) return
-  size.value = { width: rect.width, height: rect.height }
-  // Re-evaluate the cell under a stationary pointer after a resize.
-  if (hoverEvent && !hoverFrame) hoverFrame = requestAnimationFrame(updateHover)
-}
-
-function onResize(): void {
-  measure(root.value)
-}
-
 onMounted(() => {
   window.addEventListener('pointerdown', onPointerDown, { passive: true })
   window.addEventListener('pointermove', onPointerMove, { passive: true })
   window.addEventListener('scroll', clearHover, { passive: true })
-  window.addEventListener('resize', onResize, { passive: true })
   document.documentElement.addEventListener('pointerleave', clearHover)
-
-  measure(root.value)
-  // The layer can still be unmeasured on the first mounted frame (fonts,
-  // hydration), so measure again after paint and track later size changes.
-  nextTick(() => measure(root.value))
-  if (root.value) {
-    observer = new ResizeObserver(() => measure(root.value))
-    observer.observe(root.value)
-  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointerdown', onPointerDown)
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('scroll', clearHover)
-  window.removeEventListener('resize', onResize)
   document.documentElement.removeEventListener('pointerleave', clearHover)
   if (hoverFrame) cancelAnimationFrame(hoverFrame)
-  observer?.disconnect()
 })
 </script>
 
 <template>
   <div
     ref="root"
-    class="landing-ripple pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+    class="landing-ripple landing-ripple-mask pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     aria-hidden="true"
   >
-    <div
-      ref="grid"
-      :key="rippleKey"
-      class="landing-ripple-mask relative z-3 mx-auto"
-      :style="gridStyle"
-    >
+    <!-- Static grid: CSS only, so it paints before hydration. -->
+    <div class="landing-ripple-grid absolute inset-0" />
+
+    <div v-if="hoverStyle" class="absolute top-0 left-0 border-[0.5px]" :style="hoverStyle" />
+
+    <div v-if="active" :key="rippleKey" class="absolute top-0 left-0" :style="gridStyle">
       <div
         v-for="cell in cells"
         :key="`${cell.row}-${cell.col}`"
-        v-memo="[hoveredCell?.row === cell.row && hoveredCell?.col === cell.col, clickedCell]"
-        class="relative border-[0.5px] transition-opacity duration-150"
-        :class="[
-          hoveredCell?.row === cell.row && hoveredCell?.col === cell.col
-            ? 'opacity-80'
-            : 'opacity-70',
-          clickedCell && 'animate-cell-ripple'
-        ]"
+        class="border-[0.5px] opacity-0 animate-cell-ripple"
         :style="cellStyle(cell)"
       />
     </div>

@@ -9,10 +9,10 @@ import { container, heading2, ledeText, section, sectionHead } from '~/component
   <section id="fitur" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
     <div :class="container">
       <div :class="sectionHead">
-        <h2 :class="[heading2, 'max-w-[22ch]']">Enam area, satu rumah tangga.</h2>
+        <h2 :class="[heading2, 'max-w-[22ch]']">Semua yang perlu diurus, ada di sini.</h2>
         <p :class="ledeText">
-          Mulai dari ringkasan, lalu masuk ke bagian yang perlu diurus. Semua memakai rumah tangga
-          yang sama.
+          Enam area dalam satu rumah tangga — mulai dari ringkasan harian, sampai catatan kendaraan
+          dan daftar belanja. Tidak perlu berpindah aplikasi.
         </p>
       </div>
 

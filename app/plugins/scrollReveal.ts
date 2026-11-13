@@ -34,20 +34,25 @@ const scrollReveal = {
     }
 
     let fired = false
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !fired) {
-            fired = true
-            el.classList.add('lp-is-visible')
-            if (once) observer.unobserve(el)
-          }
-        })
-      },
-      { root, rootMargin, threshold }
-    )
-    observer.observe(el)
-    observers.set(el, observer)
+    try {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !fired) {
+              fired = true
+              el.classList.add('lp-is-visible')
+              if (once) observer.unobserve(el)
+            }
+          })
+        },
+        { root, rootMargin, threshold }
+      )
+      observer.observe(el)
+      observers.set(el, observer)
+    } catch {
+      // If observation cannot start, never leave content hidden.
+      el.classList.add('lp-is-visible')
+    }
   },
 
   beforeUnmount(el: HTMLElement) {
@@ -57,5 +62,9 @@ const scrollReveal = {
 }
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Signals the inline fallback that reveal initialization succeeded.
+  if (typeof window !== 'undefined') {
+    ;(window as Window & { __lpRevealReady?: boolean }).__lpRevealReady = true
+  }
   nuxtApp.vueApp.directive('scroll-reveal', scrollReveal)
 })

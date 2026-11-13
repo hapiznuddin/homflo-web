@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { container, heading2, ledeText, section } from '~/components/landingPage/ui'
+import { container, heading2, iconTile, ledeText, section } from '~/components/landingPage/ui'
 
 const privacy = [
   {
-    title: 'Tidak terhubung rekening bank',
-    text: 'Semua catatan keuangan dimasukkan manual. Homflo tidak meminta akses rekening.'
+    title: 'Tidak terhubung ke rekening bank',
+    text: 'Semua catatan keuangan diisi sendiri secara manual. Homflo tidak pernah meminta akses ke rekening atau data perbankan Anda.'
   },
   {
-    title: 'Sesi lewat server',
-    text: 'Autentikasi memakai sesi Laravel Sanctum. Browser tidak menyimpan token akses di localStorage.'
+    title: 'Sesi aman di sisi server',
+    text: 'Login menggunakan sesi Laravel Sanctum. Token tidak disimpan di localStorage browser — lebih aman dari serangan XSS.'
   },
   {
-    title: 'Data per rumah tangga',
-    text: 'Akses dibatasi ke rumah tangga aktif. Data tidak dibagikan lintas rumah tangga.'
+    title: 'Data terbatas per rumah tangga',
+    text: 'Setiap data hanya bisa diakses oleh anggota rumah tangga yang aktif. Tidak ada data yang bocor ke rumah tangga lain.'
   },
   {
-    title: 'Verifikasi email',
-    text: 'Fitur utama memerlukan email terverifikasi sebelum digunakan.'
+    title: 'Verifikasi email wajib',
+    text: 'Fitur utama hanya bisa digunakan setelah email diverifikasi — satu langkah sederhana untuk memastikan akun Anda aman.'
   }
 ]
 </script>
@@ -31,8 +31,8 @@ const privacy = [
           <span :class="iconTile" aria-hidden="true">
             <UIcon name="i-lucide-shield-check" class="size-5" />
           </span>
-          <h2 :class="heading2">Jujur soal data.</h2>
-          <p :class="ledeText">Homflo adalah buku catatan rumah tangga, bukan aplikasi bank.</p>
+          <h2 :class="heading2">Data Anda tetap milik Anda.</h2>
+          <p :class="ledeText">Semua yang tercatat di Homflo Anda isi sendiri. Tidak ada koneksi ke rekening bank, tidak ada data yang dikirim ke layanan pihak ketiga.</p>
         </div>
 
         <dl class="m-0 border-t border-border">

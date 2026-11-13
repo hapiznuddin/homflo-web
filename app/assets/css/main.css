@@ -245,10 +245,35 @@
     );
 }
 
-/* Ripple grid: brand-tinted cells, low contrast in both themes. */
+/* Ripple grid: brand-tinted cells, low contrast in both themes.
+   The static grid is painted by CSS gradients so it is visible before
+   hydration; cell elements exist only for the click ripple. */
 @utility landing-ripple {
-  --cell-border-color: color-mix(in oklab, var(--primary) 30%, transparent);
-  --cell-fill-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  --cell-size: 56px;
+  --cell-line-color: color-mix(in oklab, var(--primary) 26%, transparent);
+  --cell-base-color: color-mix(in oklab, var(--primary) 8%, transparent);
+  --cell-border-color: color-mix(in oklab, var(--primary) 55%, transparent);
+  --cell-fill-color: color-mix(in oklab, var(--primary) 32%, transparent);
+  --cell-hover-border-color: color-mix(in oklab, var(--primary) 34%, transparent);
+  --cell-hover-fill-color: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+/* Static ripple grid: no DOM cells, no JavaScript, visible on first paint.
+   1px stops, karena 0.5px gradient stop dirender sebagai garis sub-piksel
+   yang praktis tidak terlihat. */
+@utility landing-ripple-grid {
+  background-color: var(--cell-base-color);
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--cell-line-color) 0 1px,
+      transparent 1px var(--cell-size)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--cell-line-color) 0 1px,
+      transparent 1px var(--cell-size)
+    );
 }
 
 /* Fades the ripple grid toward the bottom and sides. */
@@ -363,8 +388,9 @@
 
 /* Scroll reveal: komponen landing muncul saat masuk viewport.
    Satu gaya untuk semua section, transform/opacity saja, dan mati pada
-   prefers-reduced-motion. Konten tetap terlihat default (fallback). */
-.lp-scroll-reveal {
+   prefers-reduced-motion. `html.lp-reveal` hanya dipasang skrip inline di
+   kepala halaman, jadi tanpa JavaScript konten tetap terlihat. */
+html.lp-reveal .lp-scroll-reveal {
   opacity: 0;
   transform: translateY(14px);
   transition:
@@ -372,13 +398,13 @@
     transform 600ms var(--ease-out-expo);
   transition-delay: var(--srv-delay, 0ms);
 }
-.lp-scroll-reveal.lp-is-visible {
+html.lp-reveal .lp-scroll-reveal.lp-is-visible {
   opacity: 1;
   transform: none;
 }
 
 /* Anak yang muncul bertahap dalam satu daftar (kartu domain, langkah). */
-.lp-scroll-reveal-child {
+html.lp-reveal .lp-scroll-reveal-child {
   opacity: 0;
   transform: translateY(10px);
   transition:
@@ -386,7 +412,7 @@
     transform 500ms var(--ease-out-expo);
   transition-delay: var(--srv-delay, 0ms);
 }
-.lp-scroll-reveal-child.lp-is-visible {
+html.lp-reveal .lp-scroll-reveal-child.lp-is-visible {
   opacity: 1;
   transform: none;
 }
@@ -394,11 +420,33 @@
 /* Mobile feature story: satu fitur (teks + pratinjau) masuk sebagai satu blok
    dengan slide yang lebih terasa. Desktop tetap memakai reveal halus. */
 @media (max-width: 1023px) {
-  .lp-feature-reveal {
+  html.lp-reveal .lp-feature-reveal {
     transform: translateY(32px);
   }
-  .lp-feature-reveal.lp-is-visible {
+  html.lp-reveal .lp-feature-reveal.lp-is-visible {
     transform: none;
+  }
+}
+
+/* Reduced motion: jangan andalkan JavaScript untuk menampilkan konten. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-scroll-reveal,
+  .lp-scroll-reveal-child {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Hero entrance: animation hanya ditahan sampai dokumen selesai di-parse,
+   supaya urutan reveal tidak habis sebelum frame pertama terlihat. Entrance
+   hanya menggerakkan posisi/skala, jadi hero tetap terlihat saat ditahan. */
+html.lp-hero .lp-hero-item {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.lp-hero .lp-hero-item {
+    animation-play-state: running;
   }
 }
 

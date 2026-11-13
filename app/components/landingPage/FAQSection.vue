@@ -1,30 +1,39 @@
 <script setup lang="ts">
-import { container, heading2, ledeText, section, sectionHead } from '~/components/landingPage/ui'
+import {
+  actionButton,
+  btnGhostOnPrimary,
+  btnOnPrimary,
+  container,
+  heading2,
+  ledeText,
+  section,
+  sectionHead
+} from '~/components/landingPage/ui'
 
 const faqs = [
   {
     q: 'Apa itu Homflo?',
-    a: 'Homflo adalah aplikasi web untuk mengelola uang dan kebutuhan rumah tangga di satu tempat. Isinya mencakup transaksi, anggaran, tagihan, properti, aset, kendaraan, dan daftar belanja.'
+    a: 'Homflo adalah aplikasi web untuk mengelola semua urusan rumah tangga di satu tempat — mulai dari transaksi harian, anggaran, tagihan, sampai properti, kendaraan, dan daftar belanja. Tidak perlu berpindah aplikasi untuk setiap kebutuhan.'
   },
   {
-    q: 'Apakah perlu menghubungkan rekening bank?',
-    a: 'Tidak. Homflo tidak terhubung ke rekening bank. Semua catatan keuangan dimasukkan secara manual.'
+    q: 'Apakah harus menghubungkan rekening bank?',
+    a: 'Tidak. Homflo tidak terhubung ke rekening bank dan tidak meminta akses ke data perbankan Anda. Semua catatan keuangan diisi sendiri secara manual — persis seperti buku kas.'
   },
   {
-    q: 'Bisa dipakai bersama anggota keluarga?',
-    a: 'Bisa. Anda dapat mengundang anggota lewat email. Pemilik rumah tangga mengelola anggota dan undangan; setiap anggota memakai akun sendiri. Belum ada kolaborasi real-time atau izin per anggota.'
+    q: 'Bisa dipakai bersama pasangan atau anggota keluarga?',
+    a: 'Bisa. Undang pasangan atau anggota keluarga lewat email — masing-masing memakai akun sendiri dalam satu rumah tangga yang sama. Pemilik rumah tangga yang mengelola siapa saja yang bergabung. Saat ini belum ada izin akses berbeda per anggota.'
   },
   {
-    q: 'Apakah tersedia di ponsel?',
-    a: 'Homflo adalah aplikasi web progresif (PWA). Bisa dibuka lewat browser ponsel dan dipasang ke layar utama. Homflo belum tersedia di toko aplikasi.'
+    q: 'Apakah bisa dipakai di ponsel?',
+    a: 'Bisa. Homflo adalah aplikasi web progresif (PWA) yang bisa dibuka langsung dari browser ponsel dan dipasang ke layar utama seperti aplikasi biasa. Homflo belum tersedia di App Store maupun Google Play.'
   },
   {
-    q: 'Apakah ada pengingat otomatis?',
-    a: 'Belum. Tagihan, jadwal servis, dan kewajiban ditampilkan di dalam aplikasi, tetapi belum ada pengingat otomatis lewat email atau notifikasi.'
+    q: 'Apakah ada notifikasi atau pengingat otomatis?',
+    a: 'Belum. Tagihan jatuh tempo, jadwal servis, dan kewajiban kendaraan ditampilkan di dalam aplikasi, tapi belum ada pengingat lewat email atau notifikasi push. Fitur ini ada di roadmap kami.'
   },
   {
-    q: 'Bagaimana data saya ditangani?',
-    a: 'Akses memakai sesi login. Data dibatasi ke rumah tangga aktif dan tidak terhubung ke rekening bank. Homflo tidak mengklaim enkripsi end-to-end.'
+    q: 'Seberapa aman data saya?',
+    a: 'Login menggunakan sesi server-side (Laravel Sanctum) — token tidak disimpan di browser. Data Anda hanya bisa diakses oleh anggota rumah tangga aktif dan tidak terhubung ke rekening bank. Homflo tidak mengklaim enkripsi end-to-end, tapi kami transparan soal apa yang kami lakukan dan tidak lakukan.'
   }
 ]
 </script>
@@ -33,8 +42,8 @@ const faqs = [
   <section id="faq" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
     <div :class="container">
       <div :class="sectionHead">
-        <h2 :class="heading2">Pertanyaan yang sering muncul.</h2>
-        <p :class="ledeText">Jawaban singkat tentang produk, data, dan cara mulai.</p>
+        <h2 :class="heading2">Yang sering ditanyakan.</h2>
+        <p :class="ledeText">Kami jawab yang paling sering ditanyakan, singkat dan jelas.</p>
       </div>
 
       <div class="mx-auto mt-9 max-w-[820px] border-t border-border">
@@ -67,16 +76,16 @@ const faqs = [
       >
         <div class="max-w-[640px]">
           <h2 class="m-0 max-w-[16ch] text-final font-semibold text-balance">
-            Mulai dari rumah tangga Anda.
+            Coba sekarang, gratis.
           </h2>
           <p class="mt-4 mb-0 max-w-[46ch] text-base leading-[1.6] text-on-primary-muted">
-            Satu tempat untuk uang dan urusan rumah. Tanpa menghubungkan rekening bank.
+            Buat rumah tangga, undang keluarga, dan mulai mencatat. Tidak perlu menghubungkan rekening bank.
           </p>
           <div class="mt-7 flex w-full max-w-[420px] flex-col gap-2.5 min-[480px]:flex-row">
             <NuxtLink to="/register" :class="[btnOnPrimary, actionButton]"
-              >Buat rumah tangga</NuxtLink
+              >Mulai gratis</NuxtLink
             >
-            <NuxtLink to="/login" :class="[btnGhostOnPrimary, actionButton]">Masuk</NuxtLink>
+            <NuxtLink to="/login" :class="[btnGhostOnPrimary, actionButton]">Sudah punya akun</NuxtLink>
           </div>
         </div>
       </div>

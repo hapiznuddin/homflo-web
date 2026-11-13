@@ -13,18 +13,18 @@ import { container } from '~/components/landingPage/ui'
     <div class="h-20 md:h-23" aria-hidden="true" />
     <div :class="[container, 'flex flex-col items-center text-center mb-8']">
       <h1
-        class="m-0 min-w-0 max-w-[16ch] animate-in text-display font-semibold wrap-break-word text-balance fade-in fill-mode-both slide-in-from-bottom-3 duration-600 ease-out-expo lg:max-w-[18ch]"
+        class="lp-hero-item m-0 min-w-0 max-w-[16ch] animate-in text-display font-semibold wrap-break-word text-balance fill-mode-both slide-in-from-bottom-5 duration-600 ease-out-expo lg:max-w-[18ch]"
       >
         Satu tempat untuk semua urusan rumah tangga Anda.
       </h1>
       <p
-        class="mt-5 mb-0 max-w-[54ch] animate-in text-hero-sub text-muted-foreground text-pretty fade-in fill-mode-both slide-in-from-bottom-3 delay-75 duration-600 ease-out-expo"
+        class="lp-hero-item mt-5 mb-0 max-w-[54ch] animate-in text-hero-sub text-muted-foreground text-pretty fill-mode-both slide-in-from-bottom-5 delay-75 duration-600 ease-out-expo"
       >
         Uang, tagihan, rumah, kendaraan, daftar belanja — semuanya tercatat di satu tempat bersama
         keluarga. Tanpa menghubungkan rekening bank.
       </p>
       <div
-        class="mt-8 flex w-full max-w-xl justify-center items-center animate-in flex-col gap-2.5 fade-in fill-mode-both slide-in-from-bottom-3 delay-150 duration-600 ease-out-expo min-[480px]:flex-row min-[480px]:justify-center"
+        class="lp-hero-item mt-8 flex w-full max-w-xl justify-center items-center animate-in flex-col gap-2.5 fill-mode-both slide-in-from-bottom-5 delay-150 duration-600 ease-out-expo min-[480px]:flex-row min-[480px]:justify-center"
       >
         <NuxtLink to="/register">
           <UButton size="xl" class="min-h-12 px-6 font-semibold"
@@ -42,7 +42,7 @@ import { container } from '~/components/landingPage/ui'
     </div>
 
     <div
-      class="mx-auto mt-6 w-[calc(100%-40px)] max-w-6xl animate-in delay-250 duration-800 ease-out-expo fill-mode-both fade-in slide-in-from-bottom-6 zoom-in-95 perspective-[1400px] lg:mt-0"
+      class="lp-hero-item mx-auto mt-6 w-[calc(100%-40px)] max-w-6xl animate-in delay-250 duration-800 ease-out-expo fill-mode-both slide-in-from-bottom-10 zoom-in-95 perspective-[1400px] lg:mt-0"
     >
       <LandingHeroDashboard />
     </div>

@@ -4,20 +4,20 @@ import { container, heading2, ledeText, section, sectionHead, iconTile } from '~
 const steps = [
   {
     icon: 'i-lucide-user-plus',
-    title: 'Daftar akun',
-    text: 'Pakai email atau Google. Verifikasi email untuk membuka fitur utama.',
-    meta: ['Email', 'Google']
+    title: 'Buat akun gratis',
+    text: 'Daftar dengan email atau Google dalam hitungan detik. Verifikasi email untuk mulai menggunakan semua fitur.',
+    meta: ['Email', 'Google', 'Gratis']
   },
   {
     icon: 'i-lucide-house-plus',
     title: 'Buat rumah tangga',
-    text: 'Beri nama rumah tangga. Anda menjadi pemiliknya dan bisa mengundang anggota.',
-    meta: ['Nama rumah', 'Undang anggota']
+    text: 'Beri nama rumah tangga Anda. Undang pasangan atau anggota keluarga — masing-masing pakai akun sendiri.',
+    meta: ['Nama bebas', 'Undang keluarga']
   },
   {
     icon: 'i-lucide-pencil-line',
-    title: 'Mulai mencatat',
-    text: 'Uang, tagihan, rumah, kendaraan, dan daftar belanja siap diisi.',
+    title: 'Langsung mulai mencatat',
+    text: 'Semua area sudah siap — uang, tagihan, rumah, kendaraan, dan daftar belanja. Tidak perlu setup panjang.',
     meta: ['Uang', 'Rumah', 'Kendaraan', 'Daftar']
   }
 ]
@@ -27,9 +27,10 @@ const steps = [
   <section id="cara-kerja" v-scroll-reveal :class="[section, 'lp-scroll-reveal']">
     <div :class="container">
       <div :class="sectionHead">
-        <h2 :class="heading2">Mulai dalam tiga langkah.</h2>
+        <h2 :class="heading2">Siap dipakai dalam tiga langkah.</h2>
         <p :class="ledeText">
-          Dari akun baru sampai catatan pertama. Tidak perlu menghubungkan rekening bank.
+          Dari akun baru sampai catatan pertama, prosesnya singkat. Tidak perlu menghubungkan
+          rekening bank, tidak perlu setup yang rumit.
         </p>
       </div>
 

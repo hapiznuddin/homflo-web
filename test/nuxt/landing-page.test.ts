@@ -2,8 +2,8 @@ import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LandingPage from '~/pages/index.vue'
-import LandingNav from '~/components/landing/Nav.vue'
-import LandingPreview from '~/components/landing/Preview.vue'
+import LandingNav from '~/components/landingPage/Nav.vue'
+import LandingPreview from '~/components/landingPage/FeatureSections/Preview.vue'
 
 const authMock = vi.hoisted(() => ({
   bootstrap: vi.fn(async () => 'unauthenticated')
@@ -37,7 +37,7 @@ describe('landing page', () => {
     const wrapper = await mountSuspended(LandingPage, { route: '/' })
     await flush()
 
-    expect(wrapper.find('h1').text()).toBe('Rumah dan uang, satu catatan.')
+    expect(wrapper.find('h1').text()).toBe('Satu tempat untuk semua urusan rumah tangga Anda.')
     expect(wrapper.find('a[href="/register"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/login"]').exists()).toBe(true)
 
@@ -49,9 +49,7 @@ describe('landing page', () => {
     const wrapper = await mountSuspended(LandingPage, { route: '/' })
     await flush()
 
-    expect(
-      wrapper.findAll('nav[aria-label="Area produk Homflo"] > a')
-    ).toHaveLength(6)
+    expect(wrapper.findAll('nav[aria-label="Area produk Homflo"] > a')).toHaveLength(6)
     expect(wrapper.find('#rumah-tangga').exists()).toBe(true)
     expect(wrapper.find('#rumah-tangga').text()).toContain('Belum ada kolaborasi real-time')
     expect(wrapper.find('#rumah-tangga').text()).toContain('Undangan lewat email')
@@ -63,7 +61,7 @@ describe('landing page', () => {
 
     expect(wrapper.findAll('#faq details')).toHaveLength(6)
     expect(wrapper.findAll('footer h2')).toHaveLength(0)
-    expect(wrapper.text()).toContain('Pratinjau memakai data contoh')
+    expect(wrapper.text()).toContain('Pratinjau antarmuka dengan data sintetis')
   })
 
   it('pratinjau berpindah tab dan memakai satu set id unik', async () => {
