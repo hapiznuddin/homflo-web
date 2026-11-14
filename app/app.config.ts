@@ -474,6 +474,27 @@ export default defineAppConfig({
         avatarSize: '2xs',
         label: 'text-sm text-stone-500 dark:text-stone-400'
       }
+    },
+
+    accordion: {
+      slots: {
+        root: 'w-full',
+        item: 'border-b border-border last:border-b-0',
+        header: 'flex',
+        trigger: 'group flex-1 flex items-center gap-1.5 font-medium text-sm py-3.5 outline-primary/25 focus-visible:outline-3 min-w-0 rounded-md',
+        content: 'text-sm lg:text-base text-muted data-[state=open]:animate-[accordion-down_200ms_var(--ease-out)] data-[state=closed]:animate-[accordion-up_200ms_var(--ease-out)] data-[state=closed]:overflow-hidden focus:outline-none',
+        body: 'text-sm pb-3.5',
+        leadingIcon: 'shrink-0 size-5',
+        trailingIcon: 'shrink-0 size-5 ms-auto group-data-[state=open]:rotate-180 transition-transform duration-200 ease-out motion-reduce:transition-none',
+        label: 'text-start break-words text-base lg:text-lg font-medium'
+      },
+      variants: {
+        disabled: {
+          true: {
+            trigger: 'cursor-not-allowed opacity-75'
+          }
+        }
+      }
     }
   }
 })

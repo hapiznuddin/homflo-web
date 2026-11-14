@@ -3,7 +3,7 @@ import { domains } from './domain'
 </script>
 
 <template>
-  <nav
+  <div
     class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12"
     aria-label="Area produk Homflo"
   >
@@ -52,5 +52,5 @@ import { domains } from './domain'
         >
       </div>
     </a>
-  </nav>
+  </div>
 </template>

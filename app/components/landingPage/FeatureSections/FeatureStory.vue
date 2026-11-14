@@ -129,13 +129,13 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Desktop: satu pratinjau sticky, diganti oleh fitur yang aktif. -->
-      <div class="hidden lg:block">
-        <div class="lg:sticky lg:top-24 lp-feature-stage">
-          <div class="grid">
+      <div class="hidden lg:block justify-center items-center">
+        <div class="lg:sticky lg:top-32 lp-feature-stage justify-center items-center">
+          <div class="grid justify-center items-center">
             <div
               v-for="(feature, index) in FeatureStoryItem"
               :key="feature.id"
-              class="col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-(--ease-out-expo) motion-reduce:transition-opacity"
+              class="col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-out-expo motion-reduce:transition-opacity justify-center items-center"
               data-feature-preview
               :class="
                 index === activeIndex

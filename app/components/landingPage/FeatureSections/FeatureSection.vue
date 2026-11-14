@@ -20,7 +20,7 @@ import { container, heading2, ledeText, section, sectionHead } from '~/component
 
       <LandingFeatureStory>
         <template #preview-uang>
-          <div class="min-w-0">
+          <div class="min-w-0 my-auto lg:py-4">
             <LandingPreview />
             <p class="mt-2.5 mb-0 text-end text-xs text-muted-foreground">
               Pratinjau area Uang · data contoh
@@ -236,7 +236,6 @@ import { container, heading2, ledeText, section, sectionHead } from '~/component
         </template>
 
         <template #preview-rumah-tangga>
-          <div class="rounded-[28px] border border-rule bg-soft p-3 sm:p-4">
             <div class="rounded-2xl border border-border bg-card p-[clamp(18px,3vw,28px)]">
               <div class="flex items-start justify-between gap-3 border-b border-rule pb-3.5">
                 <div>
@@ -293,7 +292,6 @@ import { container, heading2, ledeText, section, sectionHead } from '~/component
                 <span class="shrink-0 text-xs text-muted-foreground">Menunggu</span>
               </div>
             </div>
-          </div>
         </template>
       </LandingFeatureStory>
     </div>
