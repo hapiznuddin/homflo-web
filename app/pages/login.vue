@@ -111,137 +111,139 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center text-center w-full">
-    <div class="flex flex-col items-center justify-center gap-4">
-      <NuxtImg
-        src="/img/homflo-light-vertical.webp"
-        alt="Homflo Logo"
-        width="100%"
-        height="100%"
-        class="mx-auto w-full max-w-32 dark:hidden"
-      />
-      <NuxtImg
-        src="/img/homflo-dark-vertical.webp"
-        alt="Homflo Logo"
-        width="100%"
-        height="100%"
-        class="mx-auto w-full max-w-32 hidden dark:block"
-      />
-      <div class="flex flex-col items-center justify-center gap-1">
-        <h1 class="text-2xl font-bold dark:text-white">Selamat Datang Kembali</h1>
-        <p class="text-sm text-stone-500 dark:text-stone-400">
-          Kelola keuangan rumah tangga anda, mulai dari sini.
-        </p>
-      </div>
-    </div>
-
-    <form class="mt-6 flex flex-col gap-4 w-full" novalidate @submit.prevent="onSubmit">
-      <div class="flex flex-col w-full justify-start items-start gap-1">
-        <label for="login-email" class="block text-sm md:text-base font-medium dark:text-white"
-          >Email</label
-        >
-        <UInput
-          id="login-email"
-          v-model="form.email"
-          trailing-icon="i-lucide-at-sign"
-          placeholder="Masukkan email Anda"
-          type="email"
-          autocomplete="email"
-          required
+  <div class="w-full">
+    <AuthCard class="text-center">
+      <div class="flex flex-col items-center justify-center gap-4">
+        <NuxtImg
+          src="/img/homflo-light-vertical.webp"
+          alt="Homflo Logo"
+          width="100%"
+          height="100%"
+          class="mx-auto w-full max-w-32 dark:hidden"
         />
+        <NuxtImg
+          src="/img/homflo-dark-vertical.webp"
+          alt="Homflo Logo"
+          width="100%"
+          height="100%"
+          class="mx-auto w-full max-w-32 hidden dark:block"
+        />
+        <div class="flex flex-col items-center justify-center gap-1">
+          <h1 class="text-2xl font-bold dark:text-white">Selamat Datang Kembali</h1>
+          <p class="text-sm text-stone-500 dark:text-stone-400">
+            Kelola keuangan rumah tangga anda, mulai dari sini.
+          </p>
+        </div>
       </div>
 
-      <div class="flex flex-col w-full justify-start items-start gap-1">
-        <label for="login-password" class="block text-sm font-medium dark:text-white"
-          >Password</label
-        >
-        <UInput
-          id="login-password"
-          v-model="form.password"
-          :type="show ? 'text' : 'password'"
-          autocomplete="current-password"
-          required
-          placeholder="Masukkan password Anda"
-          :ui="{ trailing: 'pe-1' }"
-        >
-          <template #trailing>
-            <UButton
-              variant="link"
-              size="md"
-              :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-              :aria-label="show ? 'Hide password' : 'Show password'"
-              :aria-pressed="show"
-              aria-controls="login-password"
-              @click="show = !show"
-            />
-          </template>
-        </UInput>
-      </div>
+      <form class="mt-6 flex flex-col gap-4 w-full" novalidate @submit.prevent="onSubmit">
+        <div class="flex flex-col w-full justify-start items-start gap-1">
+          <label for="login-email" class="block text-sm md:text-base font-medium dark:text-white"
+            >Email</label
+          >
+          <UInput
+            id="login-email"
+            v-model="form.email"
+            trailing-icon="i-lucide-at-sign"
+            placeholder="Masukkan email Anda"
+            type="email"
+            autocomplete="email"
+            required
+          />
+        </div>
 
-      <UButton variant="link" size="lg" class="self-end" as-child>
-        <NuxtLink to="/forgot-password"> Lupa Password? </NuxtLink>
-      </UButton>
+        <div class="flex flex-col w-full justify-start items-start gap-1">
+          <label for="login-password" class="block text-sm font-medium dark:text-white"
+            >Password</label
+          >
+          <UInput
+            id="login-password"
+            v-model="form.password"
+            :type="show ? 'text' : 'password'"
+            autocomplete="current-password"
+            required
+            placeholder="Masukkan password Anda"
+            :ui="{ trailing: 'pe-1' }"
+          >
+            <template #trailing>
+              <UButton
+                variant="link"
+                size="md"
+                :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                :aria-label="show ? 'Hide password' : 'Show password'"
+                :aria-pressed="show"
+                aria-controls="login-password"
+                @click="show = !show"
+              />
+            </template>
+          </UInput>
+        </div>
+
+        <UButton variant="link" size="lg" class="self-end" as-child>
+          <NuxtLink to="/forgot-password"> Lupa Password? </NuxtLink>
+        </UButton>
+
+        <UButton
+          type="submit"
+          size="xl"
+          block
+          loading-auto
+          :loading="submitting"
+          :disabled="submitting"
+        >
+          Masuk
+        </UButton>
+      </form>
+
+      <USeparator label="Atau" class="my-4" />
 
       <UButton
-        type="submit"
-        size="xl"
         block
-        loading-auto
-        :loading="submitting"
-        :disabled="submitting"
+        variant="outline"
+        size="xl"
+        :loading="oauthRedirecting"
+        :disabled="submitting || oauthRedirecting"
+        @click="startGoogleOAuth('login')"
       >
-        Masuk
+        <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.8em" viewBox="0 0 16 16">
+          <!-- Icon from Material Icon Theme by Material Extensions - https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE -->
+          <g fill="none" fillRule="evenodd" clipRule="evenodd">
+            <path
+              fill="#f44336"
+              d="M7.209 1.061c.725-.081 1.154-.081 1.933 0a6.57 6.57 0 0 1 3.65 1.82a100 100 0 0 0-1.986 1.93q-1.876-1.59-4.188-.734q-1.696.78-2.362 2.528a78 78 0 0 1-2.148-1.658a.26.26 0 0 0-.16-.027q1.683-3.245 5.26-3.86"
+              opacity=".987"
+            />
+            <path
+              fill="#ffc107"
+              d="M1.946 4.92q.085-.013.161.027a78 78 0 0 0 2.148 1.658A7.6 7.6 0 0 0 4.04 7.99q.037.678.215 1.331L2 11.116Q.527 8.038 1.946 4.92"
+              opacity=".997"
+            />
+            <path
+              fill="#448aff"
+              d="M12.685 13.29a26 26 0 0 0-2.202-1.74q1.15-.812 1.396-2.228H8.122V6.713q3.25-.027 6.497.055q.616 3.345-1.423 6.032a7 7 0 0 1-.51.49"
+              opacity=".999"
+            />
+            <path
+              fill="#43a047"
+              d="M4.255 9.322q1.23 3.057 4.51 2.854a3.94 3.94 0 0 0 1.718-.626q1.148.812 2.202 1.74a6.62 6.62 0 0 1-4.027 1.684a6.4 6.4 0 0 1-1.02 0Q3.82 14.524 2 11.116z"
+              opacity=".993"
+            />
+          </g>
+        </svg>
+        Masuk dengan Google
       </UButton>
-    </form>
 
-    <USeparator label="Atau" class="my-4" />
+      <div class="mt-6 flex items-center justify-center gap-1">
+        <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
+        <UButton variant="link" size="xl" as-child>
+          <NuxtLink to="/register"> Daftar </NuxtLink>
+        </UButton>
+      </div>
 
-    <UButton
-      block
-      variant="outline"
-      size="xl"
-      :loading="oauthRedirecting"
-      :disabled="submitting || oauthRedirecting"
-      @click="startGoogleOAuth('login')"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.8em" viewBox="0 0 16 16">
-        <!-- Icon from Material Icon Theme by Material Extensions - https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE -->
-        <g fill="none" fillRule="evenodd" clipRule="evenodd">
-          <path
-            fill="#f44336"
-            d="M7.209 1.061c.725-.081 1.154-.081 1.933 0a6.57 6.57 0 0 1 3.65 1.82a100 100 0 0 0-1.986 1.93q-1.876-1.59-4.188-.734q-1.696.78-2.362 2.528a78 78 0 0 1-2.148-1.658a.26.26 0 0 0-.16-.027q1.683-3.245 5.26-3.86"
-            opacity=".987"
-          />
-          <path
-            fill="#ffc107"
-            d="M1.946 4.92q.085-.013.161.027a78 78 0 0 0 2.148 1.658A7.6 7.6 0 0 0 4.04 7.99q.037.678.215 1.331L2 11.116Q.527 8.038 1.946 4.92"
-            opacity=".997"
-          />
-          <path
-            fill="#448aff"
-            d="M12.685 13.29a26 26 0 0 0-2.202-1.74q1.15-.812 1.396-2.228H8.122V6.713q3.25-.027 6.497.055q.616 3.345-1.423 6.032a7 7 0 0 1-.51.49"
-            opacity=".999"
-          />
-          <path
-            fill="#43a047"
-            d="M4.255 9.322q1.23 3.057 4.51 2.854a3.94 3.94 0 0 0 1.718-.626q1.148.812 2.202 1.74a6.62 6.62 0 0 1-4.027 1.684a6.4 6.4 0 0 1-1.02 0Q3.82 14.524 2 11.116z"
-            opacity=".993"
-          />
-        </g>
-      </svg>
-      Masuk dengan Google
-    </UButton>
-
-    <div class="mt-6 flex items-center justify-center gap-1">
-      <p class="text-stone-600 dark:text-stone-400">Belum punya akun?</p>
-      <UButton variant="link" size="xl" as-child>
-        <NuxtLink to="/register"> Daftar </NuxtLink>
-      </UButton>
-    </div>
-
-    <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">
-      Tidak dapat terhubung ke server. Anda sedang offline.
-    </p>
+      <p v-if="route.query.offline" role="status" class="mt-4 text-sm text-amber-700">
+        Tidak dapat terhubung ke server. Anda sedang offline.
+      </p>
+    </AuthCard>
 
     <div
       v-if="oauthModalVisible()"

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import VInput from '@/components/ui/v-input/VInput.vue'
-
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
 const { nuxtApi } = useLaravel()
@@ -38,7 +36,7 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex w-full flex-col items-center justify-center text-center">
+  <AuthCard class="flex w-full flex-col items-center justify-center text-center">
     <div class="flex flex-col items-center justify-center gap-4">
       <NuxtImg
         src="/img/homflo-light-vertical.webp"
@@ -67,17 +65,14 @@ async function onSubmit(): Promise<void> {
         <label for="forgot-email" class="block text-sm md:text-base font-medium dark:text-white"
           >Email</label
         >
-        <VInput
+        <UInput
           id="forgot-email"
           v-model="form.email"
           trailing-icon="i-lucide-at-sign"
           type="email"
-          size="lg"
           placeholder="Masukkan email Anda"
           autocomplete="email"
           required
-          class="w-full"
-          :ui="{ base: 'min-h-10 text-base rounded-lg' }"
         />
       </div>
 
@@ -106,5 +101,5 @@ async function onSubmit(): Promise<void> {
         <NuxtLink to="/login"> Kembali ke halaman login </NuxtLink>
       </UButton>
     </div>
-  </div>
+  </AuthCard>
 </template>

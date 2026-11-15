@@ -44,7 +44,7 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex w-full flex-col items-center justify-center text-center">
+  <AuthCard class="flex w-full flex-col items-center justify-center text-center">
     <div class="flex flex-col items-center justify-center gap-4">
       <NuxtImg
         src="/img/homflo-light-vertical.webp"
@@ -98,5 +98,5 @@ async function onSubmit(): Promise<void> {
         Buat
       </UButton>
     </form>
-  </div>
+  </AuthCard>
 </template>

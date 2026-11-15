@@ -42,7 +42,7 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div>
+  <AuthCard>
     <h1 class="text-2xl font-bold">Atur ulang kata sandi</h1>
     <p class="mt-1 text-sm text-slate-600">Masukkan kata sandi baru Anda.</p>
 
@@ -107,5 +107,5 @@ async function onSubmit(): Promise<void> {
         Ubah kata sandi
       </UButton>
     </form>
-  </div>
+  </AuthCard>
 </template>

@@ -51,7 +51,7 @@ async function onResend(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex w-full flex-col items-center justify-center text-center">
+  <AuthCard class="flex w-full flex-col items-center justify-center text-center">
     <h1 class="text-2xl font-bold">Verifikasi email</h1>
 
     <p v-if="isEmailVerified" role="status" class="text-sm font-semibold text-green-800">
@@ -98,5 +98,5 @@ async function onResend(): Promise<void> {
         </template>
       </div>
     </template>
-  </div>
+  </AuthCard>
 </template>
