@@ -5,6 +5,7 @@ import LedgerSection from '~/components/landingPage/LedgerSections/LedgerSection
 import StepSection from '~/components/landingPage/StepSection.vue'
 import PrivacySection from '~/components/landingPage/PrivacySection.vue'
 import FAQSection from '~/components/landingPage/FAQSection.vue'
+import CTASection from '~/components/landingPage/CTASections/CTASection.vue'
 
 definePageMeta({ layout: 'landing' })
 
@@ -75,6 +76,7 @@ useHead({
       <StepSection />
       <PrivacySection />
       <FAQSection />
+      <CTASection />
     </main>
   </div>
 </template>

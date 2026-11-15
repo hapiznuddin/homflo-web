@@ -417,6 +417,27 @@ html.lp-reveal .lp-scroll-reveal-child.lp-is-visible {
   transform: none;
 }
 
+/* Ponsel di panel CTA: masuk dari sisi panel, bukan dari bawah. */
+html.lp-reveal .lp-cta-phone-left,
+html.lp-reveal .lp-cta-phone-right {
+  opacity: 0;
+  transition:
+    opacity 700ms var(--ease-out-expo),
+    transform 700ms var(--ease-out-expo);
+  transition-delay: var(--srv-delay, 0ms);
+}
+html.lp-reveal .lp-cta-phone-left {
+  transform: translateX(-24px);
+}
+html.lp-reveal .lp-cta-phone-right {
+  transform: translateX(24px);
+}
+html.lp-reveal .lp-cta-phone-left.lp-is-visible,
+html.lp-reveal .lp-cta-phone-right.lp-is-visible {
+  opacity: 1;
+  transform: none;
+}
+
 /* Mobile feature story: satu fitur (teks + pratinjau) masuk sebagai satu blok
    dengan slide yang lebih terasa. Desktop tetap memakai reveal halus. */
 @media (max-width: 1023px) {
@@ -431,7 +452,9 @@ html.lp-reveal .lp-scroll-reveal-child.lp-is-visible {
 /* Reduced motion: jangan andalkan JavaScript untuk menampilkan konten. */
 @media (prefers-reduced-motion: reduce) {
   .lp-scroll-reveal,
-  .lp-scroll-reveal-child {
+  .lp-scroll-reveal-child,
+  .lp-cta-phone-left,
+  .lp-cta-phone-right {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;

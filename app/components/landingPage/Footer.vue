@@ -8,7 +8,7 @@ import { container } from '~/components/landingPage/ui'
       <div
         class="grid grid-cols-2 gap-9 pt-[clamp(40px,5vw,64px)] pb-6 sm:grid-cols-3 lg:grid-cols-5 lg:gap-0"
       >
-        <div class="min-w-0 col-span-2 md:col-span-3 lg:col-span-2 lg:pe-10">
+        <div class="min-w-0 col-span-3 md:col-span-3 lg:col-span-2 lg:pe-10">
           <NuxtLink to="/" class="inline-flex shrink-0 items-center" aria-label="Homflo, beranda">
             <NuxtImg
               src="/img/homflo-light-horizontal.webp"

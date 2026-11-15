@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import type { AccordionItem } from '@nuxt/ui'
-import { container, heading2, ledeText, section, sectionHead } from '~/components/landingPage/ui'
+
+import {
+  container,
+  heading2,
+  ledeText,
+  section,
+  sectionHead
+} from '~/components/landingPage/ui'
 
 const faqs = ref<AccordionItem[]>([
   {
@@ -46,42 +53,6 @@ const faqs = ref<AccordionItem[]>([
 
       <div class="mx-auto mt-9 max-w-4xl">
         <UAccordion :items="faqs" />
-      </div>
-    </div>
-  </section>
-
-  <section v-scroll-reveal class="py-12 lp-scroll-reveal">
-    <div :class="container">
-      <div
-        id="cta-panel"
-        class="landing-cta-glow relative overflow-hidden rounded-4xl border border-primary/30 bg-primary px-[clamp(24px,5vw,64px)] py-[clamp(40px,7vw,72px)] text-primary-foreground"
-      >
-        <div class="max-w-4xl">
-          <h2 class="m-0 max-w-[16ch] text-final font-semibold text-balance">
-            Coba sekarang, gratis.
-          </h2>
-          <p class="mt-4 mb-0 max-w-[46ch] text-base leading-[1.6] text-on-primary-muted">
-            Buat rumah tangga, undang keluarga, dan mulai mencatat. Tidak perlu menghubungkan
-            rekening bank.
-          </p>
-          <div class="mt-7 flex w-full flex-col gap-2.5 md:flex-row">
-            <NuxtLink to="/register">
-              <UButton
-                size="xl"
-                class="bg-stone-200 hover:bg-stone-300 text-base lg:text-lg text-primary px-6 font-medium"
-                >Mulai Gratis</UButton
-              >
-            </NuxtLink>
-            <NuxtLink to="/login">
-              <UButton
-                variant="outline"
-                size="xl"
-                class="border-2 border-stone-200 hover:bg-stone-200/10 text-base lg:text-lg text-stone-200 dark:text-primary px-6 font-medium"
-                >Sudah punya akun</UButton
-              >
-            </NuxtLink>
-          </div>
-        </div>
       </div>
     </div>
   </section>

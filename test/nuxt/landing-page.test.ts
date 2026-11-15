@@ -49,17 +49,17 @@ describe('landing page', () => {
     const wrapper = await mountSuspended(LandingPage, { route: '/' })
     await flush()
 
-    expect(wrapper.findAll('nav[aria-label="Area produk Homflo"] > a')).toHaveLength(6)
+    expect(wrapper.findAll('div[aria-label="Area produk Homflo"] > a')).toHaveLength(6)
     expect(wrapper.find('#rumah-tangga').exists()).toBe(true)
     expect(wrapper.find('#rumah-tangga').text()).toContain('Belum ada kolaborasi real-time')
-    expect(wrapper.find('#rumah-tangga').text()).toContain('Undangan lewat email')
+    expect(wrapper.find('#rumah-tangga').text()).toContain('Undang pasangan atau anggota keluarga')
   })
 
-  it('memakai FAQ native, enam pertanyaan, dan footer tanpa heading', async () => {
+  it('menampilkan enam pertanyaan FAQ dan footer tanpa heading', async () => {
     const wrapper = await mountSuspended(LandingPage, { route: '/' })
     await flush()
 
-    expect(wrapper.findAll('#faq details')).toHaveLength(6)
+    expect(wrapper.findAll('#faq button')).toHaveLength(6)
     expect(wrapper.findAll('footer h2')).toHaveLength(0)
     expect(wrapper.text()).toContain('Pratinjau antarmuka dengan data sintetis')
   })
