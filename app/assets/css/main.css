@@ -245,6 +245,26 @@
     );
 }
 
+@utility landing-auth-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      88% 68% at 50% -12%,
+      color-mix(in oklab, var(--primary) 26%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      52% 44% at 84% 6%,
+      color-mix(in oklab, var(--primary) 12%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--primary) 8%, var(--background)) 0%,
+      var(--background) 56%
+    );
+}
+
 /* Ripple grid: brand-tinted cells, low contrast in both themes.
    The static grid is painted by CSS gradients so it is visible before
    hydration; cell elements exist only for the click ripple. */
@@ -280,6 +300,15 @@
 @utility landing-ripple-mask {
   mask-image: radial-gradient(
     ellipse 100% 60% at 50% 0%,
+    #000 0%,
+    rgb(0 0 0 / 0.55) 42%,
+    transparent 76%
+  );
+}
+
+@utility auth-ripple-mask {
+  mask-image: radial-gradient(
+    ellipse 150% 100% at 50% 10%,
     #000 0%,
     rgb(0 0 0 / 0.55) 42%,
     transparent 76%

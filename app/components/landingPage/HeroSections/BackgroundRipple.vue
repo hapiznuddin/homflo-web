@@ -4,8 +4,12 @@ import type { CSSProperties } from 'vue'
 const props = withDefaults(
   defineProps<{
     cellSize?: number
+    maskClass?: string
+    // Hero uses the pointer ripple. Static backdrops (auth) pass false so
+    // clicks anywhere on the page never spawn ripple cells.
+    interactive?: boolean
   }>(),
-  { cellSize: 56 }
+  { cellSize: 56, maskClass: 'landing-ripple-mask', interactive: true }
 )
 
 type Cell = { row: number; col: number }
@@ -133,6 +137,7 @@ function clearHover(): void {
 }
 
 onMounted(() => {
+  if (!props.interactive) return
   window.addEventListener('pointerdown', onPointerDown, { passive: true })
   window.addEventListener('pointermove', onPointerMove, { passive: true })
   window.addEventListener('scroll', clearHover, { passive: true })
@@ -151,7 +156,11 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="root"
-    class="landing-ripple landing-ripple-mask pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+    :class="[
+      'landing-ripple',
+      props.maskClass,
+      'pointer-events-none absolute inset-0 -z-10 overflow-hidden'
+    ]"
     aria-hidden="true"
   >
     <!-- Static grid: CSS only, so it paints before hydration. -->

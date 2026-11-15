@@ -57,7 +57,7 @@ import { container } from '~/components/landingPage/ui'
               ><UButton
                 variant="outline"
                 size="xl"
-                class="border-2 border-stone-200 hover:bg-stone-200/10 cursor-pointer text-base lg:text-lg md:w-54 lg:w-full text-stone-200 dark:text-primary px-6 font-medium"
+                class="border-2 border-stone-200 hover:bg-stone-200/10 cursor-pointer text-base lg:text-lg md:w-54 lg:w-full text-stone-200 dark:text-stone-200 px-6 font-medium"
                 >Sudah punya akun</UButton
               ></NuxtLink
             >
